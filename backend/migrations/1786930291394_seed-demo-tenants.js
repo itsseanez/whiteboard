@@ -1,0 +1,40 @@
+exports.up = async (pgm) => {
+  pgm.sql(`
+    INSERT INTO tenant (id, name, slug, timezone) VALUES
+      ('11111111-1111-1111-1111-111111111111', 'Marina''s Cuts & Color', 'marinas-cuts-color', 'America/New_York'),
+      ('22222222-2222-2222-2222-222222222222', 'Studio Wien', 'studio-wien', 'Europe/Vienna');
+
+    INSERT INTO staff (id, tenant_id, name) VALUES
+      ('a1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'Marina Lopez'),
+      ('a2222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'Anna Huber');
+
+    INSERT INTO service (id, tenant_id, name, duration_minutes, requires_resource) VALUES
+      ('b1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'Cut', 45, false),
+      ('b2222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'Full Color', 150, true);
+
+    INSERT INTO resource (id, tenant_id, name) VALUES
+      ('c2222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'Wash Station 1');
+
+    INSERT INTO staff_service (staff_id, service_id) VALUES
+      ('a1111111-1111-1111-1111-111111111111', 'b1111111-1111-1111-1111-111111111111'),
+      ('a2222222-2222-2222-2222-222222222222', 'b2222222-2222-2222-2222-222222222222');
+  `);
+};
+
+exports.down = (pgm) => {
+  pgm.sql(`
+    DELETE FROM staff_service WHERE staff_id IN (
+      'a1111111-1111-1111-1111-111111111111', 'a2222222-2222-2222-2222-222222222222'
+    );
+    DELETE FROM resource WHERE tenant_id = '22222222-2222-2222-2222-222222222222';
+    DELETE FROM service WHERE id IN (
+      'b1111111-1111-1111-1111-111111111111', 'b2222222-2222-2222-2222-222222222222'
+    );
+    DELETE FROM staff WHERE id IN (
+      'a1111111-1111-1111-1111-111111111111', 'a2222222-2222-2222-2222-222222222222'
+    );
+    DELETE FROM tenant WHERE id IN (
+      '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222'
+    );
+  `);
+};

@@ -81,12 +81,12 @@ exports.up = (pgm) => {
 
 exports.down = (pgm) => {
   pgm.sql(`
-    DROP TABLE tenant;
-    DROP TABLE staff; 
-    DROP TABLE service; 
-    DROP TABLE staff_service;
-    DROP TABLE resource;
-    DROP TABLE customer;
     DROP TABLE appointment;
+    DROP TABLE staff_service;
+    DROP TABLE customer;
+    DROP TABLE resource;
+    DROP TABLE service;
+    DROP TABLE staff;
+    DROP TABLE tenant;
   `);
 };
