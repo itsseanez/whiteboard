@@ -74,20 +74,23 @@ flowchart LR
 git clone https://github.com/itsseanez/whiteboard.git
 cd whiteboard
 cp .env.example .env
+```
 
+Open `.env` and set real values for `WHITEBOARD_APP_PASSWORD` and `WHITEBOARD_SIGNUP_PASSWORD` — these are used to create dedicated, permission-scoped Postgres roles during migration. Make sure `APP_DATABASE_URL` and `SIGNUP_DATABASE_URL` use the same passwords you set above; the migration and the connection string are not yet linked automatically.
+
+```bash
 docker compose up -d          # PostgreSQL on :5432
 
 cd backend
 npm install
-npm run migrate up            # apply migrations
+npm run migrate up            # apply migrations, including creating app-specific DB roles
+npx tsx scripts/seed-auth.ts  # create demo users + organizations, link to seeded tenants
 npm run dev                   # API on :3000
 
 cd ../frontend
 npm install
 npm run dev                   # UI on :5173
 ```
-
-If you already have Postgres running natively on `5432`, either stop it or set `DB_PORT` in `.env` to a free port before starting the container.
 
 Seed data creates two demo tenants in different timezones.
 

@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/itsseanez/whiteboard#readme",
   "dependencies": {
+    "better-auth": "^1.6.29",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "pg": "^8.22.0"
