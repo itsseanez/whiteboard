@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: whiteboard
       POSTGRES_USER: whiteboard
-      POSTGRES_PASSWORD: pwd
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:

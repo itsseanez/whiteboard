@@ -64,7 +64,7 @@ flowchart LR
 | Database | PostgreSQL 18, `node-pg-migrate`, `pg` |
 | Frontend | React 19, TypeScript, Vite, TanStack Query, Tailwind |
 | Testing | Vitest, Supertest, dedicated test database |
-| Infrastructure | Docker Compose, GitHub Actions, AWS |
+| Infrastructure | Docker Compose (local dev), Neon (Postgres), Vercel (API + frontend hosting), GitHub Actions (CI + scheduled reminder jobs) |
 
 ## Getting started
 
@@ -76,12 +76,23 @@ cd whiteboard
 cp .env.example .env
 ```
 
-Open `.env` and set real values for `WHITEBOARD_APP_PASSWORD` and `WHITEBOARD_SIGNUP_PASSWORD` — these are used to create dedicated, permission-scoped Postgres roles during migration. Make sure `APP_DATABASE_URL` and `SIGNUP_DATABASE_URL` use the same passwords you set above; the migration and the connection string are not yet linked automatically.
+Open the root `.env` and set:
+- `POSTGRES_PASSWORD` — password for the Postgres superuser Docker creates on first boot.
+- `DB_PORT` — only change this if `5432` is already in use locally.
 
 ```bash
 docker compose up -d          # PostgreSQL on :5432
 
 cd backend
+cp .env.example .env
+```
+
+Open `backend/.env` and set real values:
+- `DATABASE_URL` — must use the same password you set for `POSTGRES_PASSWORD` above.
+- `WHITEBOARD_APP_PASSWORD` and `WHITEBOARD_SIGNUP_PASSWORD` — used to create dedicated, permission-scoped Postgres roles during migration. Make sure `APP_DATABASE_URL` and `SIGNUP_DATABASE_URL` use the same passwords you set above; the migration and the connection string are not yet linked automatically.
+- `BETTER_AUTH_SECRET` — generate a fresh random value (e.g. `openssl rand -base64 32`). Never reuse an example value or share this between environments; it signs session tokens.
+
+```bash
 npm install
 npm run migrate up            # apply migrations, including creating app-specific DB roles
 npx tsx scripts/seed-auth.ts  # create demo users + organizations, link to seeded tenants
@@ -92,7 +103,7 @@ npm install
 npm run dev                   # UI on :5173
 ```
 
-Seed data creates two demo tenants in different timezones.
+Seed data creates two demo tenants in different timezones, each with a linked demo account — printed to the console when the seed script runs.
 
 ## Status
 
