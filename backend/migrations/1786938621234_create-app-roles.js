@@ -22,7 +22,7 @@ exports.down = (pgm) => {
     DROP ROLE whiteboard_signup;
 
     ALTER DEFAULT PRIVILEGES FOR ROLE whiteboard IN SCHEMA public
-      REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM whiteboard_app;
+    REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM whiteboard_app;
     REVOKE ALL ON ALL TABLES IN SCHEMA public FROM whiteboard_app;
     DROP ROLE whiteboard_app;
   `);

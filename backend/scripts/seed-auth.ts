@@ -1,6 +1,5 @@
 // scripts/seed-auth.ts
 import { auth } from '../src/lib/auth.js';
-import { pool } from '../src/db.js';
 import { Pool } from 'pg';
 
 // Owner-level connection, used only for the cross-tenant backfill below —
@@ -16,7 +15,7 @@ async function ensureUser(name: string, email: string, password: string) {
   } catch (err: any) {
     if (err?.body?.code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL') {
       console.log(`User ${email} already exists, reusing.`);
-      const result = await pool.query('SELECT id FROM "user" WHERE email = $1', [email]);
+      const result = await ownerPool.query('SELECT id FROM "user" WHERE email = $1', [email]);
       return { user: result.rows[0] };
     }
     throw err;
@@ -30,7 +29,7 @@ async function ensureOrganization(name: string, slug: string, userId: string) {
     return result;
   } catch (err: any) {
     console.log(`Organization ${slug} may already exist, reusing. (${err?.body?.code ?? err.message})`);
-    const result = await pool.query('SELECT id FROM organization WHERE slug = $1', [slug]);
+    const result = await ownerPool.query('SELECT id FROM organization WHERE slug = $1', [slug]);
     return { id: result.rows[0]?.id };
   }
 }
@@ -54,7 +53,6 @@ async function main() {
   console.log(`  marina@marinascuts.example / demo-password-123 -> marinas-cuts-color`);
   console.log(`  anna@studiowien.example / demo-password-123 -> studio-wien`);
 
-  await pool.end();
   await ownerPool.end();
 }
 
