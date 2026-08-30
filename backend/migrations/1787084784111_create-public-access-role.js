@@ -10,7 +10,15 @@ export const up = (pgm) => {
     );
   }
 
-  pgm.sql(`CREATE ROLE whiteboard_public WITH LOGIN PASSWORD '${password}';`);
+  pgm.sql(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'whiteboard_public') THEN
+        CREATE ROLE whiteboard_public WITH LOGIN PASSWORD '${password}';
+      END IF;
+    END
+    $$;
+  `);
   pgm.sql(`GRANT SELECT (id, name, slug, timezone) ON tenant TO whiteboard_public;`);
 };
 

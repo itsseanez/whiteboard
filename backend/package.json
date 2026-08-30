@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch ./src/server.ts",
-    "migrate": "npx node-pg-migrate"
+    "migrate": "npx node-pg-migrate",
+    "migrate:test": "node-pg-migrate -d TEST_DATABASE_URL up"
   },
   "repository": {
     "type": "git",
@@ -30,7 +31,9 @@
     "@types/express": "^5.0.6",
     "@types/node": "^26.2.0",
     "@types/pg": "^8.21.0",
+    "@types/supertest": "^7.2.1",
     "node-pg-migrate": "^9.0.0",
+    "supertest": "^7.2.2",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2"
   }
