@@ -2,7 +2,13 @@
 declare global {
   namespace Express {
     interface Request {
-      tenant: Tenant;
+      tenant?: Tenant;
+      tenants?: Tenant[];
+      membership?: Membership;
+      session?: {
+        user: User;
+        session: Session;
+      };
     }
   }
 }
