@@ -41,8 +41,8 @@ database you meant to reset.
 
 | Role | Purpose | Bypasses RLS | Created by |
 |---|---|---|---|
-| `whiteboard` | Owner. Runs migrations, DDL, admin work. | Yes (superuser) | Docker's `POSTGRES_USER`, not a migration |
-| `whiteboard_app` | Authenticated app queries — staff/owner routes under `/api`, resolved via session. | No | Migration (guarded) |
+| `whiteboard` | Owner. Runs migrations, DDL, admin work. Also the role Better Auth's own `Pool` connects as (see below). | Yes (superuser) | Docker's `POSTGRES_USER`, not a migration |
+| `whiteboard_app` | Authenticated app queries — staff/owner routes under `/tenant/:slug`, resolved via session. The only role subject to `app.tenant_id`/`app.user_id`-based RLS. | No | Migration (guarded) |
 | `whiteboard_signup` | Tenant provisioning/signup flow. Insert-only. | No | Migration (guarded) |
 | `whiteboard_public` | Anonymous public routes — slug-based tenant lookup, eventually public booking reads/inserts. | No | Migration (guarded) |
 
@@ -68,6 +68,36 @@ stay the same, since roles are cluster-wide.
 `whiteboard_test` — migrations always run as owner, regardless of which
 database they're targeting.
 
+### Three environments, not two
+
+With hosting on EC2 there are now three sets of connection strings, not two:
+
+| Environment | Database | Where the values live |
+|---|---|---|
+| Local dev | `whiteboard` on the Docker Postgres | `backend/.env` |
+| Test | `whiteboard_test`, same local cluster | `backend/.env.test` |
+| Production | `whiteboard` in the Postgres container on the EC2 box | `backend/.env` on the server |
+
+Roles are still cluster-wide *within* a cluster — but the EC2 box is a
+separate cluster from the local one, so all three app roles have to be
+created there too. They will be, since the same guarded `CREATE ROLE`
+migrations run on first deploy. The passwords are not shared between
+clusters and should not be.
+
+The production `.env` never enters git. `.env` was tracked in early
+commits on this repo once already and required `git filter-repo` on a
+fresh clone to remove. Decide deliberately whether it is placed on the
+box by hand or injected from GitHub Actions secrets at deploy time, and
+make sure no workflow step can echo it into a build log.
+
+**`.env.test` must define all four connection strings, not just the three
+app-facing ones.** `auth.ts` reads `DATABASE_URL` directly for its own
+connection (see below) — if it's missing from `.env.test`, Better Auth
+silently falls back to dev's `DATABASE_URL` while the rest of the app
+correctly talks to `whiteboard_test`, producing confusing "user not found"
+/ "tenant not found" errors that look like data problems but are actually
+two different databases being queried in the same request.
+
 ## Pools in code
 
 Each role has its own `pg.Pool` instance in `db.ts`, built from its
@@ -75,12 +105,52 @@ connection string:
 
 | Pool | Env var | Used in |
 |---|---|---|
-| `appPool` | `APP_DATABASE_URL` | `routes/api` services, behind `resolveTenantFromSession` |
+| `appPool` | `APP_DATABASE_URL` | `routes/tenant` services, behind `resolveTenantFromSession` |
 | `signupPool` | `SIGNUP_DATABASE_URL` | Tenant signup/provisioning |
 | `publicPool` | `PUBLIC_DATABASE_URL` | `routes/public` services, behind `resolveTenantFromSlug` |
 
 No other pool should ever connect using a role outside its intended
-purpose — e.g. `publicPool` should never be imported from an `/api` route.
+purpose — e.g. `publicPool` should never be imported from a `/tenant/:slug`
+route.
+
+**`auth.ts` builds a fourth, separate `Pool` of its own, directly from
+`DATABASE_URL`** — independent of `db.ts` entirely. Better Auth's tables
+(`user`, `session`, `organization`, `member`) have no RLS policies applied,
+so this pool running as the owner role isn't currently unsafe, but it does
+mean there are two independent places in the codebase that decide which
+database to talk to. Keeping them in sync (e.g. across `.env` vs
+`.env.test`) is a manual responsibility, not something enforced by the
+code — this already caused a real bug once during test setup.
+
+This gets worse with production in the picture. On the server there is no
+convenient `psql` prompt to sanity-check which database answered, so the
+same silent divergence surfaces as "tenant not found" against a box you
+have to SSH into to diagnose. Worth collapsing `auth.ts` onto a pool from
+`db.ts` before first deploy rather than after.
+
+## Session variables (RLS context)
+
+Two session variables drive row visibility for `whiteboard_app`:
+
+- **`app.tenant_id`** — set whenever a request already has a resolved
+  tenant. Used by the isolation policies on `staff`, `service`, `resource`,
+  `customer`, `appointment`, and the tenant-id-match branch of `tenant`'s
+  own policy.
+- **`app.user_id`** — set specifically to resolve *which* tenant a session
+  can access in the first place, before any `tenant_id` exists to scope by
+  (e.g. `getTenantBySlug`'s authenticated branch, `getTenantsByUserId`).
+  Backs the membership-`EXISTS` branch of `tenant_select_app`.
+
+Both are set via `SELECT set_config($1, $2, true)`, not raw
+`SET LOCAL name = $1` — Postgres's `SET`/`SET LOCAL` syntax does not accept
+bind parameters, so a parameterized `SET LOCAL` call fails outright.
+`set_config`'s third argument (`true`) makes it transaction-scoped,
+equivalent to `SET LOCAL`, but callable as an ordinary parameterized query.
+
+`withContext.ts` is the single shared wrapper that opens a transaction,
+calls `set_config` for whichever of `tenantId`/`userId` are provided, runs
+the query, and commits/rolls back. Every tenant-scoped service call should
+go through it rather than setting session variables by hand.
 
 ## Current grants
 
@@ -91,6 +161,9 @@ purpose — e.g. `publicPool` should never be imported from an `/api` route.
   table `whiteboard` creates in a future migration automatically grants
   the same four privileges to `whiteboard_app`, with no separate grant
   needed per new table
+- On `tenant` specifically, visibility is further restricted by the
+  `tenant_select_app` RLS policy (see below) — the blanket grant above is
+  necessary but not sufficient for reading `tenant` rows
 
 **`whiteboard_signup`**
 - `CONNECT` on database `whiteboard`, `USAGE` on schema `public`
@@ -99,6 +172,28 @@ purpose — e.g. `publicPool` should never be imported from an `/api` route.
 **`whiteboard_public`**
 - `SELECT (id, slug, timezone)` on `tenant` only — column-scoped, read-only,
   no session variable required (this is the anonymous slug-lookup path)
+
+## RLS policies on `tenant`
+
+- **`tenant_select`** — `TO whiteboard_public, whiteboard_signup` only
+  (narrowed from an original unrestricted `USING (true)`). Anonymous slug
+  lookups and signup provisioning still see every tenant unrestricted;
+  `whiteboard_app` is deliberately excluded from this policy.
+- **`tenant_select_app`** — `TO whiteboard_app` only. Allows a row through
+  if either `id = current_setting('app.tenant_id', true)::uuid` (tenant
+  already resolved), or an `EXISTS` check finds a `member` row linking
+  `current_setting('app.user_id', true)` to that row's `better_auth_org_id`
+  (tenant not yet resolved — the bootstrapping case). Both `current_setting`
+  calls use the two-argument form so an unset variable evaluates to `NULL`
+  rather than throwing, letting the `OR` fall through cleanly.
+- `tenant_insert`, `tenant_update`, `tenant_delete` — unchanged from
+  initial design, scoped `TO whiteboard_signup` (insert) or by
+  `app.tenant_id` match (update/delete).
+
+Verified manually via `SET ROLE whiteboard_app` + `SET LOCAL` inside a
+transaction, against real seeded data, for all four cases: direct
+`tenant_id` match, membership-only match, a user with zero memberships,
+and neither variable set (fails closed — zero rows, no thrown error).
 
 ## Open design question, not yet decided
 

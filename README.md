@@ -64,7 +64,7 @@ flowchart LR
 | Database | PostgreSQL 18, `node-pg-migrate`, `pg` |
 | Frontend | React 19, TypeScript, Vite, TanStack Query, Tailwind |
 | Testing | Vitest, Supertest, dedicated test database |
-| Infrastructure | Docker Compose (local dev), Neon (Postgres), Vercel (API + frontend hosting), GitHub Actions (CI + scheduled reminder jobs) |
+| Infrastructure | AWS EC2, Docker Compose, Caddy (automatic TLS), GitHub Actions (CI + deploy over SSH) |
 
 ## Getting started
 
@@ -95,7 +95,7 @@ Open `backend/.env` and set real values:
 ```bash
 npm install
 npm run migrate up            # apply migrations, including creating app-specific DB roles
-npm run seed                  # create demo users + organizations, link to seeded tenants
+npx tsx scripts/seed-auth.ts  # create demo users + organizations, link to seeded tenants
 npm run dev                   # API on :3000
 
 cd ../frontend
@@ -104,18 +104,6 @@ npm run dev                   # UI on :5173
 ```
 
 Seed data creates two demo tenants in different timezones, each with a linked demo account — printed to the console when the seed script runs.
-
-## Running tests
-
-Requires a `whiteboard_test` database, created automatically by Docker's
-init script on first boot (or after `docker compose down -v`). Apply
-migrations to it once:
-
-```bash
-npm run migrate:test
-npm run seed:test
-npm test                      # Then run the suite
-```
 
 ## Status
 
