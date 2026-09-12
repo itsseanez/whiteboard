@@ -8,7 +8,7 @@ Computed availability across staff and room constraints · timezone-correct thro
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg)](https://www.typescriptlang.org/)
-[![Node](https://img.shields.io/badge/Node-20%20LTS-5FA04E.svg)](https://nodejs.org/)
+[![Node](https://img.shields.io/badge/Node-26%20LTS-5FA04E.svg)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791.svg)](https://www.postgresql.org/)
 
 [Live demo](#) · [API docs](#) · [Design notes](docs/)
@@ -60,11 +60,11 @@ flowchart LR
 
 | Layer | Choice |
 |---|---|
-| Backend | Node 20, TypeScript, Express |
+| Backend | Node 26, TypeScript, Express |
 | Database | PostgreSQL 18, `node-pg-migrate`, `pg` |
 | Frontend | React 19, TypeScript, Vite, TanStack Query, Tailwind |
 | Testing | Vitest, Supertest, dedicated test database |
-| Infrastructure | AWS EC2, Docker Compose, Caddy (automatic TLS), GitHub Actions (CI + deploy over SSH) |
+| Infrastructure | AWS EC2, Docker Compose, Caddy (automatic TLS), GitHub Actions (CI + deploy over SSM) |
 
 ## Getting started
 

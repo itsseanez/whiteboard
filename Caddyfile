@@ -1,0 +1,7 @@
+whiteboardhq.app {
+    reverse_proxy app:3000
+}
+
+www.whiteboardhq.app {
+    redir https://whiteboardhq.app{uri} permanent
+}

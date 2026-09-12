@@ -14,7 +14,7 @@ export const up = (pgm) => {
     DO $$
     BEGIN
       IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'whiteboard_public') THEN
-        CREATE ROLE whiteboard_public WITH LOGIN PASSWORD '${password}';
+        EXECUTE format('CREATE ROLE whiteboard_public WITH LOGIN PASSWORD %L', $pw$${password}$pw$);
       END IF;
     END
     $$;
