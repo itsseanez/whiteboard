@@ -8,10 +8,10 @@ Computed availability across staff and room constraints · timezone-correct thro
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg)](https://www.typescriptlang.org/)
-[![Node](https://img.shields.io/badge/Node-26%20LTS-5FA04E.svg)](https://nodejs.org/)
+[![Node](https://img.shields.io/badge/Node-26-5FA04E.svg)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791.svg)](https://www.postgresql.org/)
 
-[Live demo](#) · [API docs](#) · [Design notes](docs/)
+[Live demo](https://whiteboardhq.app) · [API docs](#) · [Design notes](docs/)
 
 </div>
 
@@ -38,6 +38,7 @@ Those two experiences pull against each other, and most booking products resolve
 | **Deliberate time handling** | Working hours stored as local wall time plus zone ID; appointments in UTC. 2pm remains 2pm across a DST transition, and tenants in different regions do not share a constant offset. |
 | **Race-free reservation** | Check-then-insert has a race window. Reservation is enforced by a Postgres exclusion constraint, so two concurrent requests for the same slot produce exactly one booking and one clean error. |
 | **Structural tenant isolation** | Enforced below the query layer rather than by a `WHERE tenant_id = ?` a developer can forget, with a test proving cross-tenant reads fail. |
+| **Least-privilege database roles** | Four application roles, none of them the owner, none bypassing RLS — one each for authenticated tenant queries, signup provisioning, anonymous public reads, and authentication. Each connects through its own pool. |
 
 Detailed write-ups live in [`docs/`](docs/).
 
@@ -64,11 +65,11 @@ flowchart LR
 | Database | PostgreSQL 18, `node-pg-migrate`, `pg` |
 | Frontend | React 19, TypeScript, Vite, TanStack Query, Tailwind |
 | Testing | Vitest, Supertest, dedicated test database |
-| Infrastructure | AWS EC2, Docker Compose, Caddy (automatic TLS), GitHub Actions (CI + deploy over SSM) |
+| Infrastructure | AWS EC2, Docker Compose, Caddy (automatic TLS), GitHub Actions (CI + deploy via SSM), SSM Parameter Store |
 
 ## Getting started
 
-**Prerequisites:** Node 20+, Docker
+**Prerequisites:** Node 26+, Docker
 
 ```bash
 git clone https://github.com/itsseanez/whiteboard.git
@@ -88,9 +89,13 @@ cp .env.example .env
 ```
 
 Open `backend/.env` and set real values:
+
 - `DATABASE_URL` — must use the same password you set for `POSTGRES_PASSWORD` above.
-- `WHITEBOARD_APP_PASSWORD` and `WHITEBOARD_SIGNUP_PASSWORD` — used to create dedicated, permission-scoped Postgres roles during migration. Make sure `APP_DATABASE_URL` and `SIGNUP_DATABASE_URL` use the same passwords you set above; the migration and the connection string are not yet linked automatically.
+- `WHITEBOARD_APP_PASSWORD`, `WHITEBOARD_SIGNUP_PASSWORD`, `WHITEBOARD_PUBLIC_PASSWORD`, `WHITEBOARD_AUTH_PASSWORD` — used to create dedicated, permission-scoped Postgres roles during migration.
+- `APP_DATABASE_URL`, `SIGNUP_DATABASE_URL`, `PUBLIC_DATABASE_URL`, `AUTH_DATABASE_URL` — each must embed the matching password above. The migration and the connection string are not linked automatically; a mismatch produces a successful migration followed by an authentication failure.
 - `BETTER_AUTH_SECRET` — generate a fresh random value (e.g. `openssl rand -base64 32`). Never reuse an example value or share this between environments; it signs session tokens.
+- `BETTER_AUTH_URL` — `http://localhost:3000` locally. Without it, the request origin is derived from incoming headers.
+- `PORT` — defaults to 3000.
 
 ```bash
 npm install
@@ -105,11 +110,31 @@ npm run dev                   # UI on :5173
 
 Seed data creates two demo tenants in different timezones, each with a linked demo account — printed to the console when the seed script runs.
 
+### Scripts
+
+| Script | Does |
+|---|---|
+| `npm run dev` | `tsx watch` against `src/server.ts` — transpiles without typechecking |
+| `npm run build` | `tsc` — compiles `src/` to `dist/` |
+| `npm start` | Runs the compiled `dist/server.js` |
+| `npm run typecheck` | `tsc -p tsconfig.check.json` — checks `src`, `tests`, `scripts`, and config, emitting nothing |
+| `npm test` | Vitest against `whiteboard_test` |
+| `npm run migrate up` | Migrations against `DATABASE_URL` |
+| `npm run migrate:test up` | Migrations against `TEST_DATABASE_URL` |
+
+Because `dev` does not typecheck, run `npm run typecheck` before pushing. CI runs it too.
+
+## Deployment
+
+A single EC2 instance running Docker Compose: Postgres, the API, a one-shot migration service, and Caddy for automatic TLS. Images are built in GitHub Actions, tagged by commit SHA, and pushed to GHCR; the instance pulls them. Deploys are triggered via SSM `send-command` authenticated by GitHub OIDC — no SSH, no stored credentials, port 22 closed. Production secrets live in SSM Parameter Store and are fetched by the instance profile at deploy time.
+
+Rationale for each of these is in [`DECISIONS.md`](DECISIONS.md); the database role model is in [`docs/database-roles.md`](docs/database-roles.md).
+
 ## Status
 
 In active development since August 2026.
 
-- [ ] Tenancy, authentication, roles, core model, deployed
+- [x] Tenancy, authentication, roles, core model, deployed
 - [ ] Availability engine
 - [ ] Booking flow, public page, concurrency
 - [ ] Calendars, reschedule, cancel, notifications, audit trail
