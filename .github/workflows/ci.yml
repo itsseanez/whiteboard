@@ -14,12 +14,14 @@ jobs:
       WHITEBOARD_APP_PASSWORD: apppass
       WHITEBOARD_SIGNUP_PASSWORD: signuppass
       WHITEBOARD_PUBLIC_PASSWORD: publicpass
+      WHITEBOARD_AUTH_PASSWORD: authpass
 
       DATABASE_URL: postgresql://whiteboard:testpass@localhost:5432/whiteboard_test
       APP_DATABASE_URL: postgresql://whiteboard_app:apppass@localhost:5432/whiteboard_test
       SIGNUP_DATABASE_URL: postgresql://whiteboard_signup:signuppass@localhost:5432/whiteboard_test
       PUBLIC_DATABASE_URL: postgresql://whiteboard_public:publicpass@localhost:5432/whiteboard_test
       TEST_DATABASE_URL: postgresql://whiteboard:testpass@localhost:5432/whiteboard_test
+      AUTH_DATABASE_URL: postgresql://whiteboard_auth:authpass@localhost:5432/whiteboard_test
 
       BETTER_AUTH_SECRET: not-a-real-secret-ci-only
 
@@ -66,7 +68,7 @@ jobs:
       - name: Test
         working-directory: backend
         run: npm test
-        
+
   build-and-push:
     needs: test
     runs-on: ubuntu-latest

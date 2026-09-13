@@ -21,8 +21,14 @@ exports.up = (pgm) => {
     $$;
     GRANT USAGE ON SCHEMA public TO whiteboard_app;
     GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO whiteboard_app;
-    ALTER DEFAULT PRIVILEGES FOR ROLE whiteboard IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO whiteboard_app;
+    DO $$
+    BEGIN
+      EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO whiteboard_app',
+        current_user
+      );
+    END
+    $$;
 
     DO $$
     BEGIN

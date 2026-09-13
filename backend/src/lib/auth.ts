@@ -1,12 +1,9 @@
 import { betterAuth } from "better-auth";
 import { organization } from "better-auth/plugins"
-import { Pool } from "pg";
-import 'dotenv/config';
+import { authPool } from "../db.js";
 
 export const auth = betterAuth({
-    database: new Pool({
-        connectionString: process.env.DATABASE_URL,
-    }),
+    database: authPool,
     emailAndPassword: { 
         enabled: true, 
     }, 
