@@ -38,7 +38,7 @@ The database role model is in [`docs/database-roles.md`](docs/database-roles.md)
 
 **In:** tenant provisioning · staff, service, and resource management · working hours and time off · availability engine · public booking page per tenant · book, cancel, reschedule · staff and owner calendars · email notifications · appointment audit trail · REST API with webhooks.
 
-**Out:** payments and deposits · recurring series · group bookings · waitlists · calendar sync · SMS · packages and loyalty · custom intake forms · reporting dashboards · walk-in queues · product retail · mobile apps · custom domains · label customization.
+**Out unless done with core:** payments and deposits · recurring series · group bookings · waitlists · calendar sync · SMS · packages and loyalty · custom intake forms · reporting dashboards · walk-in queues · product retail · mobile apps · custom domains · label customization.
 
 Several of those are how a commercial version would make money. None of them matter if availability is wrong.
 
@@ -49,7 +49,7 @@ Several of those are how a commercial version would make money. None of them mat
 Not yet settled. Each constrains everything built on top, so they get decided before the first interval function:
 
 - **Where the computation lives.** All-SQL with range types and `range_agg`, all-TypeScript, or SQL fetching raw constraints with TypeScript doing the interval math. The definition of done requires explaining why a given slot did *not* appear, which argues for a pure function taking constraints as arguments and doing no I/O.
-- **Time library.** `date-fns-tz` or Temporal.
+- **Time library.** Temporal.
 - **Slot granularity.** Fixed grid, service-length steps, or anchored to existing appointments. This determines whether the parked gap-filling feature is a scoring problem or a structural one — a 15-minute grid creates the stranded gaps it would later be scoring against.
 - **Buffer interaction.** Whether adjacent services' after- and before-buffers add or overlap. The answer is baked into the stored range, so it can't stay implicit.
 
@@ -64,8 +64,6 @@ Not yet settled. Each constrains everything built on top, so they get decided be
 | Hardening: seed data, API docs, demo tenants | A stranger books an appointment from the URL with no instructions |
 
 **Deployed in phase one, not at the end.** An empty app was live at a real address over TLS, with an automated pipeline, before it did anything interesting.
-
-**If behind:** cut resources (staff-only booking, no rooms). Never cut timezone correctness or the concurrency test.
 
 ## Definition of done
 
