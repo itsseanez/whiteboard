@@ -72,7 +72,7 @@ exports.up = (pgm) => {
       customer_id  uuid NOT NULL REFERENCES customer(id),
       starts_at    timestamptz NOT NULL,
       ends_at      timestamptz NOT NULL,
-      status       text NOT NULL DEFAULT 'booked',
+      status       text NOT NULL DEFAULT 'BOOKED',
       created_at   timestamptz NOT NULL DEFAULT now()
     );
     CREATE INDEX appointment_tenant_id_idx ON appointment(tenant_id);
