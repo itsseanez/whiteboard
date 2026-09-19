@@ -52,6 +52,7 @@ flowchart LR
   C --> E[Booking service]
   D --> F[(PostgreSQL)]
   E --> F
+  E --> D
   E --> G[Notification worker]
 ```
 
