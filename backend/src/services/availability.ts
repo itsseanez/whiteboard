@@ -1,14 +1,14 @@
 import type { Pool, PoolClient } from 'pg';
 import { withContext } from '../withContext.js';
-import { computeQueryWindow } from '../availability/context-window.js';
-import type { Interval, ResourceCandidate, StaffCandidate, TimeZone, WeekdayHours } from '../availability/types.ts'
+import { computeQueryWindow } from '../availability/query-window.js';
 
 // ---------------------------------------------------------------------------
 // Raw row shapes — what pg hands back, before any Temporal conversion.
 // timestamptz arrives as Date, time as a string like "09:00:00".
+// Converting them is availability-mapper.ts's job, not this file's.
 // ---------------------------------------------------------------------------
 
-interface ServiceRow {
+export interface ServiceRow {
   id: string;
   durationMinutes: number;
   bufferBeforeMinutes: number;
@@ -16,31 +16,33 @@ interface ServiceRow {
   minimumNoticeMinutes: number;
 }
 
-interface HoursRow {
+export interface HoursRow {
   weekday: number; // Monday = 1, Sunday = 7
   startTime: string; // 'HH:mm:ss' format
   endTime: string; // 'HH:mm:ss' format
 }
 
-interface StaffHoursRow extends HoursRow {
+export interface StaffHoursRow extends HoursRow {
   staffId: string;
 }
 
-interface TimeOffRow {
+export interface TimeOffRow {
   staffId: string;
   startsAt: Date;
   endsAt: Date;
 }
 
-interface AppointmentRow {
+export interface AppointmentRow {
   id: string;
-  staffId: string;
-  resourceIda: string;
+  // Both nullable in the schema: staff_id for resource-only bookings,
+  // resource_id for services that need no resource.
+  staffId: string | null;
+  resourceId: string | null;
   startsAt: Date;
   endsAt: Date;
 }
 
-interface AvailabilityRows {
+export interface AvailabilityRows {
   service: ServiceRow;
   staffIds: string[];
   resourceIds: string[];
@@ -50,7 +52,7 @@ interface AvailabilityRows {
   appointments: AppointmentRow[];
 }
 
-export class ServiceNotFoundError extends Error { };
+export class ServiceNotFoundError extends Error { }
 
 // ---------------------------------------------------------------------------
 // Query helpers. Each takes a client, never a pool: the client is already bound
@@ -182,11 +184,11 @@ async function fetchAppointments(
 
 export interface AvailabilityQuery {
   tenantId: string;
-  timezone: string; // IANA id from tenant.timezone
+  timeZone: string; // IANA id from tenant.timezone
   serviceId: string;
   preferredStaffId: string | null;
   fromDate: string; // salon calendar date, "2026-10-25"
-  toDate: string;
+  throughDate: string;
   now: Date;
 }
 
@@ -194,15 +196,20 @@ export async function fetchAvailabilityRows(
   pool: Pool,
   query: AvailabilityQuery,
 ): Promise<AvailabilityRows> {
-
   return withContext(pool, { tenantId: query.tenantId }, async (client) => {
     // Wave 1 — independent of each other, but a single PoolClient is one
     // connection, so node-postgres serializes these anyway. Promise.all would
     // buy nothing.
     const service = await fetchService(client, query.serviceId);
 
-    const spanMinutes = service.durationMinutes + service.bufferBeforeMinutes + service.bufferAfterMinutes;
-    const { windowStart, windowEnd } = computeQueryWindow(query.timezone, query.fromDate, query.toDate, spanMinutes);
+    const spanMinutes =
+      service.durationMinutes + service.bufferBeforeMinutes + service.bufferAfterMinutes;
+    const { windowStart, windowEnd } = computeQueryWindow(
+      query.timeZone,
+      query.fromDate,
+      query.throughDate,
+      spanMinutes,
+    );
 
     const staffIds = await fetchCandidateStaffIds(client, query.serviceId, query.preferredStaffId);
     const resourceIds = await fetchLinkedResourceIds(client, query.serviceId);
@@ -221,40 +228,4 @@ export async function fetchAvailabilityRows(
 
     return { service, staffIds, resourceIds, businessHours, staffHours, timeOff, appointments };
   });
-}
-
-/**
- * Map raw rows into the engine's input types.
- *
- * This is the only place in the codebase where pg values become Temporal ones:
- *   - Date          -> Temporal.Instant   (via toTemporalInstant or epochMilliseconds)
- *   - "09:00:00"    -> your wall-clock representation
- *   - "00:00:00" in an end column means END of day, not the beginning
- *   - integers      -> Temporal.Duration, or keep them as minutes
- *
- * Group the per-staff rows into one entry per candidate rather than leaving
- * four parallel arrays keyed by staffId — parallel arrays let a staff member
- * appear in one and not another.
- */
-
-export interface AvailabilityInput {
-  request: {
-    timeZone: TimeZone;
-    now: Temporal.Instant;
-    fromDate: Temporal.PlainDate;
-    throughDate: Temporal.PlainDate;
-  }
-  service: {
-    duration: Temporal.Duration;
-    beforeBuffer: Temporal.Duration;
-    afterBuffer: Temporal.Duration;
-    minimumNotice: Temporal.Duration;
-  }
-  businessHours: readonly WeekdayHours[];
-  staffCandidates: readonly StaffCandidate[];
-  resourceCandidates: readonly ResourceCandidate[];
-}
-
-export function toEngineInput(rows: AvailabilityRows, query: AvailabilityQuery): AvailabilityInput {
-  throw new Error('toEngineInput not implemented');
 }
