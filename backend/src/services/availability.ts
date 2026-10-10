@@ -1,6 +1,9 @@
 import type { Pool, PoolClient } from 'pg';
 import { withContext } from '../withContext.js';
 import { computeQueryWindow } from '../availability/query-window.js';
+import { computeAvailability } from '../availability/engine.js';
+import type { AvailabilityResult } from '../availability/types.js';
+import { toEngineInput } from './availability-mapper.js';
 
 // ---------------------------------------------------------------------------
 // Raw row shapes — what pg hands back, before any Temporal conversion.
@@ -228,4 +231,22 @@ export async function fetchAvailabilityRows(
 
     return { service, staffIds, resourceIds, businessHours, staffHours, timeOff, appointments };
   });
+}
+
+// ---------------------------------------------------------------------------
+// The whole availability path, in three steps: SQL fetches, the mapper
+// converts, TypeScript computes. Nothing between them makes a decision.
+//
+// The pool is a parameter rather than a module-level import because the public
+// booking page and the owner's calendar ask the same question through different
+// roles — publicPool for one, appPool for the other — and the queries are
+// identical because RLS applies the tenant filter.
+// ---------------------------------------------------------------------------
+
+export async function getAvailability(
+  pool: Pool,
+  query: AvailabilityQuery,
+): Promise<AvailabilityResult> {
+  const rows = await fetchAvailabilityRows(pool, query);
+  return computeAvailability(toEngineInput(rows, query));
 }

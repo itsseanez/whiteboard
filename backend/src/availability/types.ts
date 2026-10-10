@@ -28,10 +28,6 @@ export interface ResourceCandidate {
   busyIntervals: readonly BusyInterval[];
 }
 
-// Output half of src/availability/types.ts — appended after Interval,
-// BusyInterval, WeekdayHours, StaffCandidate, ResourceCandidate and
-// AvailabilityInput.
-
 /**
  * Why one candidate could not take a particular grid time.
  * These appear only as a complete set — if a time reaches the excluded list,
@@ -66,8 +62,7 @@ export type TenantReason =
 
 /**
  * A grid time inside business hours that is not bookable.
- * `reason` is either one tenant-wide fact, or the complete set of per-staff
- * facts — narrow with Array.isArray().
+ * `reason` is either one tenant-wide fact, or the complete set of per-staff facts
  */
 export interface ExcludedTime {
   readonly startsAt: Temporal.Instant;
