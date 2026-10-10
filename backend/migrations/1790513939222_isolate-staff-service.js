@@ -79,6 +79,10 @@ exports.down = (pgm) => {
     ALTER TABLE staff_service ADD CONSTRAINT staff_service_service_id_fkey
       FOREIGN KEY (service_id) REFERENCES service(id);
 
+    -- Both columns the up added. Dropping only tenant_id leaves created_at
+    -- behind, and the next up then fails with
+    -- "column created_at of relation staff_service already exists".
+    ALTER TABLE staff_service DROP COLUMN created_at;
     ALTER TABLE staff_service DROP COLUMN tenant_id;
   `);
 };
