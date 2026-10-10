@@ -136,7 +136,7 @@ Rationale for each of these is in [`DECISIONS.md`](DECISIONS.md); the database r
 In active development since August 2026.
 
 - [x] Tenancy, authentication, roles, core model, deployed
-- [ ] Availability engine
+- [x] Availability engine
 - [ ] Booking flow, public page, concurrency
 - [ ] Calendars, reschedule, cancel, notifications, audit trail
 - [ ] Hardening, API docs, demo tenants
