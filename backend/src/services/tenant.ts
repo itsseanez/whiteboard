@@ -3,6 +3,8 @@ import { withContext } from '../withContext.js';
 
 export interface Tenant {
   id: string;
+  /** The salon's display name, for the public page's header. */
+  name: string;
   slug: string;
   timezone: string; // IANA id, e.g. "Europe/Vienna"
 }
@@ -34,7 +36,7 @@ export async function getTenantBySlug(
   if (includeOrgId) {
     return withContext(appPool, { userId }, async (client) => {
       const { rows } = await client.query(
-        `SELECT id, slug, timezone, better_auth_org_id AS "betterAuthOrgId"
+        `SELECT id, name, slug, timezone, better_auth_org_id AS "betterAuthOrgId"
          FROM tenant WHERE slug = $1`,
         [slug]
       );
@@ -43,7 +45,9 @@ export async function getTenantBySlug(
   }
 
   const { rows } = await publicPool.query(
-    `SELECT id, slug, timezone FROM tenant WHERE slug = $1`,
+    // name is readable by whiteboard_public per the create-public-access-role
+    // grant; it is what the booking page puts in its header.
+    `SELECT id, name, slug, timezone FROM tenant WHERE slug = $1`,
     [slug]
   );
   return rows[0] ?? null;

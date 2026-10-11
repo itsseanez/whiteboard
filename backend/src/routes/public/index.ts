@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import { resolveTenantFromSlug } from '../../middleware/tenant.js';
 import { getPublicAvailability } from '../../controllers/availability.js';
+import { getPublicServices } from '../../controllers/catalog.js';
 import { postPublicBooking } from '../../controllers/booking.js';
 import {
   postCancelBooking,
@@ -10,6 +11,13 @@ import {
 
 const router = Router({ mergeParams: true });
 router.use(resolveTenantFromSlug); // every route below this line has req.tenant set
+
+// GET /:slug/services
+//
+// The salon's name and zone, plus what it offers and who can do it. The
+// booking page's first request: every other endpoint here needs a serviceId,
+// and nothing else hands one out.
+router.get('/services', getPublicServices);
 
 // GET /:slug/availability?serviceId=<uuid>&from=2026-10-24&through=2026-10-26&staffId=<uuid>
 //
