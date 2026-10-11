@@ -10,6 +10,9 @@
 
 import { Link } from 'react-router-dom';
 
+import shell from '../shell.module.css';
+import styles from './Landing.module.css';
+
 const DEMO_SALONS = [
   { slug: 'studio-wien', name: 'Studio Wien', zone: 'Vienna' },
   { slug: 'marinas-cuts-color', name: "Marina's Cuts & Color", zone: 'New York' },
@@ -17,33 +20,32 @@ const DEMO_SALONS = [
 
 export default function Landing() {
   return (
-    <main className="page">
-      <span className="wordmark">Whiteboard</span>
+    <main className={`${shell.page} ${shell.narrow}`}>
+      <span className={shell.wordmark}>Whiteboard</span>
 
-      <h1 className="date">
-        <span>Two salons,</span>
-        <span className="month">one engine</span>
+      <h1 className={styles.headline}>
+        Two salons, <span className={styles.quiet}>one engine</span>
       </h1>
 
-      <p className="lede">
-        Booking software for independent service businesses. Both salons below run the same
-        code and the same database, and neither can see the other's day.
+      <p className={shell.lede}>
+        Booking software for independent service businesses. Both salons below run the same code
+        and the same database, and neither can see the other's day.
       </p>
 
-      <ul className="salons">
+      <ul className={styles.salons}>
         {DEMO_SALONS.map((salon) => (
           <li key={salon.slug}>
-            <Link to={`/${salon.slug}`}>
-              <span className="name">{salon.name}</span>
-              <span className="zone">{salon.zone}</span>
+            <Link className={styles.salon} to={`/${salon.slug}`}>
+              <span className={styles.name}>{salon.name}</span>
+              <span className={styles.zone}>{salon.zone}</span>
             </Link>
           </li>
         ))}
       </ul>
 
-      <p className="note">
-        They sit in different time zones on purpose. Opening hours are stored as local wall
-        clock times, so each salon's day is correct on the mornings the clocks change.
+      <p className={styles.note}>
+        They sit in different time zones on purpose. Opening hours are stored as local wall clock
+        times, so each salon's day is correct on the mornings the clocks change.
       </p>
     </main>
   );

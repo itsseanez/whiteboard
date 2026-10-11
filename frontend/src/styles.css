@@ -1,23 +1,80 @@
-/* The daybook.
+/* Tokens, reset, and base element styling. Nothing else.
  *
- * A stylist's appointment book is a column of times down a page, so that is
- * what this is: one narrow column, the date set large at the top, times below
- * it as hairline-separated rows. Not a grid of pills, not a deck of cards.
+ * Every component owns its own .module.css. This file holds only what cannot
+ * be scoped: the custom properties, the reset, and the defaults for bare
+ * elements. If a rule here names a component, it is in the wrong file.
  *
- * Boldness is spent in one place — the date. Everything else stays quiet.
+ * MONOCHROME MEANS NO HUE
+ *
+ * Every value below has equal red, green and blue channels. Not "nearly grey"
+ * — literally zero chroma. A monochrome palette with a 2% blue cast is just an
+ * undecided blue palette, and it shows up the moment the page sits next to
+ * anything genuinely neutral.
+ *
+ * Since there is no accent colour, value carries the whole hierarchy. That is
+ * a constraint worth naming: pure black is reserved for selection and focus,
+ * and only one thing on the page is black at a time. Everything else lives in
+ * the greys. Where a colour palette would signal "this is the chosen slot" with
+ * a hue, this one signals it by being the darkest thing in view.
  */
 
-:root {
-  --porcelain: #eef1ef;
-  --ink: #17292b;
-  --teal: #1f5a5e;
-  --brass: #b9842f;
-  --mute: #6c7f7f;
-  --line: #d3dad7;
+@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700&display=swap');
 
-  --page: 27rem;
-  --display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
-  --text: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+:root {
+  /* The ramp. Named by role, not by lightness, so a component never has to
+   * know which step it is using — and the dark-mode block below can swap the
+   * ends without any component changing. */
+  --paper: #ffffff;
+  --sunk: #f4f4f4;
+  --rule: #e4e4e4;
+  --rule-strong: #bdbdbd;
+  --muted: #8c8c8c;
+  --ink-soft: #5c5c5c;
+  --ink: #2b2b2b;
+  --black: #000000;
+
+  /* A day with times gets a tint. One step, not a scale — see the note in
+   * MonthGrid.module.css for why the density map was cut. */
+  --fill-open: #e9e9e9;
+
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.5rem;
+  --step-3: 2.25rem;
+  --step-4: 3.25rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2.5rem;
+  --space-7: 4rem;
+
+  /* Radius encodes interactivity: things you can press are rounded, grid
+   * structure is not. Applying one radius to everything is what makes a page
+   * read as a component kit rather than a design. */
+  --radius-press: 4px;
+
+  --measure: 34rem;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0d0d0d;
+    --sunk: #171717;
+    --rule: #262626;
+    --rule-strong: #3d3d3d;
+    --muted: #767676;
+    --ink-soft: #a3a3a3;
+    --ink: #e0e0e0;
+    --black: #ffffff;
+
+    --fill-open: #1c1c1c;
+  }
 }
 
 *,
@@ -26,460 +83,64 @@
   box-sizing: border-box;
 }
 
+* {
+  margin: 0;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
 }
 
 body {
-  margin: 0;
-  background: var(--porcelain);
+  background: var(--paper);
   color: var(--ink);
-  font-family: var(--text);
-  font-size: 1rem;
+  font-family: 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--step-0);
   line-height: 1.5;
-  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
 
-:focus-visible {
-  outline: 2px solid var(--brass);
-  outline-offset: 2px;
+h1,
+h2,
+h3 {
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
 }
 
 button {
-  font: inherit;
+  cursor: pointer;
+}
+
+a {
   color: inherit;
-  font-variant-numeric: inherit;
 }
 
-/* ------------------------------------------------------------------ shell */
-
-.page {
-  max-width: var(--page);
-  margin: 0 auto;
-  padding: 2.5rem 1rem 4rem;
-}
-
-.wordmark {
-  display: block;
-  margin: 0 0 2.25rem;
-  color: var(--teal);
-  font-family: var(--text);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-decoration: none;
-}
-
-.wordmark:hover {
-  color: var(--ink);
-}
-
-/* The one loud thing on the page. */
-.date {
-  margin: 0 0 1.75rem;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(2.5rem, 13vw, 3.5rem);
-  line-height: 0.95;
-  letter-spacing: -0.02em;
-}
-
-.date span {
-  display: block;
-}
-
-.date .month {
-  font-weight: 400;
-  color: var(--teal);
-}
-
-.lede {
-  margin: 0 0 2rem;
-  max-width: 32ch;
-  color: var(--mute);
-}
-
-/* -------------------------------------------------------------- day strip */
-
-.days {
-  display: flex;
-  gap: 0.375rem;
-  margin: 0 0 2rem;
-  padding-bottom: 0.5rem;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.days::-webkit-scrollbar {
-  display: none;
-}
-
-.day {
-  flex: 0 0 auto;
-  width: 3rem;
-  padding: 0.5rem 0 0.625rem;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: none;
-  color: var(--mute);
-  cursor: pointer;
-  text-align: center;
-  line-height: 1.25;
-}
-
-.day:hover {
-  color: var(--ink);
-}
-
-.day .dow {
-  display: block;
-  font-size: 0.6875rem;
-  font-weight: 500;
-}
-
-.day .dom {
-  display: block;
-  font-family: var(--display);
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.day[aria-pressed='true'] {
-  border-color: var(--ink);
-  color: var(--ink);
-}
-
-.day[data-shut='true'] .dom {
-  color: var(--line);
-}
-
-/* ---------------------------------------------------------------- choices */
-
-.field {
-  margin: 0 0 1.75rem;
-}
-
-.field > h2 {
-  margin: 0 0 0.625rem;
-  font-family: var(--text);
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-.choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-}
-
-.choice {
-  padding: 0.4375rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: none;
-  cursor: pointer;
-  font-size: 0.9375rem;
-}
-
-.choice:hover {
-  border-color: var(--mute);
-}
-
-.choice[aria-pressed='true'] {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--porcelain);
-}
-
-.choice .mins {
-  margin-left: 0.4375rem;
-  color: var(--mute);
-  font-size: 0.8125rem;
-}
-
-.choice[aria-pressed='true'] .mins {
-  color: var(--line);
-}
-
-/* ------------------------------------------------------------------ times */
-
-/* The daybook itself: a column of moments, ruled like a page. */
-.times {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--line);
-}
-
-.times li {
-  border-bottom: 1px solid var(--line);
-}
-
-.slot {
-  display: flex;
-  align-items: baseline;
-  gap: 0.875rem;
-  width: 100%;
-  padding: 0.8125rem 0.25rem;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  text-align: left;
-}
-
-.slot:hover {
-  background: #e4e9e6;
-}
-
-.slot .at {
-  font-family: var(--display);
-  font-size: 1.1875rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.slot .who {
-  color: var(--mute);
-  font-size: 0.875rem;
-}
-
-.slot[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--porcelain);
-}
-
-.slot[aria-pressed='true'] .who {
-  color: var(--line);
-}
-
-/* ------------------------------------------------------------------- form */
-
-.booking {
-  margin-top: 2rem;
-  padding-top: 1.75rem;
-  border-top: 2px solid var(--ink);
-}
-
-.booking h2 {
-  margin: 0 0 0.25rem;
-  font-family: var(--display);
-  font-size: 1.375rem;
-  font-weight: 600;
-}
-
-.booking .when {
-  margin: 0 0 1.5rem;
-  color: var(--teal);
-}
-
-label {
-  display: block;
-  margin-bottom: 1rem;
-}
-
-label > span {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-input {
-  width: 100%;
-  padding: 0.5625rem 0.6875rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: #fff;
-  color: var(--ink);
-  font: inherit;
-}
-
-input:hover {
-  border-color: var(--mute);
-}
-
-.optional {
-  color: var(--mute);
-  font-weight: 400;
-}
-
-/* ---------------------------------------------------------------- buttons */
-
-.go {
-  width: 100%;
-  margin-top: 0.5rem;
-  padding: 0.75rem 1rem;
-  border: 0;
-  border-radius: 4px;
-  background: var(--teal);
-  color: var(--porcelain);
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.go:hover {
-  background: var(--ink);
-}
-
-.go:disabled {
-  background: var(--mute);
-  cursor: default;
-}
-
-.quiet {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: none;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-.quiet:hover {
-  border-color: var(--ink);
-}
-
-.actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-
-.actions > * {
-  flex: 1;
-}
-
-.link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--teal);
-  cursor: pointer;
-  font-size: 0.9375rem;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-}
-
-.link:hover {
-  color: var(--ink);
-}
-
-/* --------------------------------------------------------------- messages */
-
-.note {
-  margin: 1.5rem 0 0;
-  padding: 0.8125rem 0.875rem;
-  border-left: 3px solid var(--brass);
-  background: #e7ebe8;
-  font-size: 0.9375rem;
-}
-
-.empty {
-  margin: 0;
-  padding: 2rem 0;
-  border-top: 1px solid var(--line);
-  color: var(--mute);
-}
-
-/* The single orchestrated moment: a confirmation answering an action. */
-.done {
-  padding-top: 1.75rem;
-  border-top: 2px solid var(--ink);
-  animation: rise 320ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(0.75rem);
-  }
+/* One focus treatment for the whole app, on :focus-visible only so a mouse
+ * press never draws a ring. Black, which in this palette is the loudest thing
+ * available — appropriate for the one state that must never be missed. */
+:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .done {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
-}
-
-.done h1 {
-  margin: 0 0 0.75rem;
-  font-family: var(--display);
-  font-size: clamp(1.75rem, 8vw, 2.25rem);
-  font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-}
-
-.done dl {
-  margin: 1.5rem 0 0;
-  border-top: 1px solid var(--line);
-}
-
-.done div {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.6875rem 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.done dt {
-  color: var(--mute);
-  font-size: 0.875rem;
-}
-
-.done dd {
-  margin: 0;
-  font-weight: 500;
-  text-align: right;
-}
-
-.done .manage {
-  margin: 1.5rem 0 0;
-  font-size: 0.875rem;
-  color: var(--mute);
-}
-
-.done .manage a {
-  color: var(--teal);
-  word-break: break-all;
-}
-
-/* ---------------------------------------------------------------- landing */
-
-.salons {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--line);
-}
-
-.salons li {
-  border-bottom: 1px solid var(--line);
-}
-
-.salons a {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 0.25rem;
-  color: inherit;
-  text-decoration: none;
-}
-
-.salons a:hover {
-  background: #e4e9e6;
-}
-
-.salons .name {
-  font-family: var(--display);
-  font-size: 1.1875rem;
-  font-weight: 600;
-}
-
-.salons .zone {
-  color: var(--mute);
-  font-size: 0.875rem;
 }

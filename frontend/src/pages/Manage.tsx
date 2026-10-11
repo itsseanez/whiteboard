@@ -43,6 +43,9 @@ import {
   weekdayShort,
 } from '../format';
 
+import shell from '../shell.module.css';
+import styles from './Manage.module.css';
+
 const WINDOW_DAYS = 14;
 
 function manageMessage(error: unknown): string {
@@ -174,19 +177,17 @@ export default function Manage() {
   }
 
   const header = (
-    <Link className="wordmark" to={`/${slug}`}>
+    <Link className={shell.wordmark} to={`/${slug}`}>
       {catalog?.tenant.name ?? 'Whiteboard'}
     </Link>
   );
 
   if (!token) {
     return (
-      <main className="page">
+      <main className={`${shell.page} ${shell.narrow}`}>
         {header}
-        <h1 className="date">
-          <span>No link</span>
-        </h1>
-        <p className="lede">
+        <h1 className={styles.headline}>No link</h1>
+        <p className={shell.lede}>
           This page needs the link from your confirmation. Open that link rather than typing
           this address.
         </p>
@@ -196,29 +197,29 @@ export default function Manage() {
 
   if (outcome) {
     return (
-      <main className="page">
+      <main className={`${shell.page} ${shell.narrow}`}>
         {header}
-        <div className="done">
+        <div className={styles.done}>
           {outcome.kind === 'cancelled' ? (
             <>
-              <h1>{outcome.already ? 'Already cancelled' : 'Cancelled'}</h1>
-              <p className="lede">
+              <h1 className={styles.doneTitle}>{outcome.already ? 'Already cancelled' : 'Cancelled'}</h1>
+              <p className={shell.lede}>
                 {outcome.already
                   ? 'This appointment was cancelled earlier. Nothing changed just now.'
                   : 'The time is free again. Book another whenever you like.'}
               </p>
-              <Link className="link" to={`/${slug}`}>
+              <Link className={styles.link} to={`/${slug}`}>
                 Book another appointment
               </Link>
             </>
           ) : (
             <>
-              <h1>Moved</h1>
-              <p className="lede">
+              <h1 className={styles.doneTitle}>Moved</h1>
+              <p className={shell.lede}>
                 {timeZone ? fullMoment(outcome.startsAt, timeZone) : outcome.startsAt}
                 {timeZone ? `, until ${timeOfDay(outcome.endsAt, timeZone)}` : ''}
               </p>
-              <p className="manage">
+              <p className={styles.keep}>
                 Your original link still works, so keep it if you need to change this again.
               </p>
             </>
@@ -230,9 +231,9 @@ export default function Manage() {
 
   if (!catalog || !timeZone) {
     return (
-      <main className="page">
+      <main className={`${shell.page} ${shell.narrow}`}>
         {header}
-        {problem && <p className="note">{problem}</p>}
+        {problem && <p className={styles.note}>{problem}</p>}
       </main>
     );
   }
@@ -241,39 +242,38 @@ export default function Manage() {
   const slots = today?.status === 'open' ? today.slots : [];
 
   return (
-    <main className="page">
+    <main className={`${shell.page} ${shell.narrow}`}>
       {header}
 
-      <h1 className="date">
-        <span>Your</span>
-        <span className="month">appointment</span>
+      <h1 className={styles.headline}>
+        Your <span className={styles.quietWord}>appointment</span>
       </h1>
 
-      <p className="lede">
+      <p className={shell.lede}>
         Move it to another time, or cancel it. Both take effect straight away.
       </p>
 
-      {problem && <p className="note">{problem}</p>}
+      {problem && <p className={styles.note}>{problem}</p>}
 
       {!moving ? (
-        <div className="actions">
-          <button className="go" type="button" onClick={() => setMoving(true)}>
+        <div className={styles.actions}>
+          <button className={styles.go} type="button" onClick={() => setMoving(true)}>
             Move it
           </button>
-          <button className="quiet" type="button" onClick={cancel} disabled={sending}>
+          <button className={styles.secondary} type="button" onClick={cancel} disabled={sending}>
             {sending ? 'Cancelling…' : 'Cancel it'}
           </button>
         </div>
       ) : (
         <>
-          <div className="days">
+          <div className={styles.days}>
             {dates.map((candidate) => {
               const day = availability?.days.find((d) => d.date === candidate);
               return (
                 <button
                   key={candidate}
                   type="button"
-                  className="day"
+                  className={styles.day}
                   aria-pressed={candidate === date}
                   data-shut={day?.status === 'closed'}
                   onClick={() => {
@@ -281,23 +281,23 @@ export default function Manage() {
                     setSlot(null);
                   }}
                 >
-                  <span className="dow">{weekdayShort(dateToIso(candidate), timeZone)}</span>
-                  <span className="dom">{dayOfMonth(dateToIso(candidate), timeZone)}</span>
+                  <span className={styles.dow}>{weekdayShort(dateToIso(candidate), timeZone)}</span>
+                  <span className={styles.dom}>{dayOfMonth(dateToIso(candidate), timeZone)}</span>
                 </button>
               );
             })}
           </div>
 
           {date && (
-            <p className="lede">
+            <p className={shell.lede}>
               {weekdayLong(dateToIso(date), timeZone)} {dayAndMonth(dateToIso(date), timeZone)}
             </p>
           )}
 
-          {availability === null && <p className="empty">Looking for free times…</p>}
+          {availability === null && <p className={styles.empty}>Looking for free times…</p>}
 
           {availability !== null && slots.length === 0 && (
-            <p className="empty">
+            <p className={styles.empty}>
               {today?.status === 'closed'
                 ? 'Closed on this day. Try another from the strip above.'
                 : 'Nothing free on this day. Try another from the strip above.'}
@@ -305,17 +305,17 @@ export default function Manage() {
           )}
 
           {slots.length > 0 && (
-            <ul className="times">
+            <ul className={styles.times}>
               {slots.map((candidate) => (
                 <li key={candidate.startsAt}>
                   <button
                     type="button"
-                    className="slot"
+                    className={styles.slot}
                     aria-pressed={candidate.startsAt === slot?.startsAt}
                     onClick={() => setSlot(candidate)}
                   >
-                    <span className="at">{timeOfDay(candidate.startsAt, timeZone)}</span>
-                    <span className="who">
+                    <span className={styles.at}>{timeOfDay(candidate.startsAt, timeZone)}</span>
+                    <span className={styles.until}>
                       until {timeOfDay(candidate.endsAt, timeZone)}
                     </span>
                   </button>
@@ -324,12 +324,12 @@ export default function Manage() {
             </ul>
           )}
 
-          <div className="actions">
-            <button className="go" type="button" onClick={move} disabled={!slot || sending}>
+          <div className={styles.actions}>
+            <button className={styles.go} type="button" onClick={move} disabled={!slot || sending}>
               {sending ? 'Moving…' : 'Move to this time'}
             </button>
             <button
-              className="quiet"
+              className={styles.secondary}
               type="button"
               onClick={() => {
                 setMoving(false);

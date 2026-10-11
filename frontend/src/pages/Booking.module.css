@@ -1,0 +1,222 @@
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.salon {
+  font-size: var(--step-3);
+}
+
+/* The zone, stated plainly. Every time on this page is the salon's local time,
+ * and a customer booking from another country has no way to know that unless
+ * the page says it. */
+.zone {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+@media (min-width: 40rem) {
+  .controls {
+    grid-template-columns: 2fr 2fr;
+  }
+}
+
+/* Period navigation and the view switch share a line: both answer "what am I
+ * looking at", and splitting them onto two rows implies they are unrelated. */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  margin-bottom: 0;
+}
+
+.period {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.periodLabel {
+  font-size: var(--step-1);
+  font-weight: 500;
+  min-width: 10.5rem;
+}
+
+.step {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.step:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.step:disabled {
+  color: var(--rule-strong);
+  border-color: var(--rule);
+  cursor: default;
+}
+
+/* A segmented control, built as one bordered group rather than three buttons,
+ * so the three views read as one choice. */
+.views {
+  display: flex;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  overflow: hidden;
+}
+
+.view {
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+  font-weight: 500;
+}
+
+.view + .view {
+  border-left: 1px solid var(--rule-strong);
+}
+
+.view:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.viewOn {
+  background: var(--black);
+  color: var(--paper);
+}
+
+.viewOn:hover {
+  background: var(--black);
+  color: var(--paper);
+}
+
+.calendar {
+  margin-bottom: var(--space-5);
+}
+
+.hint {
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+/* --- the booking form --------------------------------------------------- */
+
+/* Appears only once a time is chosen, and the chosen time is restated at the
+ * top of it. On a month-to-form flow the customer may have clicked the time
+ * several scrolls ago. */
+.form {
+  max-width: var(--measure);
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-5);
+}
+
+.chosen {
+  font-size: var(--step-2);
+  margin-bottom: var(--space-1);
+}
+
+.chosenMeta {
+  color: var(--ink-soft);
+  margin-bottom: var(--space-5);
+}
+
+.fields {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.input {
+  padding: var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  background: var(--paper);
+}
+
+.input:hover {
+  border-color: var(--ink-soft);
+}
+
+.submit {
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--black);
+  border-radius: var(--radius-press);
+  background: var(--black);
+  color: var(--paper);
+  font-weight: 500;
+}
+
+.submit:disabled {
+  background: var(--rule-strong);
+  border-color: var(--rule-strong);
+  color: var(--paper);
+  cursor: default;
+}
+
+/* A rule and a weight, not a red box. There is no red in this palette, and a
+ * problem does not need one to be noticed when it is the only thing on the
+ * page set against a black border. */
+.problem {
+  border-left: 2px solid var(--black);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+  background: var(--sunk);
+  font-size: var(--step--1);
+}
+
+/* --- confirmation ------------------------------------------------------- */
+
+.done {
+  max-width: var(--measure);
+}
+
+.doneTitle {
+  font-size: var(--step-3);
+  margin-bottom: var(--space-3);
+}
+
+.manage {
+  display: block;
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-press);
+  background: var(--sunk);
+  font-size: var(--step--1);
+  word-break: break-all;
+}

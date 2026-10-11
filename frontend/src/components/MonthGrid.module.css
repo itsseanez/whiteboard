@@ -1,0 +1,136 @@
+/* The month view.
+ *
+ * WHY THIS IS NOT A DENSITY MAP
+ *
+ * It was, briefly: four steps of grey keyed to how many times a day had, so
+ * the month read as a heat map you could scan for the darkest squares. Built
+ * it, rendered it against the seeded data, and every open day came out at
+ * exactly 23 slots — identical hours, one service, no bookings yet. The whole
+ * grid went one flat mid-grey and the encoding said nothing at all, while
+ * costing every cell its contrast.
+ *
+ * A real salon's days would differ, so the idea would eventually have worked.
+ * It still went, for a better reason than the demo data: choosing a day only
+ * needs "can I come in", and the exact count is already printed in the cell.
+ * Four greys for a second dimension nobody asked about is decoration.
+ *
+ * So: one tint for a day with times, nothing for a day without, and the count
+ * for precision. Fill is never the only signal — the count and the accessible
+ * name both carry it, because two greys are a fine distinction to rely on.
+ */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+}
+
+.heading {
+  padding: var(--space-2) var(--space-3);
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--step--1);
+  color: var(--muted);
+  background: var(--sunk);
+}
+
+/* No radius: this is structure, not a control. The cells that can be pressed
+ * are distinguished by the cursor and the hover ring, not by being rounded —
+ * rounding every cell would turn the grid into a tray of tiles. */
+.cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 4.5rem;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--fill-0);
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  transition: background 120ms ease;
+}
+
+.day {
+  font-size: var(--step-1);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.count {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+/* Outside the displayed month, or before today, or shut. All three are
+ * unpressable and all three look the same, because to a customer they are the
+ * same: nothing to pick here. */
+.inert {
+  background: var(--paper);
+  cursor: default;
+}
+
+.inert .day {
+  color: var(--rule-strong);
+}
+
+/* Left white rather than sunk. The sunk grey sat a shade away from the tint a
+ * bookable day carries, so "belongs to another month" and "you can book this"
+ * read as the same cell. The faint numeral is enough to say it is not yours. */
+.outside {
+  background: var(--paper);
+}
+
+.outside .day {
+  color: var(--rule-strong);
+}
+
+.open:hover {
+  background: var(--sunk);
+}
+
+.hasTimes {
+  background: var(--fill-open);
+}
+
+/* The selected day. Black border drawn inside the cell with an inset shadow
+ * rather than a border, so selecting a day cannot shift the grid by a pixel. */
+.selected {
+  box-shadow: inset 0 0 0 2px var(--black);
+}
+
+.selected .day {
+  font-weight: 700;
+}
+
+/* Today gets a mark rather than a fill, so it cannot be confused with the
+ * density scale that every other visual weight in this grid belongs to. */
+.today .day::after {
+  content: '';
+  display: block;
+  width: 1.25rem;
+  height: 2px;
+  margin-top: 2px;
+  background: var(--ink);
+}
+
+@media (max-width: 40rem) {
+  .cell {
+    min-height: 3.5rem;
+    padding: var(--space-1) var(--space-2);
+    gap: var(--space-1);
+  }
+
+  .day {
+    font-size: var(--step-0);
+  }
+
+  .heading {
+    padding: var(--space-1) var(--space-2);
+  }
+}

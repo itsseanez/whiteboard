@@ -1,0 +1,179 @@
+.headline {
+  font-size: var(--step-3);
+  margin-bottom: var(--space-3);
+}
+
+.quietWord {
+  color: var(--muted);
+}
+
+/* A problem gets a black rule and the sunk background, never a hue — there is
+ * no red in this palette, and against an otherwise all-grey page a single
+ * black-ruled block is already the loudest thing on screen. */
+.note {
+  border-left: 2px solid var(--black);
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-4) 0;
+  background: var(--sunk);
+  font-size: var(--step--1);
+  max-width: var(--measure);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.go {
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--black);
+  border-radius: var(--radius-press);
+  background: var(--black);
+  color: var(--paper);
+  font-weight: 500;
+}
+
+.go:disabled {
+  background: var(--rule-strong);
+  border-color: var(--rule-strong);
+  cursor: default;
+}
+
+/* Cancelling is destructive, so it is the quieter of the two buttons. A
+ * destructive action should be reachable without being the thing your eye
+ * lands on first. */
+.secondary {
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.days {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: var(--space-4) 0 var(--space-3);
+  scroll-snap-type: x proximity;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  width: 3.5rem;
+  padding: var(--space-2);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  background: var(--paper);
+  scroll-snap-align: start;
+  font-variant-numeric: tabular-nums;
+}
+
+.day[aria-pressed='true'] {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--paper);
+}
+
+.day[data-shut='true'] {
+  color: var(--rule-strong);
+  border-style: dashed;
+}
+
+.dow {
+  font-size: var(--step--1);
+  color: inherit;
+  opacity: 0.7;
+}
+
+.dom {
+  font-size: var(--step-1);
+  font-weight: 500;
+}
+
+.times {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: var(--space-4) 0 0;
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  background: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+
+.slot:hover {
+  border-color: var(--ink);
+}
+
+.slot[aria-pressed='true'] {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--paper);
+}
+
+.at {
+  font-size: var(--step-0);
+  font-weight: 500;
+}
+
+.until {
+  font-size: var(--step--1);
+  opacity: 0.7;
+}
+
+.empty {
+  padding: var(--space-4) 0;
+  color: var(--ink-soft);
+}
+
+.done {
+  max-width: var(--measure);
+}
+
+.doneTitle {
+  font-size: var(--step-3);
+  margin-bottom: var(--space-3);
+}
+
+.link {
+  display: inline-block;
+  margin-top: var(--space-4);
+  font-weight: 500;
+}
+
+.keep {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-press);
+  background: var(--sunk);
+  font-size: var(--step--1);
+}
+
+@media (min-width: 48rem) {
+  .headline {
+    font-size: var(--step-4);
+  }
+}

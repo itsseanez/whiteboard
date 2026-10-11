@@ -1,0 +1,64 @@
+.headline {
+  font-size: var(--step-3);
+  margin-bottom: var(--space-4);
+  max-width: 24ch;
+}
+
+/* The second line is set in the muted grey rather than bolded or italicised.
+ * Accenting one word of a headline is the commonest way a page announces that
+ * nobody chose anything; shifting the whole clause down a value step says the
+ * same thing and reads as deliberate. */
+.quiet {
+  color: var(--muted);
+}
+
+.salons {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-6) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.salons li {
+  border-bottom: 1px solid var(--rule);
+}
+
+.salon {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-1);
+  text-decoration: none;
+  transition: padding-left 120ms ease;
+}
+
+/* The row indents on hover instead of changing colour. In a palette with one
+ * ink, movement is the cheaper signal — and it points at the direction the
+ * click goes. */
+.salon:hover {
+  padding-left: var(--space-3);
+  background: var(--sunk);
+}
+
+.name {
+  font-size: var(--step-2);
+  font-weight: 500;
+}
+
+.zone {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.note {
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+  max-width: var(--measure);
+}
+
+@media (min-width: 48rem) {
+  .headline {
+    font-size: var(--step-4);
+  }
+}

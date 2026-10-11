@@ -1,0 +1,59 @@
+/* The page shell: the frame all three pages sit in.
+ *
+ * A module rather than global classes, because "shared by three pages" and
+ * "global" are different things. Importing it names the dependency, so
+ * deleting a page cannot leave an orphaned .page rule in a file nobody reads.
+ */
+
+.page {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) var(--space-7);
+}
+
+.narrow {
+  max-width: var(--measure);
+}
+
+/* The wordmark is set tight and small rather than large: on a booking page the
+ * customer is here to find a time, and the salon's own name is the heading
+ * that matters. The product name stays out of the way. */
+.wordmark {
+  display: inline-block;
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+  text-decoration: none;
+  margin-bottom: var(--space-6);
+}
+
+.wordmark:hover {
+  color: var(--ink);
+}
+
+.title {
+  font-size: var(--step-3);
+  margin-bottom: var(--space-2);
+}
+
+.lede {
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: var(--space-5) 0;
+}
+
+@media (min-width: 48rem) {
+  .page {
+    padding: var(--space-6) var(--space-5) var(--space-7);
+  }
+
+  .title {
+    font-size: var(--step-4);
+  }
+}

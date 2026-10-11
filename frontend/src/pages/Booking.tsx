@@ -1,19 +1,26 @@
-// The booking flow: pick a service, pick a day, pick a time, give a name.
+// The booking flow: pick a service and a stylist, pick a time, give a name.
 //
-// Two things worth knowing about how this talks to the API.
+// THREE VIEWS, ONE REQUEST SHAPE
 //
-// First, it asks for a 14-day window once per service rather than one day at a
-// time. The day strip then shows which days are actually open before the
-// customer clicks a shut one, and switching days costs no request. The
-// endpoint caps a range at 31 days, so 14 is well inside it.
+// Month, week and day are three densities over the same data, not three
+// different features. Each one computes the range it needs, asks the
+// availability endpoint once, and renders from a single Map keyed by date.
+// Switching view re-fetches; switching day inside a loaded range costs nothing.
 //
-// Second, `startsAt` goes back to the booking endpoint as the exact string the
-// availability response gave out. It is never parsed into a Date and
-// re-serialised. The engine offers instants; the booking endpoint matches on
-// the instant; a round trip through the browser's Date is a chance to lose
-// precision or shift a zone for no benefit.
+// THE 31-DAY CAP IS WHY MONTH VIEW IS NOT 42 DAYS
+//
+// The endpoint refuses an inclusive range over 31 days. A six-row month grid
+// spans 42, so the month view asks for the month's OWN days — at most 31, and
+// exactly 31 for October — and renders the borrowed leading and trailing cells
+// as inert. They belong to a month the customer has not navigated to, so
+// showing times in them would be wrong even if the range allowed it.
+//
+// `startsAt` goes back to the booking endpoint as the exact string availability
+// handed out. It is never parsed into a Date and re-serialised: the engine
+// offers instants, the endpoint matches on the instant, and a round trip
+// through the browser's Date is a chance to lose one for no benefit.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import {
@@ -24,31 +31,49 @@ import {
   type Availability,
   type Booked,
   type Catalog,
+  type Day,
   type Service,
   type Slot,
 } from '../api';
 import {
-  dateRange,
+  addMonths,
+  addDays,
+  rangeFor,
+  sameMonth,
+  startOfWeek,
+  weekDates,
+} from '../calendar';
+import {
   dateToIso,
   dayAndMonth,
-  dayOfMonth,
   duration,
   fullMoment,
+  salonDate,
   timeOfDay,
   weekdayLong,
-  weekdayShort,
 } from '../format';
+import MonthGrid from '../components/MonthGrid';
+import WeekGrid from '../components/WeekGrid';
+import DayTimes from '../components/DayTimes';
+import Select from '../components/Select';
+import shell from '../shell.module.css';
+import styles from './Booking.module.css';
 
-const WINDOW_DAYS = 14;
+type View = 'month' | 'week' | 'day';
+
+const VIEWS: readonly View[] = ['month', 'week', 'day'];
+
+/** Any stylist qualified for the service. The default, and not a real id. */
+const ANY_STAFF = '';
 
 /** A 409 means the world moved, and each cause needs its own sentence. */
 function bookingMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === 'slot_taken') {
-      return 'Someone else just took that time. The list below is up to date.';
+      return 'Someone else just took that time. The times shown are now up to date.';
     }
     if (error.code === 'slot_not_available') {
-      return 'That time is no longer free. Pick another from the list below.';
+      return 'That time is no longer free. Pick another.';
     }
     if (error.status === 400) {
       return 'Check the details above and try again.';
@@ -57,18 +82,34 @@ function bookingMessage(error: unknown): string {
   return 'Something went wrong booking that time. Try again in a moment.';
 }
 
+/** 'October 2026' — a pure calendar label, so no zone is involved. */
+function monthLabel(date: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    timeZone: 'UTC',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(`${date}T12:00:00Z`));
+}
+
+function weekLabel(anchor: string, timeZone: string): string {
+  const dates = weekDates(anchor);
+  const first = dates[0]!;
+  const last = dates[6]!;
+  return `${dayAndMonth(dateToIso(first), timeZone)} – ${dayAndMonth(dateToIso(last), timeZone)}`;
+}
+
 export default function Booking() {
   const { slug = '' } = useParams();
 
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  // Heading and detail, not just detail. A single string meant the error view
-  // was headed "Not found" for every failure — including a backend that is not
-  // running, which reads as "this salon does not exist" and sends you looking
-  // in the wrong place entirely.
   const [loadError, setLoadError] = useState<{ title: string; detail: string } | null>(null);
 
-  const [serviceId, setServiceId] = useState<string | null>(null);
-  const [staffId, setStaffId] = useState<string | null>(null);
+  const [serviceId, setServiceId] = useState<string>('');
+  const [staffId, setStaffId] = useState<string>(ANY_STAFF);
+
+  const [view, setView] = useState<View>('month');
+  /** Which period is on screen. A date, interpreted per view. */
+  const [anchor, setAnchor] = useState<string | null>(null);
   const [date, setDate] = useState<string | null>(null);
 
   const [availability, setAvailability] = useState<Availability | null>(null);
@@ -90,7 +131,7 @@ export default function Booking() {
       .then((loaded) => {
         if (!live) return;
         setCatalog(loaded);
-        setServiceId(loaded.services[0]?.id ?? null);
+        setServiceId(loaded.services[0]?.id ?? '');
       })
       .catch((error: unknown) => {
         if (!live) return;
@@ -111,31 +152,40 @@ export default function Booking() {
   const timeZone = catalog?.tenant.timeZone;
   const service: Service | undefined = catalog?.services.find((s) => s.id === serviceId);
 
-  // The days the strip offers. Computed in the salon's zone, so "today" is the
-  // salon's today — a customer in Kennesaw at 20:00 is looking at tomorrow in
-  // Vienna, and the strip has to say so.
-  const dates = useMemo(
-    () => (timeZone ? dateRange(timeZone, WINDOW_DAYS) : []),
-    [timeZone],
+  /** Today in the SALON's zone — a customer in Kennesaw at 20:00 is already on
+   * tomorrow in Vienna, and every view has to agree about which day that is. */
+  const today = useMemo(() => (timeZone ? salonDate(new Date(), timeZone) : null), [timeZone]);
+
+  useEffect(() => {
+    if (today && !anchor) {
+      setAnchor(today);
+      setDate(today);
+    }
+  }, [today, anchor]);
+
+  // A stylist who cannot do the newly chosen service must not stay selected —
+  // the availability query would return nothing and the page would look broken.
+  useEffect(() => {
+    if (staffId !== ANY_STAFF && service && !service.staff.some((s) => s.id === staffId)) {
+      setStaffId(ANY_STAFF);
+    }
+  }, [service, staffId]);
+
+  // --- availability for the visible period --------------------------------
+
+  const range = useMemo(
+    () => (anchor && today ? rangeFor(view, anchor, today) : null),
+    [view, anchor, today],
   );
 
   useEffect(() => {
-    if (!date && dates[0]) setDate(dates[0]);
-  }, [dates, date]);
-
-  // --- availability for the whole window ----------------------------------
-
-  const from = dates[0];
-  const through = dates[dates.length - 1];
-
-  useEffect(() => {
-    if (!serviceId || !from || !through) return;
+    if (!serviceId || !range) return;
     let live = true;
 
     setAvailability(null);
     setSlot(null);
 
-    getAvailability(slug, serviceId, from, through, staffId ?? undefined)
+    getAvailability(slug, serviceId, range.from, range.through, staffId || undefined)
       .then((loaded) => {
         if (live) setAvailability(loaded);
       })
@@ -146,17 +196,51 @@ export default function Booking() {
     return () => {
       live = false;
     };
-  }, [slug, serviceId, staffId, from, through]);
+  }, [slug, serviceId, staffId, range]);
 
-  const dayFor = useCallback(
-    (wanted: string) => availability?.days.find((d) => d.date === wanted),
-    [availability],
+  /** Keyed by date, so every view looks a day up the same way. */
+  const days = useMemo(() => {
+    const map = new Map<string, Day>();
+    for (const day of availability?.days ?? []) map.set(day.date, day);
+    return map;
+  }, [availability]);
+
+  // --- period navigation ---------------------------------------------------
+
+  function step(direction: -1 | 1) {
+    if (!anchor) return;
+    const next =
+      view === 'month'
+        ? addMonths(anchor, direction)
+        : addDays(anchor, direction * (view === 'week' ? 7 : 1));
+    setAnchor(next);
+    // Keep the chosen day inside the period on screen, so the day view and the
+    // heading never disagree about which date they are describing.
+    if (view === 'day') setDate(next);
+    else if (view === 'week') setDate(startOfWeek(next));
+    else if (date && !sameMonth(date, next)) setDate(next);
+  }
+
+  /** Stepping back is pointless once the period already contains today. */
+  const canStepBack = Boolean(
+    anchor &&
+      today &&
+      (view === 'month'
+        ? !sameMonth(anchor, today)
+        : view === 'week'
+          ? startOfWeek(anchor) > startOfWeek(today)
+          : anchor > today),
   );
 
-  const today = date ? dayFor(date) : undefined;
-  const slots = today?.status === 'open' ? today.slots : [];
+  const periodLabel = !anchor || !timeZone
+    ? ''
+    : view === 'month'
+      ? monthLabel(anchor)
+      : view === 'week'
+        ? weekLabel(anchor, timeZone)
+        : `${weekdayLong(dateToIso(anchor), timeZone)} ${dayAndMonth(dateToIso(anchor), timeZone)}`;
 
-  // --- booking ------------------------------------------------------------
+  // --- booking -------------------------------------------------------------
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -182,9 +266,9 @@ export default function Booking() {
       setBooked(result);
     } catch (error: unknown) {
       setProblem(bookingMessage(error));
-      // Refresh, so the list the customer looks at next is the current one.
-      if (serviceId && from && through) {
-        getAvailability(slug, serviceId, from, through, staffId ?? undefined)
+      // Refresh, so the times the customer looks at next are the current ones.
+      if (range) {
+        getAvailability(slug, serviceId, range.from, range.through, staffId || undefined)
           .then(setAvailability)
           .catch(() => undefined);
       }
@@ -194,248 +278,240 @@ export default function Booking() {
     }
   }
 
-  // --- rendering ----------------------------------------------------------
+  // --- rendering -----------------------------------------------------------
 
   if (loadError) {
     return (
-      <main className="page">
-        <Link className="wordmark" to="/">
+      <main className={`${shell.page} ${shell.narrow}`}>
+        <Link className={shell.wordmark} to="/">
           Whiteboard
         </Link>
-        <h1 className="date">
-          <span>{loadError.title}</span>
-        </h1>
-        <p className="lede">{loadError.detail}</p>
+        <h1 className={shell.title}>{loadError.title}</h1>
+        <p className={shell.lede}>{loadError.detail}</p>
       </main>
     );
   }
 
-  if (!catalog || !timeZone) {
+  if (!catalog || !timeZone || !today || !anchor) {
     return (
-      <main className="page">
-        <span className="wordmark">Whiteboard</span>
+      <main className={`${shell.page} ${shell.narrow}`}>
+        <span className={shell.wordmark}>Whiteboard</span>
+        <p className={shell.lede}>Loading…</p>
       </main>
     );
   }
 
   if (booked) {
-    const manageUrl = `${window.location.origin}/${slug}/manage?token=${encodeURIComponent(booked.manageToken)}`;
+    const manageUrl = `${window.location.origin}/${slug}/manage?token=${encodeURIComponent(
+      booked.manageToken,
+    )}`;
     return (
-      <main className="page">
-        <Link className="wordmark" to="/">
-          {catalog.tenant.name}
+      <main className={`${shell.page} ${shell.narrow}`}>
+        <Link className={shell.wordmark} to="/">
+          Whiteboard
         </Link>
-        <div className="done">
-          <h1>You're booked</h1>
-          <dl>
-            <div>
-              <dt>Service</dt>
-              <dd>{service?.name}</dd>
-            </div>
-            <div>
-              <dt>When</dt>
-              <dd>{fullMoment(booked.startsAt, timeZone)}</dd>
-            </div>
-            <div>
-              <dt>Ends</dt>
-              <dd>{timeOfDay(booked.endsAt, timeZone)}</dd>
-            </div>
-            <div>
-              <dt>With</dt>
-              <dd>{service?.staff.find((m) => m.id === booked.staffId)?.name}</dd>
-            </div>
-          </dl>
-          <p className="manage">
-            To change or cancel this appointment, keep this link — it is the only copy:
-            <br />
-            <a href={manageUrl}>{manageUrl}</a>
+        <div className={styles.done}>
+          <h1 className={styles.doneTitle}>You're booked</h1>
+          <p className={shell.lede}>
+            {fullMoment(booked.startsAt, timeZone)} at {catalog.tenant.name}, {timeZone}.
           </p>
+          <p className={shell.lede}>
+            Keep this link. It is the only way to change or cancel this appointment, and it is not
+            shown again.
+          </p>
+          <a className={styles.manage} href={manageUrl}>
+            {manageUrl}
+          </a>
         </div>
       </main>
     );
   }
 
-  const headingDate = date ?? from ?? '';
+  const chosenDay = date ? days.get(date) : undefined;
 
   return (
-    <main className="page">
-      <Link className="wordmark" to="/">
-        {catalog.tenant.name}
+    <main className={shell.page}>
+      <Link className={shell.wordmark} to="/">
+        Whiteboard
       </Link>
 
-      <h1 className="date">
-        <span>{headingDate ? weekdayLong(dateToIso(headingDate), timeZone) : ''}</span>
-        <span className="month">
-          {headingDate ? dayAndMonth(dateToIso(headingDate), timeZone) : ''}
-        </span>
-      </h1>
-
-      <div className="days">
-        {dates.map((candidate) => {
-          const day = dayFor(candidate);
-          return (
-            <button
-              key={candidate}
-              type="button"
-              className="day"
-              aria-pressed={candidate === date}
-              data-shut={day?.status === 'closed'}
-              onClick={() => {
-                setDate(candidate);
-                setSlot(null);
-              }}
-            >
-              <span className="dow">{weekdayShort(dateToIso(candidate), timeZone)}</span>
-              <span className="dom">{dayOfMonth(dateToIso(candidate), timeZone)}</span>
-            </button>
-          );
-        })}
+      <div className={styles.head}>
+        <h1 className={styles.salon}>{catalog.tenant.name}</h1>
+        <span className={styles.zone}>All times {timeZone}</span>
       </div>
 
-      {catalog.services.length > 1 && (
-        <div className="field">
-          <h2>Service</h2>
-          <div className="choices">
-            {catalog.services.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className="choice"
-                aria-pressed={option.id === serviceId}
-                onClick={() => {
-                  setServiceId(option.id);
-                  setStaffId(null);
-                  setSlot(null);
-                }}
-              >
-                {option.name}
-                <span className="mins">{duration(option.durationMinutes)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className={styles.controls}>
+        <Select
+          label="Service"
+          value={serviceId}
+          onChange={setServiceId}
+          options={catalog.services.map((s) => ({
+            value: s.id,
+            label: `${s.name} · ${duration(s.durationMinutes)}`,
+          }))}
+        />
+        <Select
+          label="Stylist"
+          value={staffId}
+          disabled={!service || service.staff.length === 0}
+          onChange={setStaffId}
+          options={[
+            { value: ANY_STAFF, label: 'Any stylist' },
+            ...(service?.staff ?? []).map((s) => ({ value: s.id, label: s.name })),
+          ]}
+        />
+      </div>
 
-      {service && service.staff.length > 1 && (
-        <div className="field">
-          <h2>Stylist</h2>
-          <div className="choices">
+      <div className={styles.bar}>
+        <div className={styles.period}>
+          <button
+            type="button"
+            className={styles.step}
+            onClick={() => step(-1)}
+            disabled={!canStepBack}
+            aria-label="Previous"
+          >
+            <svg width="7" height="12" viewBox="0 0 7 12" aria-hidden="true">
+              <path d="M6 1L1 6l5 5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className={styles.step}
+            onClick={() => step(1)}
+            aria-label="Next"
+          >
+            <svg width="7" height="12" viewBox="0 0 7 12" aria-hidden="true">
+              <path d="M1 1l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </button>
+          <span className={styles.periodLabel}>{periodLabel}</span>
+        </div>
+
+        <div className={styles.views} role="group" aria-label="Calendar view">
+          {VIEWS.map((option) => (
             <button
+              key={option}
               type="button"
-              className="choice"
-              aria-pressed={staffId === null}
+              className={`${styles.view} ${view === option ? styles.viewOn : ''}`}
+              aria-pressed={view === option}
               onClick={() => {
-                setStaffId(null);
-                setSlot(null);
+                setView(option);
+                // Anchor on the chosen day so switching view keeps the
+                // customer where they were rather than jumping to today.
+                if (date) setAnchor(date);
               }}
             >
-              Anyone
+              {option[0]!.toUpperCase() + option.slice(1)}
             </button>
-            {service.staff.map((member) => (
-              <button
-                key={member.id}
-                type="button"
-                className="choice"
-                aria-pressed={member.id === staffId}
-                onClick={() => {
-                  setStaffId(member.id);
-                  setSlot(null);
-                }}
-              >
-                {member.name}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
-      )}
+      </div>
 
-      {service && service.staff.length === 0 && (
-        <p className="note">
-          Nobody is set up to perform {service.name} yet, so there is nothing to book.
+      <div className={styles.calendar}>
+        {availability?.noQualifiedStaff ? (
+          <p className={shell.lede}>Nobody is set up for this service yet.</p>
+        ) : view === 'month' ? (
+          <MonthGrid
+            anchor={anchor}
+            today={today}
+            selected={date}
+            days={days}
+            onPick={(picked) => {
+              setDate(picked);
+              setAnchor(picked);
+              setView('day');
+            }}
+          />
+        ) : view === 'week' ? (
+          <WeekGrid
+            anchor={anchor}
+            today={today}
+            timeZone={timeZone}
+            days={days}
+            selected={slot}
+            onPick={(picked, chosen) => {
+              setDate(picked);
+              setSlot(chosen);
+            }}
+          />
+        ) : (
+          // No heading here: the period label above already names the day, and
+          // repeating it is the sort of duplication that only shows up once you
+          // look at the rendered page.
+          <DayTimes day={chosenDay} timeZone={timeZone} selected={slot} onPick={setSlot} />
+        )}
+      </div>
+
+      {!slot ? (
+        <p className={styles.hint}>
+          {view === 'month'
+            ? 'Pick a day with times to see them.'
+            : 'Pick a time to book it.'}
         </p>
-      )}
+      ) : null}
 
-      {availability === null && <p className="empty">Looking for free times…</p>}
-
-      {availability !== null && slots.length === 0 && (
-        <p className="empty">
-          {today?.status === 'closed'
-            ? 'Closed on this day. Try another from the strip above.'
-            : 'Nothing free on this day. Try another from the strip above.'}
-        </p>
-      )}
-
-      {slots.length > 0 && (
-        <ul className="times">
-          {slots.map((candidate) => {
-            const who = service?.staff.filter((m) => candidate.staffIds.includes(m.id)) ?? [];
-            return (
-              <li key={candidate.startsAt}>
-                <button
-                  type="button"
-                  className="slot"
-                  aria-pressed={candidate.startsAt === slot?.startsAt}
-                  onClick={() => setSlot(candidate)}
-                >
-                  <span className="at">{timeOfDay(candidate.startsAt, timeZone)}</span>
-                  <span className="who">{who.map((m) => m.name).join(', ')}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {problem && <p className="note">{problem}</p>}
-
-      {slot && (
-        <form className="booking" onSubmit={submit}>
-          <h2>{timeOfDay(slot.startsAt, timeZone)}</h2>
-          <p className="when">
-            {service?.name}, until {timeOfDay(slot.endsAt, timeZone)}
+      {slot && service ? (
+        <form className={styles.form} onSubmit={submit}>
+          <p className={styles.chosen}>{timeOfDay(slot.startsAt, timeZone)}</p>
+          <p className={styles.chosenMeta}>
+            {weekdayLong(slot.startsAt, timeZone)} {dayAndMonth(slot.startsAt, timeZone)} ·{' '}
+            {service.name}, {duration(service.durationMinutes)}
           </p>
 
-          <label>
-            <span>Your name</span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              maxLength={200}
-              autoComplete="name"
-            />
-          </label>
+          {problem ? <p className={styles.problem}>{problem}</p> : null}
 
-          <label>
-            <span>Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              maxLength={320}
-              autoComplete="email"
-            />
-          </label>
+          <div className={styles.fields}>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="name">
+                Your name
+              </label>
+              <input
+                id="name"
+                className={styles.input}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                maxLength={200}
+                autoComplete="name"
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                className={styles.input}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                maxLength={320}
+                autoComplete="email"
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="phone">
+                Phone, if you want a reminder
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                className={styles.input}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                maxLength={40}
+                autoComplete="tel"
+              />
+            </div>
+          </div>
 
-          <label>
-            <span>
-              Phone <span className="optional">optional</span>
-            </span>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              maxLength={40}
-              autoComplete="tel"
-            />
-          </label>
-
-          <button className="go" type="submit" disabled={sending}>
+          <button className={styles.submit} type="submit" disabled={sending}>
             {sending ? 'Booking…' : 'Book this time'}
           </button>
         </form>
-      )}
+      ) : null}
     </main>
   );
 }

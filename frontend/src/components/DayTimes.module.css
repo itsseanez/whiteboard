@@ -1,0 +1,46 @@
+/* The day view: every time for one date, in a wrapping grid.
+ *
+ * auto-fill rather than a fixed column count, so the same component is a
+ * single column on a phone and eight across on a desktop without a media
+ * query deciding where the breaks go. Times are a fixed width, so the grid
+ * can be told the width and left to work out the count.
+ */
+
+.times {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
+  gap: var(--space-2);
+}
+
+.slot {
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  background: var(--paper);
+  font-size: var(--step-0);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.slot:hover {
+  border-color: var(--ink);
+}
+
+.slotOn {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--paper);
+}
+
+.slotOn:hover {
+  border-color: var(--black);
+}
+
+.empty {
+  padding: var(--space-5) 0;
+  color: var(--ink-soft);
+}

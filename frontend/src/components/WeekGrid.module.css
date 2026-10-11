@@ -1,0 +1,118 @@
+/* The week view: seven columns, each a column of times.
+ *
+ * This is the view that actually answers "when can I come in", because it shows
+ * times rather than counts. The month view is for choosing roughly when; this
+ * one is for choosing exactly when.
+ */
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  min-width: 0;
+}
+
+.head {
+  padding: var(--space-2) var(--space-3);
+  background: var(--sunk);
+  border-bottom: 1px solid var(--rule);
+}
+
+.weekday {
+  display: block;
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.date {
+  display: block;
+  font-size: var(--step-1);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.headToday .date {
+  font-weight: 700;
+}
+
+.headToday {
+  box-shadow: inset 0 2px 0 0 var(--ink);
+}
+
+/* Capped and scrollable rather than letting one busy day stretch the whole
+ * row. Without the cap, a day with forty slots sets the height of all seven
+ * columns and the week stops fitting on a screen. */
+.times {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-2);
+  overflow-y: auto;
+  /* A floor as well as a ceiling. Without the floor, a week whose days are all
+   * past or closed renders as a single line of dashes and reads as a broken
+   * grid rather than an empty one. */
+  min-height: 9rem;
+  max-height: 24rem;
+}
+
+.slot {
+  padding: var(--space-2) var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-press);
+  background: var(--sunk);
+  color: var(--ink);
+  font-size: var(--step--1);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.slot:hover {
+  background: var(--rule);
+}
+
+/* The chosen time is the darkest thing on the page. In a palette with no
+ * accent, that inversion is the strongest signal available, which is why it is
+ * spent on the one state the customer must not misread. */
+.slotOn {
+  background: var(--black);
+  color: var(--paper);
+}
+
+.slotOn:hover {
+  background: var(--black);
+}
+
+.shut {
+  padding: var(--space-3);
+  min-height: 9rem;
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+@media (max-width: 52rem) {
+  /* Seven columns of times do not fit a phone. Scroll the week sideways with
+   * snap points rather than reflowing it into something that is no longer a
+   * week — the day view already exists for one day at a time. */
+  .week {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: 8.5rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  .column {
+    scroll-snap-align: start;
+  }
+}
