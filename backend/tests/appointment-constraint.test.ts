@@ -1,3 +1,5 @@
+// backend/tests/appointment-constraint.test.ts
+//
 // Proof that the exclusion constraints — not the application's availability
 // check — are what make concurrent booking safe.
 //
@@ -18,6 +20,7 @@
 
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { Pool, type PoolClient } from 'pg';
+import { randomBytes } from 'node:crypto';
 
 const owner = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -71,9 +74,10 @@ async function insertAppointment(
   const { rows } = await client.query<{ id: string }>(
     `INSERT INTO appointment (
        tenant_id, staff_id, service_id, resource_id, customer_id,
-       starts_at, ends_at, blocked_starts_at, blocked_ends_at, status
+       starts_at, ends_at, blocked_starts_at, blocked_ends_at, status,
+       manage_token_hash
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $7, $8)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $7, $8, $9)
      RETURNING id`,
     [
       TENANT,
@@ -84,6 +88,12 @@ async function insertAppointment(
       minutesFromBase(options.startMinutes),
       minutesFromBase(options.startMinutes + duration),
       options.status ?? 'BOOKED',
+      // Not a real token's hash — just 64 hex characters, which is all the
+      // column's CHECK requires. Nothing here manages an appointment by token;
+      // these tests drive the constraint directly. The column is NOT NULL with
+      // no DEFAULT on purpose, so every insert path has to supply one rather
+      // than silently receiving a token nobody will ever hold.
+      randomBytes(32).toString('hex'),
     ],
   );
   return rows[0]!.id;
@@ -270,5 +280,100 @@ describe('appointment exclusion constraints', () => {
     await expect(
       insertAppointment(owner, { startMinutes: 0, status: 'PENCILLED_IN' }),
     ).rejects.toMatchObject({ code: '23514' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reschedule moves an existing row rather than inserting a new one, so the
+// guarantees proved above have to be re-proved for UPDATE. They are not
+// obviously the same: an INSERT compares a brand-new row against the index,
+// while an UPDATE compares a row against an index that still contains its own
+// previous version.
+//
+// Everything in services/manage-booking.ts rests on these two facts, so they
+// are asserted rather than assumed.
+// ---------------------------------------------------------------------------
+
+/** Moves an appointment's whole blocked range, as a reschedule does. */
+async function moveAppointment(
+  client: PoolClient | Pool,
+  id: string,
+  startMinutes: number,
+  durationMinutes = 60,
+): Promise<number> {
+  const { rowCount } = await client.query(
+    `UPDATE appointment
+     SET starts_at = $2, ends_at = $3, blocked_starts_at = $2, blocked_ends_at = $3
+     WHERE id = $1`,
+    [id, minutesFromBase(startMinutes), minutesFromBase(startMinutes + durationMinutes)],
+  );
+  return rowCount ?? 0;
+}
+
+describe('the exclusion constraints under UPDATE', () => {
+  it('lets a row move onto a range overlapping its own previous position', async () => {
+    // The fact the reschedule availability exclusion exists to match. If this
+    // were rejected, moving an appointment by 15 minutes would be impossible at
+    // the database level and reschedule would need a delete-then-insert.
+    const id = await insertAppointment(owner, { startMinutes: 0, durationMinutes: 60 });
+
+    // 0-60 becomes 30-90: a 30-minute overlap with where it just was.
+    await expect(moveAppointment(owner, id, 30)).resolves.toBe(1);
+
+    const { rows } = await owner.query<{ n: string }>(
+      `SELECT count(*) AS n FROM appointment WHERE starts_at >= $1`,
+      [BASE],
+    );
+    expect(rows[0]!.n).toBe('1');
+  });
+
+  it('still refuses a move onto another appointment', async () => {
+    const mine = await insertAppointment(owner, { startMinutes: 0, durationMinutes: 60 });
+    await insertAppointment(owner, { startMinutes: 240, durationMinutes: 60 });
+
+    await expect(moveAppointment(owner, mine, 270)).rejects.toMatchObject({ code: '23P01' });
+  });
+
+  it('blocks a second transaction until the first commits, then rejects it', async () => {
+    // The concurrency gate, for reschedule. Two customers moving two different
+    // appointments onto the same free slot at the same moment.
+    const a = await owner.connect();
+    const b = await owner.connect();
+
+    const first = await insertAppointment(owner, { startMinutes: 0, durationMinutes: 60 });
+    const second = await insertAppointment(owner, { startMinutes: 480, durationMinutes: 60 });
+
+    try {
+      await a.query('BEGIN');
+      await b.query('BEGIN');
+
+      // A moves its appointment into the 240-300 window.
+      await moveAppointment(a, first, 240);
+
+      // B tries to move its own into 270-330, overlapping A's new — and still
+      // uncommitted, therefore invisible — position.
+      const blocked = moveAppointment(b, second, 270);
+      const swallow = blocked.catch(() => undefined);
+
+      expect(await settledWithin(swallow, 400)).toBe('pending');
+
+      await a.query('COMMIT');
+
+      await expect(blocked).rejects.toMatchObject({ code: '23P01' });
+      await b.query('ROLLBACK');
+    } finally {
+      await finish(a);
+      await finish(b);
+    }
+
+    // A moved; B did not.
+    const { rows } = await owner.query<{ startsAt: Date }>(
+      `SELECT starts_at AS "startsAt" FROM appointment WHERE id = ANY($1::uuid[]) ORDER BY starts_at`,
+      [[first, second]],
+    );
+    expect(rows.map((r) => r.startsAt.toISOString())).toEqual([
+      new Date(minutesFromBase(240)).toISOString(),
+      new Date(minutesFromBase(480)).toISOString(),
+    ]);
   });
 });

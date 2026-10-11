@@ -1,3 +1,5 @@
+// src/services/booking.ts
+//
 // The write half of the booking flow. Two steps that are deliberately NOT one
 // transaction, and the reason is the whole design:
 //
@@ -22,13 +24,14 @@
 import type { Pool, PoolClient } from 'pg';
 import { withContext } from '../withContext.js';
 import { getAvailability, ServiceNotFoundError } from './availability.js';
+import { issueManageToken } from './manage-token.js';
 import type { Slot } from '../availability/types.js';
 
 /** The requested time is not among the offered slots — never was, or no longer is. */
-export class SlotNotOfferedError extends Error { }
+export class SlotNotOfferedError extends Error {}
 
 /** The slot was offered and lost a race. SQLSTATE 23P01 from the constraint. */
-export class SlotTakenError extends Error { }
+export class SlotTakenError extends Error {}
 
 export interface BookingRequest {
   tenantId: string;
@@ -47,6 +50,12 @@ export interface BookedAppointment {
   staffId: string;
   startsAt: Temporal.Instant;
   endsAt: Temporal.Instant;
+  /**
+   * The plaintext manage token, returned here and nowhere else ever again.
+   * Only the hash is stored, so if the caller loses this the appointment can no
+   * longer be managed from a link — which is the intended property.
+   */
+  manageToken: string;
 }
 
 interface ServiceBuffers {
@@ -108,8 +117,33 @@ async function upsertCustomer(
   return row.id;
 }
 
-/** Step 1. Throws SlotNotOfferedError unless this exact start is on offer. */
-async function requireOfferedSlot(pool: Pool, request: BookingRequest): Promise<Slot> {
+/**
+ * What requireOfferedSlot needs. Narrower than BookingRequest — no customer —
+ * so reschedule can reuse it without inventing customer data it is not
+ * changing. BookingRequest satisfies it structurally.
+ */
+export interface SlotRequest {
+  tenantId: string;
+  timeZone: string;
+  serviceId: string;
+  staffId: string;
+  startsAt: Temporal.Instant;
+  now: Date;
+}
+
+/**
+ * Step 1. Throws SlotNotOfferedError unless this exact start is on offer.
+ *
+ * `excludeAppointmentId` is the appointment being rescheduled, or null for a
+ * new booking. See the note in services/availability.ts — without it, a
+ * reschedule cannot move an appointment to any time overlapping where it
+ * already sits, because its own row reports itself busy.
+ */
+export async function requireOfferedSlot(
+  pool: Pool,
+  request: SlotRequest,
+  excludeAppointmentId: string | null,
+): Promise<Slot> {
   const date = request.startsAt.toZonedDateTimeISO(request.timeZone).toPlainDate().toString();
 
   const availability = await getAvailability(pool, {
@@ -122,6 +156,7 @@ async function requireOfferedSlot(pool: Pool, request: BookingRequest): Promise<
     fromDate: date,
     throughDate: date,
     now: request.now,
+    excludeAppointmentId,
   });
 
   const day = availability.days[0];
@@ -140,7 +175,8 @@ export async function createBooking(
   pool: Pool,
   request: BookingRequest,
 ): Promise<BookedAppointment> {
-  const slot = await requireOfferedSlot(pool, request);
+  // null: a new booking has no appointment of its own to disregard.
+  const slot = await requireOfferedSlot(pool, request, null);
 
   // Which resource, when the service needs one. The engine already excluded any
   // that are occupied, so the first free one is as good as any — picking the
@@ -158,13 +194,19 @@ export async function createBooking(
 
     const customerId = await upsertCustomer(client, request.tenantId, request.customer);
 
+    // Issued inside the transaction's scope so that a lost race discards it
+    // along with the row. A token that was returned but never stored would be
+    // worse than none: the customer would hold a link that 404s.
+    const manage = issueManageToken();
+
     try {
       const { rows } = await client.query<{ id: string }>(
         `INSERT INTO appointment (
            tenant_id, staff_id, service_id, resource_id, customer_id,
-           starts_at, ends_at, blocked_starts_at, blocked_ends_at
+           starts_at, ends_at, blocked_starts_at, blocked_ends_at,
+           manage_token_hash
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING id`,
         [
           request.tenantId,
@@ -176,6 +218,7 @@ export async function createBooking(
           new Date(slot.endsAt.epochMilliseconds),
           new Date(blockedStartsAt.epochMilliseconds),
           new Date(blockedEndsAt.epochMilliseconds),
+          manage.hash,
         ],
       );
       const row = rows[0];
@@ -186,6 +229,7 @@ export async function createBooking(
         staffId: request.staffId,
         startsAt: slot.startsAt,
         endsAt: slot.endsAt,
+        manageToken: manage.token,
       };
     } catch (error) {
       // The race was lost. withContext rolls the transaction back, so the

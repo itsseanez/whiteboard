@@ -1,3 +1,5 @@
+// src/controllers/booking.ts
+//
 // POST /:slug/appointments — the public booking write path.
 //
 // Status codes, and why each:
@@ -135,6 +137,10 @@ export async function postPublicBooking(req: Request, res: Response): Promise<vo
       staffId: booked.staffId,
       startsAt: booked.startsAt.toString(),
       endsAt: booked.endsAt.toString(),
+      // The only time this is ever emitted. It goes into the confirmation
+      // email's cancel and reschedule links; the database holds only its hash,
+      // so it cannot be re-issued or looked up later.
+      manageToken: booked.manageToken,
     });
   } catch (error) {
     if (error instanceof ServiceNotFoundError) {
