@@ -7,7 +7,7 @@
 Computed availability across staff and room constraints · timezone-correct through DST · race-free reservation
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178C6.svg)](https://www.typescriptlang.org/)
 [![Node](https://img.shields.io/badge/Node-26-5FA04E.svg)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791.svg)](https://www.postgresql.org/)
 
@@ -52,6 +52,7 @@ flowchart LR
   C --> E[Booking service]
   D --> F[(PostgreSQL)]
   E --> F
+  E --> D
   E --> G[Notification worker]
 ```
 
@@ -135,7 +136,7 @@ Rationale for each of these is in [`DECISIONS.md`](DECISIONS.md); the database r
 In active development since August 2026.
 
 - [x] Tenancy, authentication, roles, core model, deployed
-- [ ] Availability engine
+- [x] Availability engine
 - [ ] Booking flow, public page, concurrency
 - [ ] Calendars, reschedule, cancel, notifications, audit trail
 - [ ] Hardening, API docs, demo tenants

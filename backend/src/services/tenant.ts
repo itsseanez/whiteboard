@@ -1,16 +1,30 @@
 import { publicPool, appPool } from '../db.js';
 import { withContext } from '../withContext.js';
 
+export interface Tenant {
+  id: string;
+  slug: string;
+  timezone: string; // IANA id, e.g. "Europe/Vienna"
+}
+
+export interface TenantWithOrg extends Tenant {
+  betterAuthOrgId: string;
+}
+
+export interface Membership {
+  role: string;
+}
+
 export async function getTenantBySlug(
   slug: string,
   includeOrgId: true,
   userId: string
-): Promise<{ id: string; slug: string; timezone: string; betterAuthOrgId: string } | null>;
+): Promise<TenantWithOrg | null>;
 
 export async function getTenantBySlug(
   slug: string,
   includeOrgId?: false
-): Promise<{ id: string; slug: string; timezone: string } | null>;
+): Promise<Tenant | null>;
 
 export async function getTenantBySlug(
   slug: string,

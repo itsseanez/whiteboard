@@ -25,7 +25,7 @@ The database role model is in [`docs/database-roles.md`](docs/database-roles.md)
 
 ## Architecture
 
-- **Availability is computed, never stored.** Bookable times are derived per request by intersecting business hours, staff working hours, approved time off, existing appointments plus buffers, and resource conflicts. No pre-generated slot rows.
+- **Availability is computed, never stored.** Bookable times are derived per request by intersecting business hours, staff working hours, approved time off, existing appointments plus buffers, and resource conflicts. No pre-generated slot rows. See [`docs/availability.md`](docs/availability.md) for the algorithm.
 - **Invariants live in the database, not application code.** Booking races are prevented by a Postgres exclusion constraint on `(staff_id =, during &&)` via `btree_gist`, so the check and the write are one atomic operation. Check-then-insert has a race window; this does not.
 - **Tenant isolation is enforced below the query layer**, by row-level security with a session variable — not by a `WHERE tenant_id = ?` a developer can forget. A test proves cross-tenant reads fail.
 - **One database role per access path, none of them the owner.** `whiteboard_app`, `whiteboard_signup`, `whiteboard_public`, `whiteboard_auth` — each scoped to what it needs, none bypassing RLS. Better Auth originally ran on an inline pool as the owner role, which meant password hashes and session validation bypassed RLS on every table in the database; it now has its own role scoped to seven tables and no domain access. See [`docs/database-roles.md`](docs/database-roles.md).
@@ -38,25 +38,16 @@ The database role model is in [`docs/database-roles.md`](docs/database-roles.md)
 
 **In:** tenant provisioning · staff, service, and resource management · working hours and time off · availability engine · public booking page per tenant · book, cancel, reschedule · staff and owner calendars · email notifications · appointment audit trail · REST API with webhooks.
 
-**Out:** payments and deposits · recurring series · group bookings · waitlists · calendar sync · SMS · packages and loyalty · custom intake forms · reporting dashboards · walk-in queues · product retail · mobile apps · custom domains · label customization.
+**Out unless done with core:** payments and deposits · recurring series · group bookings · waitlists · calendar sync · SMS · packages and loyalty · custom intake forms · reporting dashboards · walk-in queues · product retail · mobile apps · custom domains · label customization.
 
 Several of those are how a commercial version would make money. None of them matter if availability is wrong.
 
 **Parked until the core is done:** intelligent gap-filling — cancelled slots offered to waiting customers first-come-first-served, and slot scoring that prefers times packing the day tightly over ones stranding unusable gaps. Cheap on top of the existing engine, and it's the receptionist judgment the project's thesis is built on.
 
-## Open — availability engine
-
-Not yet settled. Each constrains everything built on top, so they get decided before the first interval function:
-
-- **Where the computation lives.** All-SQL with range types and `range_agg`, all-TypeScript, or SQL fetching raw constraints with TypeScript doing the interval math. The definition of done requires explaining why a given slot did *not* appear, which argues for a pure function taking constraints as arguments and doing no I/O.
-- **Time library.** `date-fns-tz` or Temporal.
-- **Slot granularity.** Fixed grid, service-length steps, or anchored to existing appointments. This determines whether the parked gap-filling feature is a scoring problem or a structural one — a 15-minute grid creates the stranded gaps it would later be scoring against.
-- **Buffer interaction.** Whether adjacent services' after- and before-buffers add or overlap. The answer is baked into the stored range, so it can't stay implicit.
-
 ## Phases
 
 | Phase | Gate |
-|---|---|
+| --- | --- |
 | Tenancy, auth, roles, core model, **deployed** | Two tenants live at a URL; a test proves neither can read the other |
 | Availability engine | Correct slots from hours, time off, buffers, bookings, and resources — including across a DST boundary |
 | Booking flow, public page, concurrency | Two simultaneous requests for one slot; exactly one wins |
@@ -64,8 +55,6 @@ Not yet settled. Each constrains everything built on top, so they get decided be
 | Hardening: seed data, API docs, demo tenants | A stranger books an appointment from the URL with no instructions |
 
 **Deployed in phase one, not at the end.** An empty app was live at a real address over TLS, with an automated pipeline, before it did anything interesting.
-
-**If behind:** cut resources (staff-only booking, no rooms). Never cut timezone correctness or the concurrency test.
 
 ## Definition of done
 
