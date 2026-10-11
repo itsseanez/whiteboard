@@ -61,7 +61,11 @@ export default function Booking() {
   const { slug = '' } = useParams();
 
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // Heading and detail, not just detail. A single string meant the error view
+  // was headed "Not found" for every failure — including a backend that is not
+  // running, which reads as "this salon does not exist" and sends you looking
+  // in the wrong place entirely.
+  const [loadError, setLoadError] = useState<{ title: string; detail: string } | null>(null);
 
   const [serviceId, setServiceId] = useState<string | null>(null);
   const [staffId, setStaffId] = useState<string | null>(null);
@@ -92,8 +96,11 @@ export default function Booking() {
         if (!live) return;
         setLoadError(
           error instanceof ApiError && error.status === 404
-            ? 'No salon at this address.'
-            : 'Could not load this salon. Try again in a moment.',
+            ? { title: 'Not found', detail: 'No salon at this address.' }
+            : {
+                title: "Can't reach the salon",
+                detail: 'Something went wrong loading this page. Try again in a moment.',
+              },
         );
       });
     return () => {
@@ -196,9 +203,9 @@ export default function Booking() {
           Whiteboard
         </Link>
         <h1 className="date">
-          <span>Not found</span>
+          <span>{loadError.title}</span>
         </h1>
-        <p className="lede">{loadError}</p>
+        <p className="lede">{loadError.detail}</p>
       </main>
     );
   }

@@ -16,10 +16,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '^/[^/]+/(services|availability|appointments)(/.*)?$': 'http://localhost:3000',
+      '^/[^/]+/(services|availability|appointments)(/|\\?|$)': 'http://localhost:3000',
     },
   },
-
+ 
   build: {
     // Express serves this directory. Matches the COPY in backend/Dockerfile.
     outDir: 'dist',
