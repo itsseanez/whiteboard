@@ -34,20 +34,84 @@ export function dayOfMonth(iso: string, timeZone: string): string {
 }
 
 /**
- * '09:15'.
+ * Does the viewer's own locale write 9:00 AM or 09:00?
  *
- * hourCycle is pinned to h23 rather than left to the locale. A column of times
- * is being scanned, not read, and '1:00 PM' sorts and aligns worse than
- * '13:00' when forty of them sit in a row. The date formats above stay
- * locale-sensitive; only this one is fixed, and on purpose.
+ * Asked of Intl rather than decided from a list. resolvedOptions() reports
+ * the hour cycle the locale resolved to, but ONLY when an hour field was
+ * requested — ask without `hour` and it comes back undefined, which is the
+ * trap that makes this look broken.
+ *
+ * It also honours an explicit preference carried on the locale, so a viewer
+ * whose browser reports en-US-u-hc-h23 gets 24-hour even in the States.
+ *
+ * h11 and h12 are both twelve-hour (they differ only in whether midnight is
+ * 0 or 12); h23 and h24 are both twenty-four.
+ */
+function viewerUsesTwelveHour(): boolean {
+  const cycle = new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions().hourCycle;
+  return cycle === 'h12' || cycle === 'h11';
+}
+
+/**
+ * '09:15', or '9:15 AM' for a viewer whose locale writes clocks that way.
+ *
+ * THE ZONE AND THE NOTATION ARE DIFFERENT QUESTIONS
+ *
+ * Which MOMENT to show is the salon's business: the instant is always
+ * rendered in the salon's zone, so a customer in Kennesaw sees the time they
+ * will be standing in the doorway in Vienna. That never follows the viewer.
+ *
+ * How to WRITE that moment is the viewer's business, and follows their
+ * locale. The two are independent, and conflating them is what made an
+ * earlier version key notation off the salon's country.
+ *
+ * It also makes this file consistent with itself. weekdayLong and dayAndMonth
+ * already format in the viewer's locale — an American reads 'October 16' and
+ * a Brit '16 October' — so pinning only the clock was the odd one out.
+ *
+ * Accepted cost: the same slot is written two ways to two people, so a
+ * screenshot is not evidence of what anyone else sees, and anything asserting
+ * on these strings has to pin a locale.
  */
 export function timeOfDay(iso: string, timeZone: string): string {
+  const twelve = viewerUsesTwelveHour();
   return new Intl.DateTimeFormat(undefined, {
     timeZone,
-    hour: '2-digit',
+    // 'numeric' under a twelve-hour cycle, because hour:'2-digit' renders
+    // '09:00 AM' and nobody writes that. '2-digit' under twenty-four, because
+    // a column of times is scanned rather than read and '09:00' aligns with
+    // '19:00'.
+    hour: twelve ? 'numeric' : '2-digit',
     minute: '2-digit',
-    hourCycle: 'h23',
   }).format(new Date(iso));
+}
+
+/**
+ * The same time, padded so a column of them lines up.
+ *
+ * The chips in the week and day views are already identical boxes — measured
+ * at 150px each. What jitters is the text in them: '9:00 AM' is 53px wide and
+ * '10:00 AM' is 62px, so centring shifts the single-digit hours four pixels
+ * right and the colons wander down the column.
+ *
+ * U+2007 FIGURE SPACE is a space defined to be exactly as wide as a digit.
+ * Prefixing one to a single-digit hour makes every time in the column the
+ * same width, and with font-variant-numeric: tabular-nums the colons and
+ * minutes then sit on an exact vertical line.
+ *
+ * Padding rather than hour:'2-digit' because '09:00 AM' is not how anyone
+ * writes it; this gets the alignment without the leading zero.
+ *
+ * Only single-digit hours match, so 24-hour output ('09:15', always two
+ * digits) passes through untouched, as does any locale whose shape this
+ * does not recognise.
+ *
+ * Not used by fullMoment: that is prose, where a leading gap after the comma
+ * would be a flaw rather than an alignment.
+ */
+export function timeOfDayAligned(iso: string, timeZone: string): string {
+  const text = timeOfDay(iso, timeZone);
+  return /^\d:/.test(text) ? `\u2007${text}` : text;
 }
 
 /** 'Thursday 16 October, 09:15' — for a confirmation, where context matters. */

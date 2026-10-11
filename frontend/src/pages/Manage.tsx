@@ -39,6 +39,7 @@ import {
   dayOfMonth,
   fullMoment,
   timeOfDay,
+  timeOfDayAligned,
   weekdayLong,
   weekdayShort,
 } from '../format';
@@ -314,7 +315,7 @@ export default function Manage() {
                     aria-pressed={candidate.startsAt === slot?.startsAt}
                     onClick={() => setSlot(candidate)}
                   >
-                    <span className={styles.at}>{timeOfDay(candidate.startsAt, timeZone)}</span>
+                    <span className={styles.at}>{timeOfDayAligned(candidate.startsAt, timeZone)}</span>
                     <span className={styles.until}>
                       until {timeOfDay(candidate.endsAt, timeZone)}
                     </span>

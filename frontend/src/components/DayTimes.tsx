@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import type { Day, Slot } from '../api';
-import { timeOfDay } from '../format';
+import { timeOfDay, timeOfDayAligned } from '../format';
 import styles from './DayTimes.module.css';
 
 interface Props {
@@ -31,9 +31,10 @@ export default function DayTimes({ day, timeZone, selected, onPick }: Props): Re
           type="button"
           className={`${styles.slot} ${selected?.startsAt === slot.startsAt ? styles.slotOn : ''}`}
           aria-pressed={selected?.startsAt === slot.startsAt}
+          aria-label={timeOfDay(slot.startsAt, timeZone)}
           onClick={() => onPick(slot)}
         >
-          {timeOfDay(slot.startsAt, timeZone)}
+          {timeOfDayAligned(slot.startsAt, timeZone)}
         </button>
       ))}
     </div>

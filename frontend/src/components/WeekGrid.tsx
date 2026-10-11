@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import type { Day, Slot } from '../api';
 import { weekDates } from '../calendar';
-import { dateToIso, timeOfDay, weekdayShort } from '../format';
+import { dateToIso, timeOfDay, timeOfDayAligned, weekdayShort } from '../format';
 import styles from './WeekGrid.module.css';
 
 interface Props {
@@ -47,13 +47,16 @@ export default function WeekGrid({
                   <button
                     key={slot.startsAt}
                     type="button"
-                    className={`${styles.slot} ${
-                      selected?.startsAt === slot.startsAt ? styles.slotOn : ''
-                    }`}
+                    className={`${styles.slot} ${selected?.startsAt === slot.startsAt ? styles.slotOn : ''
+                      }`}
                     aria-pressed={selected?.startsAt === slot.startsAt}
+                    // The visible label carries a figure space for alignment;
+                    // the accessible name is the plain time, so nothing has to
+                    // decide how to announce a padding character.
+                    aria-label={timeOfDay(slot.startsAt, timeZone)}
                     onClick={() => onPick(date, slot)}
                   >
-                    {timeOfDay(slot.startsAt, timeZone)}
+                    {timeOfDayAligned(slot.startsAt, timeZone)}
                   </button>
                 ))}
               </div>
