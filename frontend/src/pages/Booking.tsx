@@ -139,9 +139,9 @@ export default function Booking() {
           error instanceof ApiError && error.status === 404
             ? { title: 'Not found', detail: 'No salon at this address.' }
             : {
-                title: "Can't reach the salon",
-                detail: 'Something went wrong loading this page. Try again in a moment.',
-              },
+              title: "Can't reach the salon",
+              detail: 'Something went wrong loading this page. Try again in a moment.',
+            },
         );
       });
     return () => {
@@ -224,12 +224,12 @@ export default function Booking() {
   /** Stepping back is pointless once the period already contains today. */
   const canStepBack = Boolean(
     anchor &&
-      today &&
-      (view === 'month'
-        ? !sameMonth(anchor, today)
-        : view === 'week'
-          ? startOfWeek(anchor) > startOfWeek(today)
-          : anchor > today),
+    today &&
+    (view === 'month'
+      ? !sameMonth(anchor, today)
+      : view === 'week'
+        ? startOfWeek(anchor) > startOfWeek(today)
+        : anchor > today),
   );
 
   const periodLabel = !anchor || !timeZone
@@ -351,12 +351,12 @@ export default function Booking() {
           }))}
         />
         <Select
-          label="Stylist"
+          label="Preferred staff"
           value={staffId}
           disabled={!service || service.staff.length === 0}
           onChange={setStaffId}
           options={[
-            { value: ANY_STAFF, label: 'Any stylist' },
+            { value: ANY_STAFF, label: 'Any' },
             ...(service?.staff ?? []).map((s) => ({ value: s.id, label: s.name })),
           ]}
         />
