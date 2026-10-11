@@ -297,8 +297,36 @@ is not already resolved. Silent, not an error.
 
 ## Known gaps / not yet granted
 
-- `whiteboard_public` will need read access to `staff`, `service`, and
-  `resource` (for the public availability view), and insert access on
-  `appointment` (for public booking) — planned for weeks 3–8 per the
-  project timeline, not granted yet.
+- **`whiteboard_public` can write any status, not just `CANCELLED`.**
+  Cancel needs `UPDATE (status)` on `appointment`, and column privileges are
+  all-or-nothing per column, so the grant also permits `COMPLETED` and
+  `NO_SHOW`. The `appointment_status_check` keeps the set closed and the
+  application only ever parameterizes the literal `'CANCELLED'`, so nothing
+  reachable through the API can do otherwise. It adds no practical reach for
+  an attacker either — all three statuses free the slot identically, so the
+  ability to write one is the ability to achieve the only effect that matters.
+  The real fix is a `WITH CHECK` on the public role's RLS policy restricting
+  the status it may write. Not done, because the current policies have no
+  `WITH CHECK` at all and adding one needs its own pass over every write path.
+
+- **`appointment.service_id` is now readable by `whiteboard_public`.**
+  Withheld originally; reschedule needs it to re-run availability against the
+  right service, and it cannot be taken from the request without letting a
+  caller validate against the wrong duration and opening rules.
+  `appointment.customer_id` stays withheld, so the correlation between a
+  person and a visit — the part worth protecting — is still closed.
+
+- **The manage-token lookup requires `SELECT (manage_token_hash)`.**
+  Postgres needs `SELECT` on every column named in a `WHERE` clause, so the
+  public role can read this column. It holds sha256 digests of 32 random
+  bytes, never plaintext tokens, which is specifically why the grant is
+  uninteresting. The tighter alternative — a `SECURITY DEFINER` function
+  doing the lookup, with no `SELECT` on the column at all — was not taken
+  because such a function bypasses RLS and would have to re-apply the tenant
+  filter itself. Worth doing deliberately; not worth doing incidentally.
+
 - `invitation` has no RLS policy and no route using it.
+
+> The **Current grants** section above predates the availability, booking and
+> manage-token migrations and no longer lists everything `whiteboard_public`
+> holds. `\dp appointment` in psql is the authority until it is rewritten.

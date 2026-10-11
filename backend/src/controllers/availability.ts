@@ -28,7 +28,11 @@ function oneString(value: unknown): string | undefined {
 }
 
 type Parsed =
-  | { ok: true; value: Omit<AvailabilityQuery, 'now'> }
+  // Both omitted fields are supplied by the handler, not parsed from the
+  // request: `now` is the single clock read, and excludeAppointmentId is always
+  // null here because a browsing customer has no appointment of their own in
+  // play. Neither is a client-settable input.
+  | { ok: true; value: Omit<AvailabilityQuery, 'now' | 'excludeAppointmentId'> }
   | { ok: false; status: 400; error: string };
 
 function parseRequest(req: Request): Parsed {
@@ -147,7 +151,13 @@ export async function getPublicAvailability(req: Request, res: Response): Promis
   }
 
   // The one clock read in the whole availability path.
-  const query: AvailabilityQuery = { ...parsed.value, now: new Date() };
+  // excludeAppointmentId is null here: a browsing customer is asking what is
+  // free, with no appointment of their own in play.
+  const query: AvailabilityQuery = {
+    ...parsed.value,
+    now: new Date(),
+    excludeAppointmentId: null,
+  };
 
   try {
     const result = await getAvailability(publicPool, query);
