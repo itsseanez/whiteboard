@@ -162,9 +162,23 @@ async function fetchAppointments(
   resourceIds: string[],
   windowStart: Date,
   windowEnd: Date,
+  excludeAppointmentId: string | null,
 ): Promise<AppointmentRow[]> {
   // An appointment matters if it occupies a candidate staff member OR a linked
-  // resource. customer_id and service_id are deliberately not selected.
+  // resource. customer_id is deliberately not selected.
+  //
+  // excludeAppointmentId exists for reschedule, and it is not an optimisation.
+  // A reschedule asks "where could this appointment go", and the appointment's
+  // own current booking is in this table. Left in, it reports itself as busy:
+  // moving a 14:00 appointment to 14:15 would be refused because 14:00–15:00 is
+  // occupied — by the very row being moved. Every time overlapping its own
+  // current position becomes unofferable, which is most of the times a customer
+  // nudging their appointment would actually pick.
+  //
+  // The database has no such problem. An exclusion constraint compares a row
+  // against OTHER rows, so an UPDATE moving a row onto its own old range is
+  // accepted (verified). This exclusion exists to make the engine agree with
+  // the constraint, not to relax it.
   const { rows } = await client.query<AppointmentRow>(
     `SELECT id,
             staff_id    AS "staffId",
@@ -175,8 +189,9 @@ async function fetchAppointments(
      WHERE status = 'BOOKED'
        AND starts_at < $4
        AND ends_at   > $3
-       AND (staff_id = ANY($1::uuid[]) OR resource_id = ANY($2::uuid[]))`,
-    [staffIds, resourceIds, windowStart, windowEnd],
+       AND (staff_id = ANY($1::uuid[]) OR resource_id = ANY($2::uuid[]))
+       AND ($5::uuid IS NULL OR id <> $5)`,
+    [staffIds, resourceIds, windowStart, windowEnd, excludeAppointmentId],
   );
   return rows;
 }
@@ -193,6 +208,18 @@ export interface AvailabilityQuery {
   fromDate: string; // salon calendar date, "2026-10-25"
   throughDate: string;
   now: Date;
+  /**
+   * One appointment to treat as if it did not exist. Reschedule passes the
+   * appointment being moved; everything else passes null.
+   *
+   * Required rather than optional on purpose. `exactOptionalPropertyTypes` is
+   * on, so an optional property cannot be set to an explicit undefined and
+   * every call site would need two shapes. More importantly, forgetting it
+   * would silently mean "exclude nothing", and the one caller that needs it is
+   * the one where that is wrong. Making it explicit forces each caller to say
+   * which it means.
+   */
+  excludeAppointmentId: string | null;
 }
 
 export async function fetchAvailabilityRows(
@@ -227,6 +254,7 @@ export async function fetchAvailabilityRows(
       resourceIds,
       windowStart,
       windowEnd,
+      query.excludeAppointmentId,
     );
 
     return { service, staffIds, resourceIds, businessHours, staffHours, timeOff, appointments };
