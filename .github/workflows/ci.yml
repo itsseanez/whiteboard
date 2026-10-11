@@ -42,6 +42,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The migration-ordering check below needs the commit this change is
+          # built on, which a shallow clone does not have.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -53,9 +57,53 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Migrate
+      # Reproduces the one database state CI otherwise never sees: one that
+      # already has the previous commit's migrations recorded, with this
+      # change's new files arriving on top.
+      #
+      # A fresh database applies every migration in filename order and can
+      # therefore never hit node-pg-migrate's ordering check, which refuses a
+      # not-yet-run migration that sorts before an already-run one. Production
+      # is the only database that has a recorded history, so until now it was
+      # the only place that check could fire — which is exactly how the
+      # 11 October deploy failed on a commit CI had already passed.
+      #
+      # Two stages against the same database, so the second stage faces the
+      # bookkeeping the first one wrote.
+      - name: Migrate (previous state, then this change on top)
         working-directory: backend
-        run: npm run migrate:test up
+        env:
+          # On a pull request, the branch point. On a push, the commit the
+          # branch was at before — which is what production was deployed from.
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # A first push, a force-push, or a new branch leaves no usable base.
+          # Fall back to a single pass rather than failing the build: no base
+          # means there is no ordering to check.
+          if [ -z "${BASE_SHA:-}" ] \
+             || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            echo "No reachable base commit. Applying this change's migrations only."
+            npm run migrate:test up
+            exit 0
+          fi
+
+          echo "::group::Stage 1 — migrations as of $BASE_SHA"
+          # rm first, so a migration DELETED by this change is actually absent
+          # in stage 1 rather than left behind by a checkout that only writes.
+          rm -rf migrations
+          git checkout "$BASE_SHA" -- migrations
+          npm run migrate:test up
+          echo "::endgroup::"
+
+          echo "::group::Stage 2 — this change's migrations on top"
+          rm -rf migrations
+          git checkout "$HEAD_SHA" -- migrations
+          npm run migrate:test up
+          echo "::endgroup::"
 
       - name: Seed
         working-directory: backend
