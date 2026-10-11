@@ -14,8 +14,8 @@ export function createApp(): Express {
   app.use('/tenant/:slug', apiRouter);
   app.use('/me', meRouter);
   app.use('/:slug', publicRouter);
-  
-  app.get('/', (req: Request, res: Response) => {
+
+  app.get('/', (_req: Request, res: Response) => {
     res.send('Hello World!');
   });
 
