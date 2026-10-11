@@ -51,11 +51,22 @@ jobs:
         with:
           node-version: '26'
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
       - name: Install
         working-directory: backend
         run: npm ci
+
+      # Before the database work, because it needs nothing from it and a type
+      # error here should fail in seconds rather than after the suite. It also
+      # has to fail here rather than in the image build: the frontend is
+      # compiled into the same image as the API, so a broken client means no
+      # deployable image at all.
+      - name: Build client
+        working-directory: frontend
+        run: npm ci && npm run build
 
       # Reproduces the one database state CI otherwise never sees: one that
       # already has the previous commit's migrations recorded, with this
@@ -138,7 +149,11 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          # The repository root, not ./backend: the image now carries the built
+          # frontend too, so the Dockerfile needs both directories in context.
+          # /.dockerignore is what keeps that from meaning the whole repo.
+          context: .
+          file: ./backend/Dockerfile
           push: true
           tags: |
             ghcr.io/itsseanez/whiteboard-backend:${{ github.sha }}

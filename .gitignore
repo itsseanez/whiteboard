@@ -3,6 +3,8 @@ node_modules/
 
 # Build output
 dist/
+# The frontend build, copied into the API image by the Dockerfile.
+backend/client/
 
 # Environment variables / secrets
 **/.env

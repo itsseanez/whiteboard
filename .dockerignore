@@ -1,0 +1,35 @@
+# The build context is now the repository root, so the ignore file that
+# matters is this one — backend/.dockerignore is only consulted when the
+# context is backend/, which it no longer is.
+#
+# Keeping node_modules out is not just about context size: both build stages
+# run `npm ci`, and a host node_modules copied in would be the wrong
+# architecture (this repo is developed on arm64 and the image runs on x86_64).
+
+.git
+.github
+
+node_modules
+**/node_modules
+
+dist
+**/dist
+
+.env
+.env.*
+**/.env
+**/.env.*
+
+*.log
+coverage
+**/coverage
+
+# Not needed to build or run the image.
+docs
+db-init
+Caddyfile
+compose.yml
+compose.prod.yml
+DECISIONS.md
+README.md
+LICENSE
