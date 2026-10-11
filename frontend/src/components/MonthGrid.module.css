@@ -50,10 +50,17 @@
   border: 0;
   border-right: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
-  background: var(--fill-0);
+  background: var(--paper);
   text-align: left;
   font-variant-numeric: tabular-nums;
   transition: background 120ms ease;
+
+  /* The cell is a query container, so the slot label below sizes itself
+   * against the room it actually has rather than against the viewport. The
+   * grid is seven columns of whatever the page is wide, and a media query
+   * would be guessing at that division — this measures it. It also keeps
+   * working if the calendar is ever put in a narrower column. */
+  container-type: inline-size;
 }
 
 .day {
@@ -62,9 +69,41 @@
   color: var(--ink);
 }
 
+/* "23" → "23 slots" → "23 available slots", by how wide the cell is.
+ *
+ * The words are hidden rather than swapped, so the number never re-renders and
+ * nothing shifts as the breakpoint passes. display:none also takes the hidden
+ * words out of the accessibility tree, which matters: the button's aria-label
+ * already says "23 times free", and a screen reader reading the visible label
+ * as well would announce the count twice.
+ *
+ * The thresholds are measured, not guessed. A container query resolves
+ * against the container's CONTENT box, so the cell's 1.5rem of horizontal
+ * padding comes off before the comparison: at the page's 76rem maximum the
+ * cell is 10.4rem wide but queries as 8.92rem. Rendered at that size the three
+ * labels measure 1.25rem, 3.69rem and 8.25rem, so the breakpoints sit just
+ * above the second and third with a little room to spare. */
 .count {
   font-size: var(--step--1);
   color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.unit,
+.qualifier {
+  display: none;
+}
+
+@container (min-width: 4.25rem) {
+  .unit {
+    display: inline;
+  }
+}
+
+@container (min-width: 8.5rem) {
+  .qualifier {
+    display: inline;
+  }
 }
 
 /* Outside the displayed month, or before today, or shut. All three are

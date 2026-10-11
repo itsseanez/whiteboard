@@ -62,13 +62,27 @@ export default function MonthGrid({
             aria-pressed={cell.date === selected}
             // The accessible name carries what the fill encodes visually, so
             // the density map is not information only a sighted user gets.
-            aria-label={`${cell.date}${
-              pressable ? `, ${slots} ${slots === 1 ? 'time' : 'times'} free` : ', nothing free'
-            }`}
+            aria-label={`${cell.date}${pressable ? `, ${slots} ${slots === 1 ? 'time' : 'times'} free` : ', nothing free'
+              }`}
             onClick={() => onPick(cell.date)}
           >
             <span className={styles.day}>{number}</span>
-            {pressable ? <span className={styles.count}>{slots}</span> : null}
+            {pressable ? (
+              // Nested rather than three alternative strings, so the number
+              // appears once in the DOM and the words reveal around it:
+              // "23" → "23 slots" → "23 available slots". Three sibling spans
+              // would put the count in the markup three times and leave the
+              // word order impossible to get right by appending.
+              <span className={styles.count}>
+                {slots}
+                <span className={styles.unit}>
+                  {' '}
+                  {slots === 1 ? 'slot' : 'slots'}
+
+                  <span className={styles.qualifier}> available </span>
+                </span>
+              </span>
+            ) : null}
           </button>
         );
       })}
