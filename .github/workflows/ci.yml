@@ -68,6 +68,13 @@ jobs:
         working-directory: frontend
         run: npm ci && npm run build
 
+      # Separate from the build so a failure names itself in the job list
+      # rather than hiding inside "Build client". These need no database,
+      # which is why they run here rather than beside the backend suite.
+      - name: Test client
+        working-directory: frontend
+        run: npm test
+
       # Reproduces the one database state CI otherwise never sees: one that
       # already has the previous commit's migrations recorded, with this
       # change's new files arriving on top.

@@ -112,7 +112,15 @@ export function monthGrid(anchor: string): GridCell[] {
   const stop = addDays(startOfWeek(last), 7);
   while (cursor < stop) {
     cells.push({ date: cursor, inMonth: sameMonth(cursor, first) });
-    cursor = addDays(cursor, 1);
+    const next = addDays(cursor, 1);
+    // addDays always advances, for the UTC arithmetic above. The guard is
+    // here because the failure mode if it ever stops advancing — someone
+    // "simplifying" this to local Dates, where a midnight that does not
+    // exist can land back on the same date — is this loop spinning the
+    // browser's main thread forever. A frozen tab is a far worse bug than a
+    // wrong grid, and much harder to recognise.
+    if (next <= cursor) throw new Error(`calendar: addDays did not advance from ${cursor}`);
+    cursor = next;
   }
   return cells;
 }
