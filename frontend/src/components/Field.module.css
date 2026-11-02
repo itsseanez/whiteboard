@@ -1,0 +1,36 @@
+/* .field and .label are shared with Select. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* Sentence case, not tracked-out caps. A caps label shouts a word the customer
+ * already understands. */
+.label {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.input {
+  padding: var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  background: var(--paper);
+}
+
+.input:hover {
+  border-color: var(--ink-soft);
+}
+
+.input:disabled {
+  color: var(--muted);
+  background: var(--sunk);
+  border-color: var(--rule);
+}
+
+.hint {
+  font-size: var(--step--1);
+  color: var(--muted);
+}

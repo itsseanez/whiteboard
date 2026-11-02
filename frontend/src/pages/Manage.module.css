@@ -26,37 +26,6 @@
   margin-top: var(--space-5);
 }
 
-.go {
-  padding: var(--space-3) var(--space-5);
-  border: 1px solid var(--black);
-  border-radius: var(--radius-press);
-  background: var(--black);
-  color: var(--paper);
-  font-weight: 500;
-}
-
-.go:disabled {
-  background: var(--rule-strong);
-  border-color: var(--rule-strong);
-  cursor: default;
-}
-
-/* Cancelling is destructive, so it is the quieter of the two buttons. A
- * destructive action should be reachable without being the thing your eye
- * lands on first. */
-.secondary {
-  padding: var(--space-3) var(--space-5);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-press);
-  background: var(--paper);
-  color: var(--ink-soft);
-}
-
-.secondary:hover:not(:disabled) {
-  border-color: var(--ink);
-  color: var(--ink);
-}
-
 .days {
   display: flex;
   gap: var(--space-2);

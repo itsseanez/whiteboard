@@ -56,6 +56,8 @@ import MonthGrid from '../components/MonthGrid';
 import WeekGrid from '../components/WeekGrid';
 import DayTimes from '../components/DayTimes';
 import Select from '../components/Select';
+import Field from '../components/Field';
+import Button from '../components/Button';
 import shell from '../shell.module.css';
 import styles from './Booking.module.css';
 
@@ -462,54 +464,36 @@ export default function Booking() {
           {problem ? <p className={styles.problem}>{problem}</p> : null}
 
           <div className={styles.fields}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="name">
-                Your name
-              </label>
-              <input
-                id="name"
-                className={styles.input}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                maxLength={200}
-                autoComplete="name"
-              />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                className={styles.input}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                maxLength={320}
-                autoComplete="email"
-              />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="phone">
-                Phone, if you want a reminder
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                className={styles.input}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                maxLength={40}
-                autoComplete="tel"
-              />
-            </div>
+            <Field
+              label="Your name"
+              value={name}
+              onChange={setName}
+              required
+              maxLength={200}
+              autoComplete="name"
+            />
+            <Field
+              label="Email"
+              type="email"
+              value={email}
+              onChange={setEmail}
+              required
+              maxLength={320}
+              autoComplete="email"
+            />
+            <Field
+              label="Phone, if you want a reminder"
+              type="tel"
+              value={phone}
+              onChange={setPhone}
+              maxLength={40}
+              autoComplete="tel"
+            />
           </div>
 
-          <button className={styles.submit} type="submit" disabled={sending}>
+          <Button type="submit" disabled={sending}>
             {sending ? 'Booking…' : 'Book this time'}
-          </button>
+          </Button>
         </form>
       ) : null}
     </main>

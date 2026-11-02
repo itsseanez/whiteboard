@@ -44,6 +44,7 @@ import {
   weekdayShort,
 } from '../format';
 
+import Button from '../components/Button';
 import shell from '../shell.module.css';
 import styles from './Manage.module.css';
 
@@ -258,12 +259,10 @@ export default function Manage() {
 
       {!moving ? (
         <div className={styles.actions}>
-          <button className={styles.go} type="button" onClick={() => setMoving(true)}>
-            Move it
-          </button>
-          <button className={styles.secondary} type="button" onClick={cancel} disabled={sending}>
+          <Button onClick={() => setMoving(true)}>Move it</Button>
+          <Button variant="secondary" onClick={cancel} disabled={sending}>
             {sending ? 'Cancelling…' : 'Cancel it'}
-          </button>
+          </Button>
         </div>
       ) : (
         <>
@@ -326,19 +325,18 @@ export default function Manage() {
           )}
 
           <div className={styles.actions}>
-            <button className={styles.go} type="button" onClick={move} disabled={!slot || sending}>
+            <Button onClick={move} disabled={!slot || sending}>
               {sending ? 'Moving…' : 'Move to this time'}
-            </button>
-            <button
-              className={styles.secondary}
-              type="button"
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => {
                 setMoving(false);
                 setSlot(null);
               }}
             >
               Keep it as it is
-            </button>
+            </Button>
           </div>
         </>
       )}

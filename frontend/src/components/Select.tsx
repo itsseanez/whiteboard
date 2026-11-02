@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react';
+import field from './Field.module.css';
 import styles from './Select.module.css';
 
 interface Option {
@@ -25,8 +26,8 @@ export default function Select({ label, value, options, onChange, disabled }: Pr
   const id = useId();
 
   return (
-    <div className={styles.field}>
-      <label className={styles.label} htmlFor={id}>
+    <div className={field.field}>
+      <label className={field.label} htmlFor={id}>
         {label}
       </label>
       <div className={styles.wrap}>

@@ -150,44 +150,6 @@
   margin-bottom: var(--space-5);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.label {
-  font-size: var(--step--1);
-  color: var(--muted);
-}
-
-.input {
-  padding: var(--space-3);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-press);
-  background: var(--paper);
-}
-
-.input:hover {
-  border-color: var(--ink-soft);
-}
-
-.submit {
-  padding: var(--space-3) var(--space-5);
-  border: 1px solid var(--black);
-  border-radius: var(--radius-press);
-  background: var(--black);
-  color: var(--paper);
-  font-weight: 500;
-}
-
-.submit:disabled {
-  background: var(--rule-strong);
-  border-color: var(--rule-strong);
-  color: var(--paper);
-  cursor: default;
-}
-
 /* A rule and a weight, not a red box. There is no red in this palette, and a
  * problem does not need one to be noticed when it is the only thing on the
  * page set against a black border. */

@@ -1,0 +1,34 @@
+.button {
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-press);
+}
+
+.primary {
+  border: 1px solid var(--black);
+  background: var(--black);
+  color: var(--paper);
+  font-weight: 500;
+}
+
+.primary:disabled {
+  background: var(--rule-strong);
+  border-color: var(--rule-strong);
+  cursor: default;
+}
+
+/* The quieter of a pair. A destructive action should be reachable without
+ * being the thing your eye lands on first. */
+.secondary {
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.secondary:disabled {
+  cursor: default;
+}
