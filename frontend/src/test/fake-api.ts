@@ -63,6 +63,7 @@ export const replies = {
 export interface Call {
   method: string;
   path: string;
+  query: string;
   body: unknown;
 }
 
@@ -78,7 +79,12 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const request = new Request(new URL(href, window.location.href), init);
   const url = new URL(request.url);
   const text = await request.text();
-  calls.push({ method: request.method, path: url.pathname, body: text ? JSON.parse(text) : undefined });
+  calls.push({
+    method: request.method,
+    path: url.pathname,
+    query: url.search,
+    body: text ? JSON.parse(text) : undefined,
+  });
   const reply = routes[`${request.method} ${url.pathname}`];
   if (reply === undefined) return json(404, { error: 'Not found' });
   return typeof reply === 'function' ? reply() : reply;

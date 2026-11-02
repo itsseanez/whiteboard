@@ -1,72 +1,330 @@
-.headline {
-  font-size: var(--step-3);
-  margin-bottom: var(--space-4);
-  max-width: 24ch;
-}
+/* The Whiteboard design system's marketing tiles: square, alternating paper
+ * and sunk, space-2 gutters, centered text, one black thing per tile. */
 
-/* The second line is set in the muted grey rather than bolded or italicised.
- * Accenting one word of a headline is the commonest way a page announces that
- * nobody chose anything; shifting the whole clause down a value step says the
- * same thing and reads as deliberate. */
-.quiet {
-  color: var(--muted);
-}
-
-.salons {
-  list-style: none;
-  padding: 0;
-  margin: var(--space-6) 0;
-  border-top: 1px solid var(--rule);
-}
-
-.salons li {
-  border-bottom: 1px solid var(--rule);
-}
-
-.salon {
+.nav {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-4) var(--space-1);
-  text-decoration: none;
-  transition: padding-left 120ms ease;
+  margin-bottom: var(--space-5);
 }
 
-/* The row indents on hover instead of changing colour. In a palette with one
- * ink, movement is the cheaper signal — and it points at the direction the
- * click goes. */
-.salon:hover {
-  padding-left: var(--space-3);
-  background: var(--sunk);
-}
-
-.name {
-  font-size: var(--step-2);
-  font-weight: 500;
-}
-
-.zone {
+.brand {
   font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.01em;
   color: var(--muted);
 }
 
-.note {
-  color: var(--ink-soft);
+.navLinks {
+  display: flex;
+  gap: var(--space-4);
   font-size: var(--step--1);
+}
+
+.tiles {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.tile {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-4);
+  text-align: center;
+}
+
+.paper {
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+/* For a paper tile inside a rail, where the inset rule is the only edge. */
+.paperEdge {
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.sunk {
+  background: var(--sunk);
+}
+
+.heroTitle,
+.tileTitle {
+  font-size: var(--step-3);
+  max-width: 18ch;
+}
+
+.tileLine {
+  color: var(--ink-soft);
   max-width: var(--measure);
 }
 
-.owners {
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.primary,
+.secondary {
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-press);
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.primary {
+  border: 1px solid var(--black);
+  background: var(--black);
+  color: var(--paper);
+}
+
+.secondary {
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.secondary:hover {
+  border-color: var(--ink);
+}
+
+/* --- the pinned scroll scene ---------------------------------------------- */
+
+/* Tall track, sticky tile: scroll progress through the track drives the scene. */
+.sceneTrack {
+  height: 320vh;
+}
+
+.sceneTrack > .scene {
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  align-content: center;
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
+}
+
+.sceneStill > .scene {
+  min-height: 0;
+}
+
+.sceneProduct {
+  display: grid;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 60rem;
+  margin-top: var(--space-4);
+  text-align: left;
+}
+
+.sceneTimes {
+  min-height: 9rem;
+}
+
+.sceneNote {
+  color: var(--ink-soft);
+  margin-top: var(--space-4);
+}
+
+/* --- half tiles and their product mocks ----------------------------------- */
+
+.halves {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.mock {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  width: 100%;
+  max-width: 22rem;
+}
+
+.mockSlot {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  background: var(--paper);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.mockProblem {
+  border-left: 2px solid var(--black);
+  padding: var(--space-2) var(--space-3);
+  background: var(--sunk);
+  font-size: var(--step--1);
+  text-align: left;
+}
+
+.mockHeading {
+  font-size: var(--step-1);
+  font-weight: 500;
+}
+
+.mockButtons {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.mockPrimary,
+.mockSecondary {
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-press);
+}
+
+.mockPrimary {
+  border: 1px solid var(--black);
+  background: var(--black);
+  color: var(--paper);
+  font-weight: 500;
+}
+
+.mockSecondary {
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+
+.mockRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.mockTime {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the rail ------------------------------------------------------------- */
+
+.railTile {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6) 0 var(--space-2);
+  text-align: center;
+  justify-items: center;
+}
+
+.rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(15rem, 1fr);
+  gap: var(--space-2);
+  width: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  list-style: none;
+  padding: 0;
+}
+
+.rail li {
+  scroll-snap-align: start;
+}
+
+.railItem {
+  display: grid;
+  gap: var(--space-1);
+  height: 100%;
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  text-decoration: none;
+  transition: background 120ms ease;
+}
+
+.railName {
+  font-size: var(--step-2);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.railMeta {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.footer {
   margin-top: var(--space-5);
   padding-top: var(--space-4);
   border-top: 1px solid var(--rule);
-  color: var(--ink-soft);
   font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+/* --- motion: text rises once; product visuals settle as they reach center -- */
+
+[data-reveal] {
+  transition:
+    opacity 600ms cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+
+[data-reveal='hidden'] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .mock {
+      animation: settle linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 50%;
+    }
+  }
+}
+
+@keyframes settle {
+  from {
+    transform: scale(0.96);
+  }
+  to {
+    transform: scale(1);
+  }
 }
 
 @media (min-width: 48rem) {
-  .headline {
+  .tile {
+    padding: var(--space-7) var(--space-5);
+  }
+
+  .heroTitle,
+  .tileTitle {
     font-size: var(--step-4);
+  }
+
+  .hero {
+    padding-top: calc(var(--space-7) * 1.5);
+    padding-bottom: calc(var(--space-7) * 1.5);
+  }
+
+  .halves {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .halves .tileTitle {
+    font-size: var(--step-3);
+  }
+
+  .sceneProduct {
+    grid-template-columns: minmax(18rem, 24rem) minmax(18rem, 32rem);
+    justify-content: center;
   }
 }

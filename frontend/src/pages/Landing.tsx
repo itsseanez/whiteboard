@@ -1,58 +1,164 @@
-// The root page exists only because this is a demo of a multi-tenant app: a
-// real deployment would put each salon on its own domain or subdomain and
-// nobody would ever see this.
+// The product page, built as the design system's marketing tiles: each tile
+// sells one thing, with centered text, at most two actions and the product.
+// It exists only because this is a demo of a multi-tenant app.
 //
-// The two salons are the seed migration's demo tenants, named here as literals
-// rather than fetched. There is deliberately no endpoint that lists tenants —
-// "which businesses use this product" is not something a public API should
-// answer, and adding one to make this page prettier would be a real leak in
-// exchange for a demo convenience.
+// The demo salons are literals, not fetched: there is deliberately no
+// endpoint that lists tenants.
 
+import { useRef, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 
+import BookingScene from './landing/BookingScene';
+import { useReveal } from './landing/useReveal';
 import shell from '../shell.module.css';
 import styles from './Landing.module.css';
 
-const DEMO_SALONS = [
-  { slug: 'studio-wien', name: 'Studio Wien', zone: 'Vienna' },
-  { slug: 'marinas-cuts-color', name: "Marina's Cuts & Color", zone: 'New York' },
-];
+/** Stagger index for a tile's revealed children (80ms apart). */
+const at = (i: number) => ({ '--i': i }) as CSSProperties;
 
 export default function Landing() {
+  const page = useRef<HTMLElement>(null);
+  useReveal(page);
+
   return (
-    <main className={`${shell.page} ${shell.narrow}`}>
-      <span className={shell.wordmark}>Whiteboard</span>
+    <main ref={page} className={shell.page}>
+      <header className={styles.nav}>
+        <span className={styles.brand}>Whiteboard</span>
+        <nav className={styles.navLinks}>
+          <Link to="/signin">Sign in</Link>
+          <Link to="/signup">Create a salon</Link>
+        </nav>
+      </header>
 
-      <h1 className={styles.headline}>
-        Two salons, <span className={styles.quiet}>one engine</span>
-      </h1>
-
-      <p className={shell.lede}>
-        Booking software for independent service businesses. Both salons below run the same code
-        and the same database, and neither can see the other's day.
-      </p>
-
-      <ul className={styles.salons}>
-        {DEMO_SALONS.map((salon) => (
-          <li key={salon.slug}>
-            <Link className={styles.salon} to={`/${salon.slug}`}>
-              <span className={styles.name}>{salon.name}</span>
-              <span className={styles.zone}>{salon.zone}</span>
+      <div className={styles.tiles}>
+        <section className={`${styles.tile} ${styles.paper} ${styles.hero}`}>
+          <h1 className={styles.heroTitle} data-reveal style={at(0)}>
+            Online booking for salons
+          </h1>
+          <p className={styles.tileLine} data-reveal style={at(1)}>
+            Clients see when you're free and book themselves, any hour. This is a working demo,
+            free to try.
+          </p>
+          <div className={styles.actions} data-reveal style={at(2)}>
+            <Link className={styles.primary} to="/studio-wien">
+              Book at Studio Wien
             </Link>
-          </li>
-        ))}
-      </ul>
+            <Link className={styles.secondary} to="/signup">
+              Create a salon
+            </Link>
+          </div>
+        </section>
 
-      <p className={styles.note}>
-        They sit in different time zones on purpose. Opening hours are stored as local wall clock
-        times, so each salon's day is correct on the mornings the clocks change.
-      </p>
+        <BookingScene />
 
-      <p className={styles.owners}>
-        Run a salon? <Link to="/signin">Sign in</Link> or{' '}
-        <Link to="/signup">create a salon</Link>. New salons start empty, because the tools for
-        adding staff and services aren't built yet.
-      </p>
+        <div className={styles.halves}>
+          <section className={`${styles.tile} ${styles.paper}`}>
+            <h2 className={styles.tileTitle} data-reveal style={at(0)}>
+              Can't be double-booked
+            </h2>
+            <p className={styles.tileLine} data-reveal style={at(1)}>
+              Two people book the same time at once: one gets it, the other is told straight away.
+            </p>
+            <div className={styles.mock} aria-hidden="true">
+              <span className={styles.mockSlot}>10:30 AM</span>
+              <p className={styles.mockProblem}>
+                Someone else just took that time. The times shown are now up to date.
+              </p>
+            </div>
+          </section>
+
+          <section className={`${styles.tile} ${styles.sunk}`}>
+            <h2 className={styles.tileTitle} data-reveal style={at(0)}>
+              Clients move or cancel
+            </h2>
+            <p className={styles.tileLine} data-reveal style={at(1)}>
+              Every booking comes with a private link to change it, so a no-show can become
+              someone else's appointment.
+            </p>
+            <div className={styles.mock} aria-hidden="true">
+              <span className={styles.mockHeading}>Your appointment</span>
+              <span className={styles.mockButtons}>
+                <span className={styles.mockPrimary}>Move it</span>
+                <span className={styles.mockSecondary}>Cancel it</span>
+              </span>
+            </div>
+          </section>
+
+          <section className={`${styles.tile} ${styles.sunk}`}>
+            <h2 className={styles.tileTitle} data-reveal style={at(0)}>
+              Right when the clocks change
+            </h2>
+            <p className={styles.tileLine} data-reveal style={at(1)}>
+              Hours are kept in the salon's own time, so 9:00 is still 9:00 the morning after the
+              clocks go back.
+            </p>
+            <div className={styles.mock} aria-hidden="true">
+              <span className={styles.mockRow}>
+                <span>Saturday 24 October</span>
+                <span className={styles.mockTime}>Opens 9:00</span>
+              </span>
+              <span className={styles.mockRow}>
+                <span>Monday 26 October</span>
+                <span className={styles.mockTime}>Opens 9:00</span>
+              </span>
+            </div>
+          </section>
+
+          <section className={`${styles.tile} ${styles.paper}`}>
+            <h2 className={styles.tileTitle} data-reveal style={at(0)}>
+              Why it's called Whiteboard
+            </h2>
+            <p className={styles.tileLine} data-reveal style={at(1)}>
+              A salon in Austria took my booking on a whiteboard on the wall. Perfect for the shop;
+              for me, it meant standing in the room just to see a free time.
+            </p>
+          </section>
+        </div>
+
+        <section className={styles.railTile} aria-labelledby="rail-title">
+          <h2 id="rail-title" className={styles.tileTitle} data-reveal style={at(0)}>
+            Try a demo salon
+          </h2>
+          <ul className={styles.rail}>
+            <li>
+              <Link className={`${styles.railItem} ${styles.sunk}`} to="/studio-wien">
+                <span className={styles.railName}>Studio Wien</span>
+                <span className={styles.railMeta}>Vienna</span>
+              </Link>
+            </li>
+            <li>
+              <Link className={`${styles.railItem} ${styles.paperEdge}`} to="/marinas-cuts-color">
+                <span className={styles.railName}>Marina's Cuts & Color</span>
+                <span className={styles.railMeta}>New York</span>
+              </Link>
+            </li>
+            <li>
+              <Link className={`${styles.railItem} ${styles.sunk}`} to="/signup">
+                <span className={styles.railName}>Your salon</span>
+                <span className={styles.railMeta}>Starts empty while owner tools are built</span>
+              </Link>
+            </li>
+          </ul>
+        </section>
+
+        <section className={`${styles.tile} ${styles.sunk}`}>
+          <h2 className={styles.tileTitle} data-reveal style={at(0)}>
+            See it for yourself
+          </h2>
+          <div className={styles.actions} data-reveal style={at(1)}>
+            <Link className={styles.primary} to="/studio-wien">
+              Book at Studio Wien
+            </Link>
+            <Link className={styles.secondary} to="/signin">
+              Sign in
+            </Link>
+          </div>
+        </section>
+      </div>
+
+      <footer className={styles.footer}>
+        <a href="https://github.com/itsseanez/whiteboard">Source on GitHub</a>
+      </footer>
     </main>
   );
 }
