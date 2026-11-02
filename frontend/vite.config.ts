@@ -11,12 +11,15 @@ export default defineConfig({
   // rewritten to an absolute URL. The fetch code is then identical in both,
   // and there is no VITE_API_URL to forget to set.
   //
-  // The pattern matches only the four API paths under /:slug. /studio-wien and
-  // /studio-wien/manage are pages and must stay with Vite.
+  // Anchored regexes, not plain prefixes: a prefix '/api' would also catch a
+  // salon at /apiary. Pages such as /studio-wien and /studio-wien/manage must
+  // stay with Vite.
   server: {
     port: 5173,
     proxy: {
       '^/[^/]+/(services|availability|appointments)(/|\\?|$)': 'http://localhost:3000',
+      '^/api/': 'http://localhost:3000', // Better Auth
+      '^/(me|tenant)/': 'http://localhost:3000', // session-authenticated API
     },
   },
  
