@@ -62,6 +62,14 @@ export interface Cancelled {
   cancelled: boolean;
 }
 
+/** One salon the signed-in user belongs to, from GET /me/organizations. */
+export interface Membership {
+  tenantId: string;
+  slug: string;
+  timezone: string;
+  role: string;
+}
+
 /**
  * A failed request, carrying the API's own error code.
  *
@@ -153,4 +161,9 @@ export function rescheduleBooking(
     method: 'POST',
     body: JSON.stringify(staffId ? { token, startsAt, staffId } : { token, startsAt }),
   });
+}
+
+/** Needs the session cookie, which a same-origin fetch sends by default. */
+export function getMyOrganizations(): Promise<Membership[]> {
+  return send<Membership[]>('/me/organizations');
 }

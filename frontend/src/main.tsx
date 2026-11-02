@@ -6,19 +6,26 @@ import './styles.css';
 import Landing from './pages/Landing';
 import Booking from './pages/Booking';
 import Manage from './pages/Manage';
+import SignIn from './pages/SignIn';
+import SignUp from './pages/SignUp';
+import Account from './pages/Account';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root is missing from index.html');
 
-// These three paths are also named explicitly in backend/src/app.ts, which
+// These paths are also named explicitly in backend/src/app.ts, which
 // serves index.html for each. Adding a page here means adding it there too —
 // the alternative was a catch-all on the server, which would have swallowed
-// the API routes that live under the same /:slug prefix.
+// the API routes that live under the same /:slug prefix. The static paths are
+// also reserved slugs — see slug.ts.
 createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/account" element={<Account />} />
         <Route path="/:slug" element={<Booking />} />
         <Route path="/:slug/manage" element={<Manage />} />
       </Routes>

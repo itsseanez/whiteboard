@@ -57,6 +57,14 @@
   max-width: var(--measure);
 }
 
+.owners {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+}
+
 @media (min-width: 48rem) {
   .headline {
     font-size: var(--step-4);

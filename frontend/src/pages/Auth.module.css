@@ -1,0 +1,67 @@
+/* Shared by SignIn, SignUp and Account. The page frame is shell.module.css. */
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.group {
+  display: grid;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+
+.groupTitle {
+  font-size: var(--step-0);
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* Third copy of Booking's .problem and Manage's .note — next to extract. */
+.problem {
+  border-left: 2px solid var(--black);
+  padding: var(--space-2) var(--space-3);
+  background: var(--sunk);
+  font-size: var(--step--1);
+}
+
+.switch {
+  margin-top: var(--space-5);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-5) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-1);
+  border-bottom: 1px solid var(--rule);
+}
+
+.meta {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.note {
+  margin-top: var(--space-4);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}

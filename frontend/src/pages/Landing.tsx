@@ -47,6 +47,11 @@ export default function Landing() {
         They sit in different time zones on purpose. Opening hours are stored as local wall clock
         times, so each salon's day is correct on the mornings the clocks change.
       </p>
+
+      <p className={styles.owners}>
+        Run a salon? <Link to="/signin">Sign in</Link> or <Link to="/signup">create one</Link>. A
+        new salon starts empty — owner tools are not built yet.
+      </p>
     </main>
   );
 }

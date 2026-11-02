@@ -33,13 +33,18 @@ export function createApp(): Express {
   // publicRouter ends in a catch-all that answers anything unmatched under
   // /:slug with a JSON 404 — correct for an API client, useless for a browser
   // asking for /studio-wien/manage. A fallback mounted after it would never be
-  // reached, so the two pages the client serves are named here explicitly.
+  // reached, so the pages the client serves are named here explicitly.
   //
   // Explicit paths rather than a wildcard, so this can never shadow an API
   // route: adding an endpoint under /:slug needs no thought about ordering.
   if (hasClient) {
     const page = (_req: Request, res: Response) => res.sendFile(CLIENT_INDEX);
     app.get('/', page);
+    // Before /:slug, which would match them by accident. Also reserved slugs —
+    // see frontend/src/slug.ts.
+    app.get('/signin', page);
+    app.get('/signup', page);
+    app.get('/account', page);
     app.get('/:slug', page);
     app.get('/:slug/manage', page);
   }
