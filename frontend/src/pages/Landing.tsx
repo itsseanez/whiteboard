@@ -1,6 +1,7 @@
-// The product page, built as the design system's marketing tiles: each tile
-// sells one thing, with centered text, at most two actions and the product.
-// It exists only because this is a demo of a multi-tenant app.
+// The product page, built as the design system's marketing tiles. Booking
+// happens in one place, the live tile at the top; the rail at the bottom links
+// each demo salon's full booking page. It exists only because this is a demo
+// of a multi-tenant app.
 //
 // The demo salons are literals, not fetched: there is deliberately no
 // endpoint that lists tenants.
@@ -8,7 +9,7 @@
 import { useRef, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 
-import BookingScene from './landing/BookingScene';
+import LiveBooking from './landing/LiveBooking';
 import { useReveal } from './landing/useReveal';
 import shell from '../shell.module.css';
 import styles from './Landing.module.css';
@@ -31,25 +32,7 @@ export default function Landing() {
       </header>
 
       <div className={styles.tiles}>
-        <section className={`${styles.tile} ${styles.paper} ${styles.hero}`}>
-          <h1 className={styles.heroTitle} data-reveal style={at(0)}>
-            Online booking for salons
-          </h1>
-          <p className={styles.tileLine} data-reveal style={at(1)}>
-            Clients see when you're free and book themselves, any hour. This is a working demo,
-            free to try.
-          </p>
-          <div className={styles.actions} data-reveal style={at(2)}>
-            <Link className={styles.primary} to="/studio-wien">
-              Book at Studio Wien
-            </Link>
-            <Link className={styles.secondary} to="/signup">
-              Create a salon
-            </Link>
-          </div>
-        </section>
-
-        <BookingScene />
+        <LiveBooking />
 
         <div className={styles.halves}>
           <section className={`${styles.tile} ${styles.paper}`}>
@@ -117,9 +100,9 @@ export default function Landing() {
 
         <section className={styles.railTile} aria-labelledby="rail-title">
           <h2 id="rail-title" className={styles.tileTitle} data-reveal style={at(0)}>
-            Try a demo salon
+            Open a salon's full booking page
           </h2>
-          <ul className={styles.rail}>
+          <ul className={styles.rail} aria-label="Demo salons">
             <li>
               <Link className={`${styles.railItem} ${styles.sunk}`} to="/studio-wien">
                 <span className={styles.railName}>Studio Wien</span>
@@ -139,20 +122,6 @@ export default function Landing() {
               </Link>
             </li>
           </ul>
-        </section>
-
-        <section className={`${styles.tile} ${styles.sunk}`}>
-          <h2 className={styles.tileTitle} data-reveal style={at(0)}>
-            See it for yourself
-          </h2>
-          <div className={styles.actions} data-reveal style={at(1)}>
-            <Link className={styles.primary} to="/studio-wien">
-              Book at Studio Wien
-            </Link>
-            <Link className={styles.secondary} to="/signin">
-              Sign in
-            </Link>
-          </div>
         </section>
       </div>
 

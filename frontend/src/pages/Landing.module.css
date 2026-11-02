@@ -62,78 +62,133 @@
   max-width: var(--measure);
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-}
+/* --- the live booking tile ------------------------------------------------ */
 
-.primary,
-.secondary {
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-press);
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    background 120ms ease,
-    color 120ms ease,
-    border-color 120ms ease;
-}
-
-.primary {
-  border: 1px solid var(--black);
-  background: var(--black);
-  color: var(--paper);
-}
-
-.secondary {
-  border: 1px solid var(--rule-strong);
-  background: var(--paper);
-  color: var(--ink);
-}
-
-.secondary:hover {
-  border-color: var(--ink);
-}
-
-/* --- the pinned scroll scene ---------------------------------------------- */
-
-/* Tall track, sticky tile: scroll progress through the track drives the scene. */
+/* A short track: the scene plays over 70vh of scrolling, then the tile scrolls
+ * on like any other. Only present until the visitor takes over. */
 .sceneTrack {
-  height: 320vh;
+  height: 170vh;
 }
 
-.sceneTrack > .scene {
+.sceneTrack > .live {
   position: sticky;
   top: 0;
   min-height: 100vh;
   align-content: center;
+}
+
+.live {
   padding-top: var(--space-6);
   padding-bottom: var(--space-6);
 }
 
-.sceneStill > .scene {
-  min-height: 0;
+/* Which salon is shown. The 2px ink bar is the system's "current" cue; black
+ * stays with the booking itself. */
+.switcher {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-5);
+  margin-top: var(--space-3);
+  border-bottom: 1px solid var(--rule);
 }
 
-.sceneProduct {
-  display: grid;
-  gap: var(--space-5);
+.switch {
+  padding: var(--space-2) var(--space-1);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--ink-soft);
+  font-weight: 500;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.switch:hover {
+  color: var(--ink);
+}
+
+.switch[aria-pressed='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* The product, in a square sunk frame. */
+.frame {
   width: 100%;
-  max-width: 60rem;
+  max-width: 64rem;
   margin-top: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  background: var(--sunk);
   text-align: left;
 }
 
-.sceneTimes {
+.frameZone {
+  margin-bottom: var(--space-3);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.frameNote {
+  color: var(--ink-soft);
+}
+
+.flow {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.day {
+  display: grid;
+  gap: var(--space-4);
   min-height: 9rem;
 }
 
-.sceneNote {
-  color: var(--ink-soft);
-  margin-top: var(--space-4);
+.problem {
+  scroll-margin: var(--space-6);
+  border-left: 2px solid var(--black);
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper);
+  font-size: var(--step--1);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+
+.summary {
+  font-weight: 500;
+}
+
+.done {
+  scroll-margin: var(--space-6);
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  max-width: var(--measure);
+}
+
+.doneTitle {
+  font-size: var(--step-2);
+}
+
+.doneWhen {
+  font-size: var(--step-1);
+}
+
+.manageLink {
+  display: block;
+  padding: var(--space-3);
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  font-size: var(--step--1);
+  word-break: break-all;
 }
 
 /* --- half tiles and their product mocks ----------------------------------- */
@@ -310,11 +365,6 @@
     font-size: var(--step-4);
   }
 
-  .hero {
-    padding-top: calc(var(--space-7) * 1.5);
-    padding-bottom: calc(var(--space-7) * 1.5);
-  }
-
   .halves {
     grid-template-columns: 1fr 1fr;
   }
@@ -323,8 +373,11 @@
     font-size: var(--step-3);
   }
 
-  .sceneProduct {
-    grid-template-columns: minmax(18rem, 24rem) minmax(18rem, 32rem);
-    justify-content: center;
+  .frame {
+    padding: var(--space-5);
+  }
+
+  .flow {
+    grid-template-columns: minmax(18rem, 24rem) minmax(18rem, 1fr);
   }
 }

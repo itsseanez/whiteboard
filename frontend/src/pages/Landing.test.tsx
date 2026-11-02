@@ -1,28 +1,32 @@
 // @vitest-environment jsdom
-import { fakeFetch, json } from '../test/fake-api'; // first: see the file
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { fakeFetch, json, type Call } from '../test/fake-api'; // first: see the file
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Landing from './Landing';
 
-// Shapes captured from the dev API: GET /studio-wien/services and /availability.
-const catalog = () =>
+// Shapes captured from the dev API: GET /:slug/services, /availability, and
+// POST /:slug/appointments.
+const catalog = (slug: string, name: string, timeZone: string, service: string, minutes: number) => () =>
   json(200, {
-    tenant: { name: 'Studio Wien', slug: 'studio-wien', timeZone: 'Europe/Vienna' },
+    tenant: { name, slug, timeZone },
     services: [
       {
-        id: 'b2222222-2222-2222-2222-222222222222',
-        name: 'Full Color',
-        durationMinutes: 150,
-        staff: [{ id: 'a2222222-2222-2222-2222-222222222222', name: 'Anna Huber' }],
+        id: `svc-${slug}`,
+        name: service,
+        durationMinutes: minutes,
+        staff: [{ id: `staff-${slug}`, name: 'Stylist' }],
       },
     ],
   });
-const slot = (startsAt: string) => ({ startsAt, endsAt: startsAt, staffIds: ['a2222222-2222-2222-2222-222222222222'] });
+const wien = catalog('studio-wien', 'Studio Wien', 'Europe/Vienna', 'Full Color', 150);
+const marina = catalog('marinas-cuts-color', "Marina's Cuts & Color", 'America/New_York', 'Cut', 45);
+
+const slot = (slug: string, startsAt: string) => ({ startsAt, endsAt: startsAt, staffIds: [`staff-${slug}`] });
 type Day = { date: string; status: 'closed' } | { date: string; status: 'open'; slots: unknown[] };
-const availability = (days: Day[]) => () =>
-  json(200, { timeZone: 'Europe/Vienna', noQualifiedStaff: false, days });
+const availability = (timeZone: string, days: Day[]) => () =>
+  json(200, { timeZone, noQualifiedStaff: false, days });
 
 function prefersReducedMotion(on: boolean) {
   window.matchMedia = ((query: string) => ({
@@ -39,11 +43,25 @@ function prefersReducedMotion(on: boolean) {
 
 function renderLanding() {
   render(
-    <MemoryRouter>
-      <Landing />
+    <MemoryRouter initialEntries={['/']}>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/:slug" element={<p>booking page</p>} />
+      </Routes>
     </MemoryRouter>,
   );
 }
+
+const timeButtons = () => screen.queryAllByRole('button', { name: /^\d{1,2}:\d{2}/ });
+
+const wienDays: Day[] = [
+  { date: '2026-11-02', status: 'open', slots: [] },
+  {
+    date: '2026-11-03',
+    status: 'open',
+    slots: [slot('studio-wien', '2026-11-03T09:00:00Z'), slot('studio-wien', '2026-11-03T09:15:00Z')],
+  },
+];
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -55,30 +73,25 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('Landing scroll scene', () => {
-  it("shows the scene's final frame with reduced motion: a day picked and one time chosen, in Vienna time", async () => {
+describe('Landing live booking', () => {
+  it("opens on Studio Wien's first day with times, in Vienna time, nothing chosen yet", async () => {
     fakeFetch({
-      'GET /studio-wien/services': catalog,
-      'GET /studio-wien/availability': availability([
-        { date: '2026-11-02', status: 'open', slots: [] },
-        { date: '2026-11-03', status: 'open', slots: [slot('2026-11-03T09:00:00Z'), slot('2026-11-03T09:15:00Z')] },
-      ]),
+      'GET /studio-wien/services': wien,
+      'GET /studio-wien/availability': availability('Europe/Vienna', wienDays),
     });
     renderLanding();
 
     // 09:00Z is 10:00 in Vienna in November (UTC+1).
-    const ten = await screen.findByRole('button', { name: /^10:00/ });
+    expect(await screen.findByRole('button', { name: /^10:00/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /^10:15/ })).toBeTruthy();
-    const times = screen.getAllByRole('button', { name: /^\d{1,2}:\d{2}/ });
-    expect(times.filter((b) => b.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
-    expect(ten.getAttribute('aria-pressed')).toBe('true');
+    expect(timeButtons().filter((b) => b.getAttribute('aria-pressed') === 'true')).toHaveLength(0);
   });
 
   it("asks for the rest of the salon's month, starting from the salon's today", async () => {
     vi.setSystemTime(new Date('2026-11-02T23:30:00Z')); // already Tuesday in Vienna
     const calls = fakeFetch({
-      'GET /studio-wien/services': catalog,
-      'GET /studio-wien/availability': availability([]),
+      'GET /studio-wien/services': wien,
+      'GET /studio-wien/availability': availability('Europe/Vienna', []),
     });
     renderLanding();
 
@@ -88,37 +101,136 @@ describe('Landing scroll scene', () => {
     expect(query.get('through')).toBe('2026-11-30');
   });
 
-  it('says so, and still offers a way in, when the salon cannot be reached', async () => {
+  it("switches to Marina's and shows her times in New York time", async () => {
+    fakeFetch({
+      'GET /studio-wien/services': wien,
+      'GET /studio-wien/availability': availability('Europe/Vienna', wienDays),
+      'GET /marinas-cuts-color/services': marina,
+      'GET /marinas-cuts-color/availability': availability('America/New_York', [
+        { date: '2026-11-02', status: 'open', slots: [slot('marinas-cuts-color', '2026-11-02T15:00:00Z')] },
+      ]),
+    });
+    renderLanding();
+    await screen.findByRole('button', { name: /^10:00/ });
+
+    fireEvent.click(screen.getByRole('button', { name: "Marina's Cuts & Color" }));
+
+    // 15:00Z is 10:00 in New York in November (UTC-5); Vienna's 10:15 is gone.
+    expect(await screen.findByRole('button', { name: /^10:00/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^10:15/ })).toBeNull();
+    expect(screen.getByRole('button', { name: "Marina's Cuts & Color" }).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('books the chosen time right here and shows the confirmation, without leaving the page', async () => {
+    const calls = fakeFetch({
+      'GET /studio-wien/services': wien,
+      'GET /studio-wien/availability': availability('Europe/Vienna', wienDays),
+      'POST /studio-wien/appointments': () =>
+        json(201, {
+          appointmentId: 'appt-1',
+          staffId: 'staff-studio-wien',
+          startsAt: '2026-11-03T09:00:00Z',
+          endsAt: '2026-11-03T11:30:00Z',
+          manageToken: 'tok-123',
+        }),
+    });
+    renderLanding();
+
+    fireEvent.click(await screen.findByRole('button', { name: /^10:00/ }));
+    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Ada Lovelace' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'ada@example.com' } });
+    fireEvent.submit(screen.getByRole('button', { name: /^Book 10:00/ }));
+
+    expect(await screen.findByText("You're booked")).toBeTruthy();
+    expect(screen.queryByText('booking page')).toBeNull();
+    expect(screen.getByText(/manage\?token=tok-123/)).toBeTruthy();
+    expect(calls.find((c: Call) => c.method === 'POST')).toMatchObject({
+      path: '/studio-wien/appointments',
+      body: {
+        serviceId: 'svc-studio-wien',
+        staffId: 'staff-studio-wien',
+        startsAt: '2026-11-03T09:00:00Z',
+        customer: { name: 'Ada Lovelace', email: 'ada@example.com' },
+      },
+    });
+  });
+
+  // The form is tall and the confirmation short: without this, "You're booked"
+  // lands above the viewport and the visitor sees nothing happen.
+  it('brings the confirmation into view after booking', async () => {
+    const scrolled: Element[] = [];
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
+    fakeFetch({
+      'GET /studio-wien/services': wien,
+      'GET /studio-wien/availability': availability('Europe/Vienna', wienDays),
+      'POST /studio-wien/appointments': () =>
+        json(201, {
+          appointmentId: 'appt-1',
+          staffId: 'staff-studio-wien',
+          startsAt: '2026-11-03T09:00:00Z',
+          endsAt: '2026-11-03T11:30:00Z',
+          manageToken: 'tok-123',
+        }),
+    });
+    renderLanding();
+
+    fireEvent.click(await screen.findByRole('button', { name: /^10:00/ }));
+    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Ada' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'ada@example.com' } });
+    fireEvent.submit(screen.getByRole('button', { name: /^Book 10:00/ }));
+
+    const done = await screen.findByText("You're booked");
+    await waitFor(() => expect(scrolled.some((el) => el.contains(done))).toBe(true));
+    // @ts-expect-error restore jsdom's absence
+    delete Element.prototype.scrollIntoView;
+  });
+
+  it('says when someone else took the time, and refreshes the times', async () => {
+    const calls = fakeFetch({
+      'GET /studio-wien/services': wien,
+      'GET /studio-wien/availability': availability('Europe/Vienna', wienDays),
+      'POST /studio-wien/appointments': () => json(409, { error: 'slot_taken' }),
+    });
+    renderLanding();
+
+    fireEvent.click(await screen.findByRole('button', { name: /^10:00/ }));
+    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Ada' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'ada@example.com' } });
+    fireEvent.submit(screen.getByRole('button', { name: /^Book 10:00/ }));
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(/just took that time/);
+    expect(screen.queryByText("You're booked")).toBeNull();
+    await waitFor(() =>
+      expect(calls.filter((c) => c.path === '/studio-wien/availability')).toHaveLength(2),
+    );
+  });
+
+  it('says so when the salon cannot be reached', async () => {
     fakeFetch({ 'GET /studio-wien/services': () => new Response('<html>', { status: 500 }) });
     renderLanding();
 
     expect(await screen.findByText(/couldn't load/i)).toBeTruthy();
-    expect(screen.queryAllByRole('button', { name: /^\d{1,2}:\d{2}/ })).toHaveLength(0);
+    expect(timeButtons()).toHaveLength(0);
   });
 });
 
-describe('Landing tiles', () => {
-  it('opens with what it is and two actions: book at a demo salon, or create one', () => {
+describe('Landing', () => {
+  it('says what it is, in the first heading', () => {
     fakeFetch({});
     renderLanding();
-
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Online booking for salons');
-    expect(screen.getAllByRole('link', { name: 'Book at Studio Wien' })[0]!.getAttribute('href')).toBe('/studio-wien');
-    expect(screen.getAllByRole('link', { name: 'Create a salon' })[0]!.getAttribute('href')).toBe('/signup');
-    expect(screen.getAllByRole('link', { name: 'Sign in' })[0]!.getAttribute('href')).toBe('/signin');
   });
 
-  it('says plainly that this is a demo, in the hero', () => {
+  it('has no other "book" links: booking happens in the tile, or from the three salon links', () => {
     fakeFetch({});
     renderLanding();
-    expect(screen.getByText(/working demo, free to try/i)).toBeTruthy();
-  });
 
-  it('links both demo salons from the rail', () => {
-    fakeFetch({});
-    renderLanding();
-    expect(screen.getByRole('link', { name: /Marina's Cuts & Color/ }).getAttribute('href')).toBe('/marinas-cuts-color');
-    expect(screen.getAllByRole('link', { name: /Studio Wien/ }).some((a) => a.getAttribute('href') === '/studio-wien')).toBe(true);
+    expect(screen.queryAllByRole('link', { name: /^book/i })).toHaveLength(0);
+    const rail = screen.getByRole('list', { name: 'Demo salons' });
+    const hrefs = [...rail.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual(['/studio-wien', '/marinas-cuts-color', '/signup']);
   });
 
   // The design system: text is in the HTML, script only adds the hidden
@@ -186,6 +298,14 @@ describe('Landing tiles', () => {
       fakeFetch({});
       renderLanding();
       expect(document.querySelectorAll('[data-reveal="hidden"]')).toHaveLength(0);
+    });
+
+    it('never hides anything in the booking tile: the scene is its only motion', () => {
+      prefersReducedMotion(false);
+      fakeFetch({});
+      renderLanding();
+      const tile = screen.getByRole('region', { name: 'Book at a demo salon' });
+      expect(tile.querySelectorAll('[data-reveal]')).toHaveLength(0);
     });
   });
 });
