@@ -37,7 +37,7 @@ describe('SignUp, with a session already present', () => {
     await waitFor(() => expect(screen.queryByLabelText('Password')).toBeNull());
     expect(screen.getByText(/owner@example.com/)).toBeTruthy();
     type('Salon name', 'Studio Wien');
-    fireEvent.submit(screen.getByRole('button', { name: 'Create the salon' }));
+    fireEvent.submit(screen.getByRole('button', { name: 'Create salon' }));
 
     await screen.findByText('account page');
     expect(signUps(calls)).toHaveLength(0);

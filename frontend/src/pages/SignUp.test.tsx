@@ -127,7 +127,7 @@ describe('SignUp', () => {
     expect(screen.getByText(/Signed in as owner@example.com/)).toBeTruthy();
 
     provision.mockResolvedValueOnce({ ok: true, slug: 'marinas-cuts-color' });
-    fireEvent.submit(screen.getByRole('button', { name: 'Create the salon' }));
+    fireEvent.submit(screen.getByRole('button', { name: 'Create salon' }));
 
     await screen.findByText('account page');
     expect(signUps(calls)).toHaveLength(1);
@@ -159,7 +159,7 @@ describe('SignUp', () => {
     fakeFetch({});
     renderSignUp();
     type('Salon name', 'Studio Wien');
-    expect(screen.getByText(`Your booking page: ${window.location.host}/studio-wien`)).toBeTruthy();
+    expect(screen.getByText(`${window.location.host}/studio-wien`)).toBeTruthy();
   });
 
   it('explains the address problem when the name yields no usable address', () => {

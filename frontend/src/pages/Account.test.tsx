@@ -58,10 +58,11 @@ describe('Account', () => {
     });
     renderAccount();
 
-    expect((await screen.findByRole('link', { name: '/studio-wien' })).getAttribute('href')).toBe(
+    const host = window.location.host;
+    expect((await screen.findByRole('link', { name: `${host}/studio-wien` })).getAttribute('href')).toBe(
       '/studio-wien',
     );
-    expect(screen.getByRole('link', { name: '/marinas-cuts-color' }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: `${host}/marinas-cuts-color` }).getAttribute('href')).toBe(
       '/marinas-cuts-color',
     );
   });

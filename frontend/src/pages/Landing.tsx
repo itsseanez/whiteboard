@@ -49,8 +49,9 @@ export default function Landing() {
       </p>
 
       <p className={styles.owners}>
-        Run a salon? <Link to="/signin">Sign in</Link> or <Link to="/signup">create one</Link>. A
-        new salon starts empty — owner tools are not built yet.
+        Run a salon? <Link to="/signin">Sign in</Link> or{' '}
+        <Link to="/signup">create a salon</Link>. New salons start empty, because the tools for
+        adding staff and services aren't built yet.
       </p>
     </main>
   );

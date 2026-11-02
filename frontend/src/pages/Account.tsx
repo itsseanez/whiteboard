@@ -86,8 +86,8 @@ export default function Account() {
     <>
       <h1 className={shell.title}>Your account</h1>
       <p className={shell.lede}>
-        {email ? `Signed in as ${email}. ` : ''}Owner tools — staff, services, opening hours,
-        your calendar — are not built yet. This page is where they will live.
+        {email ? `Signed in as ${email}. ` : ''}Tools for managing staff, services, hours and
+        your calendar aren't built yet. They will live on this page.
       </p>
 
       {state.salons.length === 0 ? (
@@ -100,15 +100,13 @@ export default function Account() {
           <ul className={styles.list}>
             {state.salons.map((salon) => (
               <li key={salon.tenantId}>
-                <Link to={`/${salon.slug}`}>/{salon.slug}</Link>
-                <span className={styles.meta}>
-                  {salon.role} · {salon.timezone}
-                </span>
+                <Link to={`/${salon.slug}`}>{`${window.location.host}/${salon.slug}`}</Link>
+                <span className={styles.meta}>Times in {salon.timezone}</span>
               </li>
             ))}
           </ul>
           <p className={styles.note}>
-            A new salon's booking page has nothing to book until it has staff, services and hours.
+            A new salon's page has nothing to book until it has staff, services and hours.
           </p>
         </>
       )}

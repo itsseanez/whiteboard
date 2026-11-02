@@ -67,12 +67,14 @@ export default function SignUp() {
   const zones = useMemo(() => zoneOptions(browserZone()), []);
 
   const touched = salonName.trim() !== '' || editedSlug !== null;
+  // Shown only when something is wrong; the preview below says the rest.
   const slugHint =
     takenSlug === slug
       ? 'Another salon already has this address. Pick another.'
       : touched && slugError
         ? slugError
-        : `Your booking page: ${window.location.host}/${slug || '…'}`;
+        : null;
+  const showPreview = slug !== '' && !slugError && takenSlug !== slug;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -131,9 +133,9 @@ export default function SignUp() {
       </Link>
       <h1 className={shell.title}>Create a salon</h1>
       <p className={shell.lede}>
-        This sets up an empty salon. Owner tools for adding staff, services and opening hours are
-        not built yet, so it will have nothing to book. To see booking work, try one of the{' '}
-        <Link to="/">demo salons</Link>.
+        This gives your salon its own booking page. Adding staff, services and hours isn't built
+        yet, so the page won't take bookings. To see booking work, <Link to="/">open a demo
+        salon</Link>.
       </p>
 
       <form className={styles.form} onSubmit={submit}>
@@ -144,7 +146,7 @@ export default function SignUp() {
         ) : null}
 
         <div className={styles.group}>
-          <h2 className={styles.groupTitle}>You</h2>
+          <h2 className={styles.groupTitle}>Your account</h2>
           {hasAccount ? (
             <p className={styles.note}>Signed in as {signedInAs}. Only the salon is left to set up.</p>
           ) : (
@@ -197,14 +199,20 @@ export default function SignUp() {
             autoComplete="off"
             maxLength={SLUG_MAX}
             required
-            hint={slugHint}
+            {...(slugHint ? { hint: slugHint } : {})}
           />
+          {showPreview ? (
+            <div className={styles.address}>
+              <span className={styles.addressLabel}>Customers will book at</span>
+              <span className={styles.addressValue}>{`${window.location.host}/${slug}`}</span>
+            </div>
+          ) : null}
           <Select label="Time zone" value={timezone} options={zones} onChange={setTimezone} />
         </div>
 
         <div className={styles.actions}>
           <Button type="submit" disabled={sending}>
-            {sending ? 'Creating…' : hasAccount ? 'Create the salon' : 'Create account and salon'}
+            {sending ? 'Creating…' : hasAccount ? 'Create salon' : 'Create account and salon'}
           </Button>
         </div>
       </form>
