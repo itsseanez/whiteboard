@@ -47,6 +47,7 @@ describe('Account', () => {
     renderAccount();
 
     expect(await screen.findByText(/not linked to a salon/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Finish setting up/ }).getAttribute('href')).toBe('/signup');
   });
 
   it('links every salon the account belongs to', async () => {
@@ -87,5 +88,18 @@ describe('Account', () => {
 
     await screen.findByText('landing page');
     expect(calls.some((c) => c.method === 'POST' && c.path === '/api/auth/sign-out')).toBe(true);
+  });
+
+  it('stays put and says so when signing out fails', async () => {
+    fakeFetch({
+      'GET /me/organizations': () => json(200, [salon('studio-wien', 'Europe/Vienna')]),
+      'GET /api/auth/get-session': replies.noSession,
+      'POST /api/auth/sign-out': () => new Response('', { status: 500 }),
+    });
+    renderAccount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(/still signed in/i);
+    expect(screen.queryByText('landing page')).toBeNull();
   });
 });

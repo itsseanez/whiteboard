@@ -1,6 +1,6 @@
 // Two steps: create the owner's account, then provision the salon. The second
-// is provision.ts, not this page. If it fails the account stays signed in and
-// a retry repeats only the salon step.
+// is provision.ts, not this page. A visitor who already has a session — from
+// an interrupted sign-up — skips straight to the salon step.
 
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -53,7 +53,10 @@ export default function SignUp() {
   const [editedSlug, setEditedSlug] = useState<string | null>(null);
   const [timezone, setTimezone] = useState(browserZone);
 
+  const session = authClient.useSession();
   const [accountMade, setAccountMade] = useState(false);
+  const signedInAs = session.data?.user.email ?? (accountMade ? email : null);
+  const hasAccount = signedInAs !== null;
   const [takenSlug, setTakenSlug] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -63,22 +66,27 @@ export default function SignUp() {
   const slugError = slugProblem(slug);
   const zones = useMemo(() => zoneOptions(browserZone()), []);
 
+  const touched = salonName.trim() !== '' || editedSlug !== null;
   const slugHint =
     takenSlug === slug
       ? 'Another salon already has this address. Pick another.'
-      : slug && slugError
+      : touched && slugError
         ? slugError
-        : `Your booking page: whiteboardhq.app/${slug || '…'}`;
+        : `Your booking page: ${window.location.host}/${slug || '…'}`;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (inFlight.current) return;
 
+    if (!salonName.trim()) {
+      setProblem('Enter the salon name.');
+      return;
+    }
     if (slugError) {
       setProblem('Fix the page address before continuing.');
       return;
     }
-    if (!accountMade && password.length < PASSWORD_MIN) {
+    if (!hasAccount && password.length < PASSWORD_MIN) {
       setProblem(SHORT_PASSWORD);
       return;
     }
@@ -88,7 +96,7 @@ export default function SignUp() {
     setProblem(null);
 
     try {
-      if (!accountMade) {
+      if (!hasAccount) {
         const { error } = await authClient.signUp.email({ name: ownerName, email, password });
         if (error) {
           setProblem(signUpMessage(error));
@@ -137,36 +145,39 @@ export default function SignUp() {
 
         <div className={styles.group}>
           <h2 className={styles.groupTitle}>You</h2>
-          <Field
-            label="Your name"
-            value={ownerName}
-            onChange={setOwnerName}
-            autoComplete="name"
-            maxLength={200}
-            required
-            disabled={accountMade}
-          />
-          <Field
-            label="Email"
-            type="email"
-            value={email}
-            onChange={setEmail}
-            autoComplete="email"
-            maxLength={320}
-            required
-            disabled={accountMade}
-          />
-          <Field
-            label="Password"
-            type="password"
-            value={password}
-            onChange={setPassword}
-            autoComplete="new-password"
-            maxLength={128}
-            required
-            disabled={accountMade}
-            hint={accountMade ? 'Account created.' : `At least ${PASSWORD_MIN} characters.`}
-          />
+          {hasAccount ? (
+            <p className={styles.note}>Signed in as {signedInAs}. Only the salon is left to set up.</p>
+          ) : (
+            <>
+              <Field
+                label="Your name"
+                value={ownerName}
+                onChange={setOwnerName}
+                autoComplete="name"
+                maxLength={200}
+                required
+              />
+              <Field
+                label="Email"
+                type="email"
+                value={email}
+                onChange={setEmail}
+                autoComplete="email"
+                maxLength={320}
+                required
+              />
+              <Field
+                label="Password"
+                type="password"
+                value={password}
+                onChange={setPassword}
+                autoComplete="new-password"
+                maxLength={128}
+                required
+                hint={`At least ${PASSWORD_MIN} characters.`}
+              />
+            </>
+          )}
         </div>
 
         <div className={styles.group}>
@@ -193,7 +204,7 @@ export default function SignUp() {
 
         <div className={styles.actions}>
           <Button type="submit" disabled={sending}>
-            {sending ? 'Creating…' : accountMade ? 'Create the salon' : 'Create account and salon'}
+            {sending ? 'Creating…' : hasAccount ? 'Create the salon' : 'Create account and salon'}
           </Button>
         </div>
       </form>

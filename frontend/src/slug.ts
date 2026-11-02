@@ -21,9 +21,9 @@ export const SLUG_MAX = 40;
 export function slugify(name: string): string {
   return name
     .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '') // accents split off by NFKD
+    .replace(/\p{M}/gu, '') // accents NFKD split off
     .toLowerCase()
-    .replace(/['’]/g, '')
+    .replace(/['\u2019]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, SLUG_MAX)

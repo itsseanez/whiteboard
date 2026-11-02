@@ -35,6 +35,29 @@ export const replies = {
       },
     }),
   noSession: () => json(200, null),
+  session: () =>
+    json(200, {
+      session: {
+        id: 's1',
+        token: 'tok',
+        userId: 'u2',
+        expiresAt: '2026-11-09T07:30:00.000Z',
+        createdAt: '2026-11-02T07:30:00.000Z',
+        updatedAt: '2026-11-02T07:30:00.000Z',
+        ipAddress: '',
+        userAgent: '',
+        activeOrganizationId: null,
+      },
+      user: {
+        id: 'u2',
+        name: 'Test Owner',
+        email: 'owner@example.com',
+        emailVerified: false,
+        image: null,
+        createdAt: '2026-11-02T07:30:00.000Z',
+        updatedAt: '2026-11-02T07:30:00.000Z',
+      },
+    }),
 };
 
 export interface Call {

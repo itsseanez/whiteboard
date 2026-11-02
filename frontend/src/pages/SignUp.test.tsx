@@ -77,7 +77,7 @@ describe('SignUp', () => {
     submit();
 
     expect(await screen.findByText(/used by Whiteboard/)).toBeTruthy();
-    expect(calls).toHaveLength(0);
+    expect(signUps(calls)).toHaveLength(0);
     expect(provision).not.toHaveBeenCalled();
   });
 
@@ -89,7 +89,7 @@ describe('SignUp', () => {
     submit();
 
     expect((await screen.findByRole('alert')).textContent).toMatch(/at least 8/i);
-    expect(calls).toHaveLength(0);
+    expect(signUps(calls)).toHaveLength(0);
   });
 
   it('creates the account, then provisions the salon, then lands on /account', async () => {
@@ -124,7 +124,7 @@ describe('SignUp', () => {
     submit();
 
     expect((await screen.findByRole('alert')).textContent).toMatch(/account was created/i);
-    expect(screen.getByLabelText<HTMLInputElement>('Email').disabled).toBe(true);
+    expect(screen.getByText(/Signed in as owner@example.com/)).toBeTruthy();
 
     provision.mockResolvedValueOnce({ ok: true, slug: 'marinas-cuts-color' });
     fireEvent.submit(screen.getByRole('button', { name: 'Create the salon' }));
@@ -142,7 +142,7 @@ describe('SignUp', () => {
     submit();
 
     expect(await screen.findByText(/Another salon already has this address/)).toBeTruthy();
-    expect(screen.getByLabelText<HTMLInputElement>('Email').disabled).toBe(true);
+    expect(screen.getByText(/Signed in as owner@example.com/)).toBeTruthy();
   });
 
   it('points an existing user to sign in and does not provision', async () => {
@@ -153,5 +153,32 @@ describe('SignUp', () => {
 
     expect((await screen.findByRole('alert')).textContent).toMatch(/already exists/);
     await waitFor(() => expect(provision).not.toHaveBeenCalled());
+  });
+
+  it('shows the address on the host the page is actually served from', () => {
+    fakeFetch({});
+    renderSignUp();
+    type('Salon name', 'Studio Wien');
+    expect(screen.getByText(`Your booking page: ${window.location.host}/studio-wien`)).toBeTruthy();
+  });
+
+  it('explains the address problem when the name yields no usable address', () => {
+    fakeFetch({});
+    renderSignUp();
+    type('Salon name', 'Салон');
+    expect(screen.getByText(/At least 3 characters/)).toBeTruthy();
+  });
+
+  it('refuses a salon name that is only spaces', async () => {
+    const calls = fakeFetch({ 'POST /api/auth/sign-up/email': signUpOk });
+    renderSignUp();
+    fillValid();
+    type('Salon name', '   ');
+    type('Page address', 'my-salon');
+    submit();
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(/salon name/i);
+    expect(signUps(calls)).toHaveLength(0);
+    expect(provision).not.toHaveBeenCalled();
   });
 });

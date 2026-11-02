@@ -20,6 +20,7 @@ export default function Account() {
   const navigate = useNavigate();
   const session = authClient.useSession();
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -38,10 +39,13 @@ export default function Account() {
   }, []);
 
   async function signOut() {
+    const failed = 'Could not sign out, so you are still signed in. Try again in a moment.';
     try {
-      await authClient.signOut();
-    } finally {
-      navigate('/');
+      const { error } = await authClient.signOut();
+      if (error) setProblem(failed);
+      else navigate('/');
+    } catch {
+      setProblem(failed);
     }
   }
 
@@ -89,7 +93,7 @@ export default function Account() {
       {state.salons.length === 0 ? (
         <p className={styles.note}>
           This account is not linked to a salon. If you just signed up, setting up the salon did
-          not finish.
+          not finish. <Link to="/signup">Finish setting up your salon</Link>.
         </p>
       ) : (
         <>
@@ -108,6 +112,12 @@ export default function Account() {
           </p>
         </>
       )}
+
+      {problem ? (
+        <p className={styles.problem} role="alert">
+          {problem}
+        </p>
+      ) : null}
 
       <div className={styles.actions}>
         <Button variant="secondary" onClick={signOut}>

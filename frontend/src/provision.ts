@@ -8,6 +8,9 @@ export interface SalonInput {
   timezone: string; // IANA id
 }
 
+// The form tells the owner "another salon already has this address" on
+// slug_taken, so it must mean another account holds the slug — not the
+// caller's own leftover organization from an interrupted attempt.
 export type ProvisionResult =
   | { ok: true; slug: string }
   | { ok: false; reason: 'slug_taken' }
