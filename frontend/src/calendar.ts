@@ -4,7 +4,7 @@
 //
 // Deciding what today's date is in the salon's zone is a zone question, and
 // format.ts answers it with salonDate(). Everything after that — how many days
-// October has, which weekday the 1st falls on, what the Monday of a given week
+// October has, which weekday the 1st falls on, what the Sunday that starts a given week
 // is — is a property of the calendar, not of any zone. 2026-10-16 is a Friday
 // in Vienna and a Friday in Kennesaw.
 //
@@ -14,9 +14,6 @@
 // Dates would be off by a day for anyone west of Greenwich for part of each
 // day, which is the kind of bug that works perfectly in Vienna and fails in
 // Georgia.
-
-/** Monday = 0 … Sunday = 6. The grid is Monday-first. */
-const MONDAY_FIRST_OFFSET = 6;
 
 interface Parts {
   year: number;
@@ -64,9 +61,16 @@ export function addMonths(date: string, months: number): string {
   return format(new Date(Date.UTC(targetYear, targetMonth, Math.min(day, lastDay))));
 }
 
-/** 0 = Monday … 6 = Sunday. */
+/**
+ * 0 = Sunday … 6 = Saturday. The grid is Sunday-first.
+ *
+ * This is deliberately NOT the ISO weekday the backend uses (1 = Monday …
+ * 7 = Sunday). The backend numbers days for opening-hours rows; this numbers
+ * columns in a grid. They are different jobs and converting between them is
+ * the caller's problem, not something to paper over by making both the same.
+ */
 export function weekdayIndex(date: string): number {
-  return (toUtc(parse(date)).getUTCDay() + MONDAY_FIRST_OFFSET) % 7;
+  return toUtc(parse(date)).getUTCDay();
 }
 
 export function startOfWeek(date: string): string {
@@ -95,7 +99,7 @@ export interface GridCell {
 }
 
 /**
- * The cells of a month view, Monday-first, padded to whole weeks.
+ * The cells of a month view, Sunday-first, padded to whole weeks.
  *
  * Five or six rows depending on where the 1st falls — not always six. A fixed
  * six-row grid means an empty trailing week in most months, and a calendar with
@@ -125,7 +129,7 @@ export function monthGrid(anchor: string): GridCell[] {
   return cells;
 }
 
-/** The seven dates of the week containing `anchor`, Monday first. */
+/** The seven dates of the week containing `anchor`, Sunday first. */
 export function weekDates(anchor: string): string[] {
   const monday = startOfWeek(anchor);
   return Array.from({ length: 7 }, (_, i) => addDays(monday, i));

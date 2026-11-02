@@ -13,8 +13,8 @@ interface Props {
   onPick: (date: string) => void;
 }
 
-/** Monday-first, matching weekDates() and the backend's ISO weekday numbering. */
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+/** Sunday-first, matching weekdayIndex() and weekDates(). */
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function MonthGrid({
   anchor,

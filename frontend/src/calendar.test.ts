@@ -99,37 +99,38 @@ describe('addMonths', () => {
 });
 
 describe('weekdayIndex and startOfWeek', () => {
-  it('counts Monday as 0 and Sunday as 6', () => {
-    expect(weekdayIndex('2026-10-12')).toBe(0); // Monday
-    expect(weekdayIndex('2026-10-16')).toBe(4); // Friday
-    expect(weekdayIndex('2026-10-17')).toBe(5); // Saturday
-    expect(weekdayIndex('2026-10-18')).toBe(6); // Sunday
+  it('counts Sunday as 0 and Saturday as 6', () => {
+    expect(weekdayIndex('2026-10-11')).toBe(0); // Sunday
+    expect(weekdayIndex('2026-10-12')).toBe(1); // Monday
+    expect(weekdayIndex('2026-10-16')).toBe(5); // Friday
+    expect(weekdayIndex('2026-10-17')).toBe(6); // Saturday
   });
 
   it('puts both 2026 clock changes on a Sunday', () => {
     // The engine's DST tests pivot on these two dates. They are Sundays by
     // definition of the EU rule, and if this file disagreed with that the
     // week grid would be a day out exactly on the weeks that matter most.
-    expect(weekdayIndex('2026-03-29')).toBe(6);
-    expect(weekdayIndex('2026-10-25')).toBe(6);
+    // Sunday-first, so they are index 0: the leftmost column of the grid.
+    expect(weekdayIndex('2026-03-29')).toBe(0);
+    expect(weekdayIndex('2026-10-25')).toBe(0);
   });
 
-  it('returns the Monday of the containing week', () => {
-    expect(startOfWeek('2026-10-12')).toBe('2026-10-12'); // already Monday
-    expect(startOfWeek('2026-10-18')).toBe('2026-10-12'); // Sunday looks back
-    expect(startOfWeek('2026-10-19')).toBe('2026-10-19'); // next Monday
+  it('returns the Sunday that starts the containing week', () => {
+    expect(startOfWeek('2026-10-11')).toBe('2026-10-11'); // already Sunday
+    expect(startOfWeek('2026-10-17')).toBe('2026-10-11'); // Saturday looks back
+    expect(startOfWeek('2026-10-18')).toBe('2026-10-18'); // next Sunday
   });
 
   it('spans a month boundary without losing days', () => {
-    const dates = weekDates('2026-11-01'); // a Sunday
+    const dates = weekDates('2026-12-01'); // a Tuesday
     expect(dates).toEqual([
-      '2026-10-26',
-      '2026-10-27',
-      '2026-10-28',
-      '2026-10-29',
-      '2026-10-30',
-      '2026-10-31',
-      '2026-11-01',
+      '2026-11-29',
+      '2026-11-30',
+      '2026-12-01',
+      '2026-12-02',
+      '2026-12-03',
+      '2026-12-04',
+      '2026-12-05',
     ]);
   });
 
@@ -163,7 +164,7 @@ describe('startOfMonth, endOfMonth and sameMonth', () => {
 });
 
 describe('monthGrid', () => {
-  it('is whole weeks, Monday to Sunday', () => {
+  it('is whole weeks, Sunday to Saturday', () => {
     for (const anchor of ['2026-01-15', '2026-02-15', '2026-10-15', '2027-05-15', '2028-02-15']) {
       const cells = monthGrid(anchor);
       expect(cells.length % 7).toBe(0);
@@ -189,19 +190,28 @@ describe('monthGrid', () => {
   });
 
   it('marks the borrowed leading and trailing days as outside', () => {
-    // October 2026 starts on a Thursday, so Mon–Wed come from September.
+    // October 2026 starts on a Thursday, so Sun–Wed come from September. It
+    // also ends on a Saturday, so nothing is borrowed at the end — which is
+    // why a second month is checked below for the trailing side.
     const cells = monthGrid('2026-10-15');
-    expect(cells[0]).toEqual({ date: '2026-09-28', inMonth: false });
-    expect(cells[3]).toEqual({ date: '2026-10-01', inMonth: true });
-    expect(cells[cells.length - 1]).toEqual({ date: '2026-11-01', inMonth: false });
+    expect(cells[0]).toEqual({ date: '2026-09-27', inMonth: false });
+    expect(cells[4]).toEqual({ date: '2026-10-01', inMonth: true });
+    expect(cells[cells.length - 1]).toEqual({ date: '2026-10-31', inMonth: true });
+
+    // August 2026 starts on a Saturday and ends on a Monday, so it borrows at
+    // both ends.
+    const august = monthGrid('2026-08-15');
+    expect(august[0]).toEqual({ date: '2026-07-26', inMonth: false });
+    expect(august[6]).toEqual({ date: '2026-08-01', inMonth: true });
+    expect(august[august.length - 1]).toEqual({ date: '2026-09-05', inMonth: false });
   });
 
   it('uses five rows when the month fits and six when it does not', () => {
     // 35 cells, not a fixed 42: a permanently six-row grid leaves an empty
     // trailing week most months, which reads as a rendering fault.
     expect(monthGrid('2026-10-15')).toHaveLength(35);
-    // February 2027 starts on a Monday and has 28 days — exactly four weeks.
-    expect(monthGrid('2027-02-15')).toHaveLength(28);
+    // February 2026 starts on a Sunday and has 28 days — exactly four weeks.
+    expect(monthGrid('2026-02-15')).toHaveLength(28);
     // August 2026 starts on a Saturday and has 31 days, which needs six rows.
     expect(monthGrid('2026-08-15')).toHaveLength(42);
   });
@@ -224,12 +234,12 @@ describe('rangeFor', () => {
     });
   });
 
-  it('asks for a Monday-to-Sunday week in week view', () => {
+  it('asks for a Sunday-to-Saturday week in week view', () => {
     expect(rangeFor('week', '2026-10-16', past)).toEqual({
-      from: '2026-10-12',
-      through: '2026-10-18',
+      from: '2026-10-11',
+      through: '2026-10-17',
     });
-    expect(inclusiveDays('2026-10-12', '2026-10-18')).toBe(7);
+    expect(inclusiveDays('2026-10-11', '2026-10-17')).toBe(7);
   });
 
   it('asks for the month itself, never the 42 cells of its grid', () => {
@@ -261,7 +271,7 @@ describe('rangeFor', () => {
     });
     expect(rangeFor('week', '2026-10-16', '2026-10-15')).toEqual({
       from: '2026-10-15',
-      through: '2026-10-18',
+      through: '2026-10-17',
     });
   });
 
