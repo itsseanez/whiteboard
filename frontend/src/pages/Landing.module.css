@@ -278,18 +278,11 @@
 
 .rail {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(15rem, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: var(--space-2);
   width: 100%;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
   list-style: none;
   padding: 0;
-}
-
-.rail li {
-  scroll-snap-align: start;
 }
 
 .railItem {
