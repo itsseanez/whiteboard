@@ -111,15 +111,15 @@ export default function Landing() {
               </Link>
             </li>
             <li>
-              <Link className={`${styles.railItem} ${styles.paperEdge}`} to="/marinas-cuts-color">
-                <span className={styles.railName}>Marina's Cuts & Color</span>
-                <span className={styles.railMeta}>New York</span>
+              <Link className={`${styles.railItem} ${styles.paperEdge}`} to="/signup">
+                <span className={styles.railName}>Your salon</span>
+                <span className={styles.railMeta}>Starts empty while owner tools are built</span>
               </Link>
             </li>
             <li>
-              <Link className={`${styles.railItem} ${styles.sunk}`} to="/signup">
-                <span className={styles.railName}>Your salon</span>
-                <span className={styles.railMeta}>Starts empty while owner tools are built</span>
+              <Link className={`${styles.railItem} ${styles.sunk}`} to="/marinas-cuts-color">
+                <span className={styles.railName}>Marina's Cuts & Color</span>
+                <span className={styles.railMeta}>New York</span>
               </Link>
             </li>
           </ul>
