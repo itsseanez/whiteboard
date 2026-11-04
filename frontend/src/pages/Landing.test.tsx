@@ -230,7 +230,7 @@ describe('Landing', () => {
     expect(screen.queryAllByRole('link', { name: /^book/i })).toHaveLength(0);
     const rail = screen.getByRole('list', { name: 'Demo salons' });
     const hrefs = [...rail.querySelectorAll('a')].map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/studio-wien', '/marinas-cuts-color', '/signup']);
+    expect(hrefs).toEqual(['/studio-wien', '/signup','/marinas-cuts-color']);
   });
 
   // The design system: text is in the HTML, script only adds the hidden
