@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProvisionResult, SalonInput } from '../provision';
 
-// The one mock: provisionSalon is Sean's to write and is a stub today. These
+// The one mock: provisionSalon has its own tests (provision.test.ts). These
 // tests pin the form's side of the contract — what it passes, and how it
 // reacts to each result.
 const provision = vi.hoisted(() => vi.fn<(input: SalonInput) => Promise<ProvisionResult>>());

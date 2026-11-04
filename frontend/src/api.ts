@@ -167,3 +167,8 @@ export function rescheduleBooking(
 export function getMyOrganizations(): Promise<Membership[]> {
   return send<Membership[]>('/me/organizations');
 }
+
+/** POST /me/tenants. 201 creates; 200 means an earlier attempt already did. */
+export function createTenant(body: { name: string; slug: string; timezone: string }): Promise<{ slug: string }> {
+  return send<{ slug: string }>('/me/tenants', { method: 'POST', body: JSON.stringify(body) });
+}
