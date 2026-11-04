@@ -1,0 +1,330 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: flex-end;
+  margin: var(--space-5) 0 var(--space-4);
+}
+
+.group {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.toggle,
+.date,
+.picker select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+
+.toggle[aria-pressed='true'] {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--paper);
+}
+
+.picker {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (min-width: 64rem) {
+  .layout:has(.panel) {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+}
+
+/* --- day -------------------------------------------------------------- */
+
+.dayWrap {
+  overflow-x: auto;
+}
+
+.day {
+  display: grid;
+  min-width: max-content;
+}
+
+.corner,
+.staffHead {
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--rule);
+  font-weight: 500;
+  z-index: 3;
+}
+
+.times {
+  position: relative;
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.times span {
+  position: absolute;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  font-variant-numeric: tabular-nums;
+}
+
+.column {
+  position: relative;
+  border-left: 1px solid var(--rule);
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 79px, var(--rule) 79px, var(--rule) 80px);
+}
+
+.working {
+  position: absolute;
+  inset-inline: 0;
+  background: var(--sunk);
+}
+
+.off {
+  position: absolute;
+  inset-inline: 0;
+  background: repeating-linear-gradient(45deg, var(--rule) 0 4px, transparent 4px 8px);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  padding: var(--space-1) var(--space-2);
+}
+
+.open,
+.closed {
+  position: absolute;
+  inset-inline: 0;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.open {
+  background: var(--fill-open);
+  box-shadow: inset 0 -1px 0 var(--paper);
+}
+
+.open:hover,
+.open:focus-visible {
+  background: var(--rule-strong);
+}
+
+.closed {
+  background: transparent;
+}
+
+.closed:hover,
+.closed:focus-visible {
+  background: repeating-linear-gradient(-45deg, var(--rule-strong) 0 2px, transparent 2px 6px);
+}
+
+.appointment {
+  position: absolute;
+  left: var(--space-1);
+  right: var(--space-1);
+  z-index: 2;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  text-align: left;
+  font: inherit;
+  font-size: var(--step--1);
+  color: var(--paper);
+  background: var(--black);
+  border: 0;
+  border-radius: var(--radius-press);
+  padding: var(--space-1) var(--space-2);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.legend {
+  margin-top: var(--space-3);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.swatchOpen,
+.swatchClosed {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: middle;
+  border: 1px solid var(--rule-strong);
+}
+
+.swatchOpen {
+  background: var(--fill-open);
+}
+
+.swatchClosed {
+  background: repeating-linear-gradient(-45deg, var(--rule-strong) 0 2px, transparent 2px 6px);
+}
+
+/* --- week ------------------------------------------------------------- */
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.weekDay {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-2);
+}
+
+.weekHead {
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.weekItem {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  font: inherit;
+  font-size: var(--step--1);
+  background: var(--sunk);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-press);
+  padding: var(--space-2);
+  cursor: pointer;
+}
+
+/* --- panel ------------------------------------------------------------ */
+
+.panel {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-press);
+  position: sticky;
+  top: var(--space-4);
+}
+
+.close {
+  justify-self: end;
+  font: inherit;
+  font-size: var(--step--1);
+  background: none;
+  border: 0;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.panelTitle {
+  font-size: var(--step-1);
+  font-weight: 500;
+}
+
+.reasons {
+  display: grid;
+  gap: var(--space-2);
+  padding-left: var(--space-4);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--step--1);
+}
+
+.details dt {
+  color: var(--muted);
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.actions,
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.move {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.slot {
+  font: inherit;
+  font-size: var(--step--1);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+}
+
+.slot:hover {
+  background: var(--black);
+  color: var(--paper);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.note,
+.empty {
+  margin-bottom: var(--space-3);
+  color: var(--ink-soft);
+}
+
+/* Fifth copy of the problem box. */
+.problem {
+  border-left: 2px solid var(--black);
+  padding: var(--space-2) var(--space-3);
+  background: var(--sunk);
+  font-size: var(--step--1);
+}

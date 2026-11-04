@@ -86,8 +86,8 @@ export default function Account() {
     <>
       <h1 className={shell.title}>Your account</h1>
       <p className={shell.lede}>
-        {email ? `Signed in as ${email}. ` : ''}Set up hours, staff, resources and services for each
-        organization you own.
+        {email ? `Signed in as ${email}. ` : ''}Set up hours, staff, resources and services, and see
+        the calendar, for each organization you own.
       </p>
 
       {state.organizations.length === 0 ? (
@@ -107,6 +107,8 @@ export default function Account() {
                     <>
                       {' · '}
                       <Link to={`/manage/${organization.slug}`}>Set up</Link>
+                      {' · '}
+                      <Link to={`/manage/${organization.slug}/calendar`}>Calendar</Link>
                     </>
                   ) : null}
                 </span>

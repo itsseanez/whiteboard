@@ -233,3 +233,83 @@ export const ownerApi = {
   saveService: (slug: string, id: string, input: ServiceInput) =>
     send<OwnerService>(owner(slug, `/services/${id}`), write('PUT', input)),
 };
+
+// --- owner calendar ----------------------------------------------------------
+
+export interface CalendarAppointment {
+  id: string;
+  staffId: string | null;
+  serviceId: string;
+  serviceName: string;
+  resourceId: string | null;
+  resourceName: string | null;
+  startsAt: string;
+  endsAt: string;
+  customer: { name: string; email: string; phone: string | null };
+}
+
+export interface CalendarData {
+  timeZone: string;
+  staff: StaffMember[];
+  businessHours: HoursRange[];
+  timeOff: { staffId: string; startsAt: string; endsAt: string; reason: string | null }[];
+  appointments: CalendarAppointment[];
+}
+
+export interface BusyInterval {
+  startsAt: string;
+  endsAt: string;
+  appointmentId: string;
+}
+
+export type StaffReason =
+  | { reason: 'busy'; staffId: string; busyInterval: BusyInterval }
+  | { reason: 'timeOff'; staffId: string; timeOff: { startsAt: string; endsAt: string } }
+  | { reason: 'outsideWorkingHours'; staffId: string };
+
+export type TenantReason =
+  | { reason: 'doesNotFitBeforeClosing'; closesAt: string }
+  | { reason: 'noAvailableResource'; conflicts: { resourceId: string; busyInterval: BusyInterval }[] }
+  | { reason: 'tooSoon'; earliestBookableAt: string };
+
+export interface ExcludedTime {
+  startsAt: string;
+  reason: StaffReason[] | TenantReason;
+}
+
+export type ExplainDay =
+  | { date: string; status: 'closed' }
+  | {
+      date: string;
+      status: 'open';
+      slots: { startsAt: string; endsAt: string; staffIds: string[]; resourceIds: string[] }[];
+      excluded: ExcludedTime[];
+    };
+
+export interface Explain {
+  timeZone: string;
+  noQualifiedStaff: boolean;
+  days: ExplainDay[];
+}
+
+export const calendarApi = {
+  calendar: (slug: string, from: string, through: string) =>
+    send<CalendarData>(owner(slug, `/calendar?${new URLSearchParams({ from, through })}`)),
+  explain: (slug: string, serviceId: string, from: string, through: string, staffId?: string) => {
+    const query = new URLSearchParams({ serviceId, from, through });
+    if (staffId) query.set('staffId', staffId);
+    return send<Explain>(owner(slug, `/availability/explain?${query}`));
+  },
+  book: (
+    slug: string,
+    body: { serviceId: string; staffId: string; startsAt: string; customer: { name: string; email: string; phone?: string } },
+  ) => send<Rescheduled>(owner(slug, '/appointments'), write('POST', body)),
+  cancel: (slug: string, id: string) => send<Cancelled>(owner(slug, `/appointments/${id}/cancel`), write('POST', {})),
+  move: (slug: string, id: string, startsAt: string, staffId?: string) =>
+    send<Rescheduled>(owner(slug, `/appointments/${id}/reschedule`), write('POST', staffId ? { startsAt, staffId } : { startsAt })),
+};
+
+/** GET /tenant/:slug — the signed-in owner's view of their own tenant. */
+export function getTenantContext(slug: string): Promise<{ tenant: { name: string; slug: string; timezone: string }; membership: { role: string } }> {
+  return send(owner(slug, ''));
+}

@@ -125,7 +125,7 @@ export default function Setup() {
       <h1 className={shell.title}>Set up</h1>
       <p className={shell.lede}>
         What customers can book at <Link to={`/${slug}`}>{`${window.location.host}/${slug}`}</Link>. Times are
-        in your organization's own zone.
+        in your organization's own zone. <Link to={`/manage/${slug}/calendar`}>Open the calendar</Link>.
       </p>
 
       <BusinessHours slug={slug} initial={data.businessHours} />
