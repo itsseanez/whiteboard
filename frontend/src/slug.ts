@@ -1,7 +1,7 @@
 // Slugs no salon may take, because the path /<slug> or /<slug>/... is already
 // claimed. Keep in sync with the page routes in main.tsx and the mounts in
-// backend/src/app.ts. This is the form's check only; the server must refuse
-// these too, or anyone can POST past it.
+// backend/src/app.ts. This is the form's check only; the server refuses these
+// too, from its own copy in backend/src/lib/tenant-input.ts.
 const RESERVED = new Set([
   'signin', // page
   'signup', // page
