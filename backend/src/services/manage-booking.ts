@@ -86,9 +86,12 @@ interface AppointmentRow {
   status: string;
 }
 
+/** The customer's emailed token, or the appointment id for an owner with a session. */
+export type AppointmentRef = { token: string } | { appointmentId: string };
+
 export interface CancelRequest {
   tenantId: string;
-  token: string;
+  ref: AppointmentRef;
   now: Date;
 }
 
@@ -101,7 +104,7 @@ export interface CancelResult {
 export interface RescheduleRequest {
   tenantId: string;
   timeZone: string;
-  token: string;
+  ref: AppointmentRef;
   startsAt: Temporal.Instant;
   /**
    * Move to a different stylist at the same time, or null to keep the one the
@@ -127,13 +130,15 @@ function isExclusionViolation(error: unknown): boolean {
 }
 
 /**
- * The appointment a token names, or null.
+ * The appointment a token or id names, or null.
  *
  * No tenant_id in the WHERE clause — RLS applies it. The token is globally
- * unique, so the tenant filter is what makes a valid token from another organization
- * behave exactly like a wrong one.
+ * unique, so the tenant filter is what makes a valid token (or id) from another
+ * organization behave exactly like a wrong one.
  */
-async function fetchByToken(client: PoolClient, token: string): Promise<AppointmentRow | null> {
+async function fetchByRef(client: PoolClient, ref: AppointmentRef): Promise<AppointmentRow | null> {
+  const [column, value] =
+    'token' in ref ? ['manage_token_hash', hashManageToken(ref.token)] : ['id', ref.appointmentId];
   const { rows } = await client.query<AppointmentRow>(
     `SELECT id,
             service_id AS "serviceId",
@@ -142,8 +147,8 @@ async function fetchByToken(client: PoolClient, token: string): Promise<Appointm
             ends_at    AS "endsAt",
             status
      FROM appointment
-     WHERE manage_token_hash = $1`,
-    [hashManageToken(token)],
+     WHERE ${column} = $1`,
+    [value],
   );
   return rows[0] ?? null;
 }
@@ -154,7 +159,7 @@ async function fetchByToken(client: PoolClient, token: string): Promise<Appointm
 
 export async function cancelBooking(pool: Pool, request: CancelRequest): Promise<CancelResult> {
   return withContext(pool, { tenantId: request.tenantId }, async (client) => {
-    const appointment = await fetchByToken(client, request.token);
+    const appointment = await fetchByRef(client, request.ref);
     if (!appointment) throw new AppointmentNotFoundError();
 
     // Idempotent, and only for CANCELLED. A customer clicking the same link in
@@ -200,7 +205,7 @@ export async function rescheduleBooking(
   // to precede the availability check, because the check needs this
   // appointment's service and the id to disregard.
   const appointment = await withContext(pool, { tenantId: request.tenantId }, (client) =>
-    fetchByToken(client, request.token),
+    fetchByRef(client, request.ref),
   );
   if (!appointment) throw new AppointmentNotFoundError();
   if (appointment.status !== 'BOOKED') {

@@ -35,7 +35,7 @@ type Parsed =
   | { ok: true; value: Omit<AvailabilityQuery, 'now' | 'excludeAppointmentId'> }
   | { ok: false; status: 400; error: string };
 
-function parseRequest(req: Request): Parsed {
+export function parseRequest(req: Request): Parsed {
   // req.tenant is set by resolveTenantFromSlug. It is checked rather than
   // trusted because reaching this controller without the middleware would be a
   // routing mistake, and `undefined` as a time zone throws deep inside Temporal

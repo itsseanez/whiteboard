@@ -79,7 +79,7 @@ function parseTokenRequest(req: Request): TokenParsed {
 }
 
 /** Shared by both handlers — the failure modes are identical. */
-function sendManageError(res: Response, error: unknown): boolean {
+export function sendManageError(res: Response, error: unknown): boolean {
   if (error instanceof AppointmentNotFoundError) {
     res.status(404).json({ error: 'appointment_not_found' });
     return true;
@@ -113,7 +113,7 @@ export async function postCancelBooking(req: Request, res: Response): Promise<vo
   try {
     const result = await cancelBooking(publicPool, {
       tenantId: parsed.tenantId,
-      token: parsed.token,
+      ref: { token: parsed.token },
       // The only clock read on this path, matching every other endpoint.
       now: new Date(),
     });
@@ -168,7 +168,7 @@ export async function postRescheduleBooking(req: Request, res: Response): Promis
     const result = await rescheduleBooking(publicPool, {
       tenantId: parsed.tenantId,
       timeZone: parsed.timeZone,
-      token: parsed.token,
+      ref: { token: parsed.token },
       startsAt,
       staffId: staff && staff.length > 0 ? staff : null,
       now: new Date(),

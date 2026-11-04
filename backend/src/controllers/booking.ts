@@ -40,7 +40,7 @@ function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value.trim() : undefined;
 }
 
-function parseBooking(req: Request): Parsed {
+export function parseBooking(req: Request): Parsed {
   const tenant = req.tenant;
   if (!tenant?.id || !tenant.timezone) {
     return { ok: false, error: 'Tenant not resolved' };
