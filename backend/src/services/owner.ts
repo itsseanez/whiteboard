@@ -10,6 +10,12 @@ import { toHHMM, type HoursRange } from '../lib/weekly-hours.js';
 export class NotFoundError extends Error {}
 /** A staffId or resourceId in a service body that this tenant doesn't have. */
 export class UnknownLinkError extends Error {}
+/** Archiving is refused while future bookings depend on the row. */
+export class HasFutureAppointmentsError extends Error {
+  constructor(readonly count: number) {
+    super(`${count} future appointment(s)`);
+  }
+}
 
 const FOREIGN_KEY_VIOLATION = '23503';
 
@@ -43,7 +49,7 @@ async function hoursByStaff(client: PoolClient): Promise<Map<string, HoursRange[
 export function listStaff(tenantId: string): Promise<StaffMember[]> {
   return inTenant(tenantId, async (client) => {
     const { rows } = await client.query<{ id: string; name: string }>(
-      'SELECT id, name FROM staff ORDER BY created_at, name',
+      'SELECT id, name FROM staff WHERE archived_at IS NULL ORDER BY created_at, name',
     );
     const hours = await hoursByStaff(client);
     return rows.map((s) => ({ ...s, hours: hours.get(s.id) ?? [] }));
@@ -62,7 +68,7 @@ export function createStaff(tenantId: string, name: string): Promise<StaffMember
 
 export function renameStaff(tenantId: string, staffId: string, name: string): Promise<void> {
   return inTenant(tenantId, async (client) => {
-    const { rowCount } = await client.query('UPDATE staff SET name = $2 WHERE id = $1', [staffId, name]);
+    const { rowCount } = await client.query('UPDATE staff SET name = $2 WHERE id = $1 AND archived_at IS NULL', [staffId, name]);
     if (rowCount === 0) throw new NotFoundError();
   });
 }
@@ -70,7 +76,7 @@ export function renameStaff(tenantId: string, staffId: string, name: string): Pr
 /** Replaces the whole week in one transaction, so there is never a half-edited week. */
 export function replaceStaffHours(tenantId: string, staffId: string, hours: HoursRange[]): Promise<void> {
   return inTenant(tenantId, async (client) => {
-    const { rowCount } = await client.query('SELECT 1 FROM staff WHERE id = $1 FOR UPDATE', [staffId]);
+    const { rowCount } = await client.query('SELECT 1 FROM staff WHERE id = $1 AND archived_at IS NULL FOR UPDATE', [staffId]);
     if (rowCount === 0) throw new NotFoundError();
     await client.query('DELETE FROM staff_working_hours WHERE staff_id = $1', [staffId]);
     for (const h of hours) {
@@ -164,10 +170,11 @@ export function listServices(tenantId: string): Promise<OwnerService[]> {
               buffer_before_minutes  AS "bufferBeforeMinutes",
               buffer_after_minutes   AS "bufferAfterMinutes",
               minimum_notice_minutes AS "minimumNoticeMinutes"
-       FROM service ORDER BY created_at, name`,
+       FROM service WHERE archived_at IS NULL ORDER BY created_at, name`,
     );
     const staff = await client.query<{ serviceId: string; id: string }>(
-      'SELECT service_id AS "serviceId", staff_id AS id FROM staff_service',
+      `SELECT ss.service_id AS "serviceId", ss.staff_id AS id
+       FROM staff_service ss JOIN staff s ON s.id = ss.staff_id AND s.archived_at IS NULL`,
     );
     const resources = await client.query<{ serviceId: string; id: string }>(
       'SELECT service_id AS "serviceId", resource_id AS id FROM service_resource',
@@ -181,6 +188,12 @@ export function listServices(tenantId: string): Promise<OwnerService[]> {
 }
 
 async function replaceLinks(client: PoolClient, tenantId: string, serviceId: string, input: ServiceInput) {
+  // The foreign keys allow archived staff, so active ones are checked here.
+  const { rows } = await client.query<{ n: number }>(
+    'SELECT count(*)::int AS n FROM staff WHERE id = ANY($1::uuid[]) AND archived_at IS NULL',
+    [input.staffIds],
+  );
+  if (rows[0]!.n !== input.staffIds.length) throw new UnknownLinkError();
   await client.query('DELETE FROM staff_service WHERE service_id = $1', [serviceId]);
   await client.query('DELETE FROM service_resource WHERE service_id = $1', [serviceId]);
   try {
@@ -219,7 +232,7 @@ export function updateService(tenantId: string, serviceId: string, input: Servic
     const { rowCount } = await client.query(
       `UPDATE service SET name = $2, duration_minutes = $3, buffer_before_minutes = $4,
               buffer_after_minutes = $5, minimum_notice_minutes = $6
-       WHERE id = $1`,
+       WHERE id = $1 AND archived_at IS NULL`,
       [serviceId, input.name, input.durationMinutes, input.bufferBeforeMinutes, input.bufferAfterMinutes, input.minimumNoticeMinutes],
     );
     if (rowCount === 0) throw new NotFoundError();
@@ -227,3 +240,29 @@ export function updateService(tenantId: string, serviceId: string, input: Servic
     return { id: serviceId, ...input };
   });
 }
+
+// --- archiving -----------------------------------------------------------
+//
+// Locks the row FOR UPDATE before counting. A booking's insert takes FOR KEY
+// SHARE on the same row through its foreign key, which conflicts, so either the
+// booking commits first and is counted here, or it waits and then finds the row
+// archived (booking.ts checks after its insert).
+
+async function archive(tenantId: string, table: 'staff' | 'service', id: string): Promise<void> {
+  const column = table === 'staff' ? 'staff_id' : 'service_id';
+  return inTenant(tenantId, async (client) => {
+    const { rowCount } = await client.query(`SELECT 1 FROM ${table} WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, [id]);
+    if (rowCount === 0) throw new NotFoundError();
+    const { rows } = await client.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM appointment WHERE ${column} = $1 AND status = 'BOOKED' AND ends_at > now()`,
+      [id],
+    );
+    if (rows[0]!.n > 0) throw new HasFutureAppointmentsError(rows[0]!.n);
+    await client.query(`UPDATE ${table} SET archived_at = now() WHERE id = $1`, [id]);
+    // An archived staff member stops being offered for any service.
+    if (table === 'staff') await client.query('DELETE FROM staff_service WHERE staff_id = $1', [id]);
+  });
+}
+
+export const archiveStaff = (tenantId: string, staffId: string) => archive(tenantId, 'staff', staffId);
+export const archiveService = (tenantId: string, serviceId: string) => archive(tenantId, 'service', serviceId);

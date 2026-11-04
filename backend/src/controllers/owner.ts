@@ -3,6 +3,7 @@
 //
 //   400  the body is malformed, or names staff/resources this tenant doesn't have
 //   404  no such id in this tenant (another tenant's id looks the same)
+//   409  a delete would strand future bookings
 
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { parseWeeklyHours } from '../lib/weekly-hours.js';
@@ -21,6 +22,9 @@ function handle(fn: Handler): RequestHandler {
     } catch (err) {
       if (err instanceof owner.NotFoundError) return res.status(404).json({ error: 'not_found' });
       if (err instanceof owner.UnknownLinkError) return res.status(400).json({ error: 'unknown_staff_or_resource' });
+      if (err instanceof owner.HasFutureAppointmentsError) {
+        return res.status(409).json({ error: 'has_future_appointments', count: err.count });
+      }
       next(err);
     }
   };
@@ -151,4 +155,20 @@ export const putService = handle(async (req, res) => {
   const parsed = parseService(req.body);
   if (!parsed.ok) return res.status(400).json({ error: parsed.error });
   res.json(await owner.updateService(tenantId(req), id, parsed.value));
+});
+
+// --- deletes (archive) ---------------------------------------------------
+
+export const deleteStaff = handle(async (req, res) => {
+  const id = idParam(req);
+  if (!id) return res.status(404).json({ error: 'not_found' });
+  await owner.archiveStaff(tenantId(req), id);
+  res.status(204).end();
+});
+
+export const deleteService = handle(async (req, res) => {
+  const id = idParam(req);
+  if (!id) return res.status(404).json({ error: 'not_found' });
+  await owner.archiveService(tenantId(req), id);
+  res.status(204).end();
 });

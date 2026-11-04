@@ -51,6 +51,7 @@ async function fetchServices(client: PoolClient): Promise<ServiceRow[]> {
   const { rows } = await client.query<ServiceRow>(
     `SELECT id, name, duration_minutes AS "durationMinutes"
      FROM service
+     WHERE archived_at IS NULL
      ORDER BY name`,
   );
   return rows;
@@ -66,6 +67,7 @@ async function fetchStaffLinks(client: PoolClient): Promise<LinkRow[]> {
             s.name        AS "staffName"
      FROM staff_service ss
      JOIN staff s ON s.id = ss.staff_id
+     WHERE s.archived_at IS NULL
      ORDER BY s.name`,
   );
   return rows;

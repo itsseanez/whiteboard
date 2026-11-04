@@ -59,6 +59,7 @@ import { ServiceNotFoundError } from './availability.js';
 import {
   SlotNotOfferedError,
   SlotTakenError,
+  requireNotArchived,
   requireOfferedSlot,
   type SlotRequest,
 } from './booking.js';
@@ -282,6 +283,7 @@ export async function rescheduleBooking(
       // computing availability. Not a lost race for the slot; a lost race for
       // the appointment.
       if (rowCount !== 1) throw new AppointmentNotManageableError('not_booked');
+      await requireNotArchived(client, staffId, appointment.serviceId);
 
       return {
         appointmentId: appointment.id,

@@ -71,7 +71,7 @@ async function fetchService(client: PoolClient, serviceId: string): Promise<Serv
             buffer_after_minutes    AS "bufferAfterMinutes",
             minimum_notice_minutes  AS "minimumNoticeMinutes"
      FROM service
-     WHERE id = $1`,
+     WHERE id = $1 AND archived_at IS NULL`,
     [serviceId],
   );
   const service = rows[0];
@@ -88,10 +88,11 @@ async function fetchCandidateStaffIds(
   preferredStaffId: string | null,
 ): Promise<string[]> {
   const { rows } = await client.query<{ staffId: string }>(
-    `SELECT staff_id AS "staffId"
-     FROM staff_service
-     WHERE service_id = $1
-       AND ($2::uuid IS NULL OR staff_id = $2)`,
+    `SELECT ss.staff_id AS "staffId"
+     FROM staff_service ss
+     JOIN staff s ON s.id = ss.staff_id AND s.archived_at IS NULL
+     WHERE ss.service_id = $1
+       AND ($2::uuid IS NULL OR ss.staff_id = $2)`,
     [serviceId, preferredStaffId],
   );
   return rows.map((r) => r.staffId);

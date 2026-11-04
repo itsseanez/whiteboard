@@ -20,7 +20,7 @@ export interface CalendarAppointment {
 
 export interface CalendarData {
   timeZone: string;
-  staff: { id: string; name: string; hours: HoursRange[] }[];
+  staff: { id: string; name: string; archived: boolean; hours: HoursRange[] }[];
   businessHours: HoursRange[];
   timeOff: { staffId: string; startsAt: string; endsAt: string; reason: string | null }[];
   appointments: CalendarAppointment[];
@@ -38,7 +38,14 @@ const iso = (d: Date) => d.toISOString();
 export function getCalendar(tenantId: string, timeZone: string, from: string, through: string): Promise<CalendarData> {
   const { start, end } = rangeInstants(timeZone, from, through);
   return withContext(appPool, { tenantId }, async (client) => {
-    const staff = await client.query<{ id: string; name: string }>('SELECT id, name FROM staff ORDER BY created_at, name');
+    // Archived staff appear only on days where they still have (past) appointments.
+    const staff = await client.query<{ id: string; name: string; archived: boolean }>(
+      `SELECT id, name, archived_at IS NOT NULL AS archived FROM staff
+       WHERE archived_at IS NULL
+          OR id IN (SELECT staff_id FROM appointment WHERE status = 'BOOKED' AND starts_at < $2 AND ends_at > $1)
+       ORDER BY created_at, name`,
+      [start, end],
+    );
     const hours = await client.query<{ staffId: string; weekday: number; start: string; end: string }>(
       `SELECT staff_id AS "staffId", weekday, start_time AS start, end_time AS "end"
        FROM staff_working_hours ORDER BY weekday, start_time`,

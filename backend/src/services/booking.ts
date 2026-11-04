@@ -118,6 +118,20 @@ async function upsertCustomer(
 }
 
 /**
+ * Re-checked after the write, in the same transaction. The insert's foreign keys
+ * wait on an archive that holds the staff or service row, so a plain read here
+ * sees that archive once it commits, and the booking rolls back.
+ */
+export async function requireNotArchived(client: PoolClient, staffId: string, serviceId: string): Promise<void> {
+  const { rows } = await client.query<{ ok: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM staff WHERE id = $1 AND archived_at IS NULL)
+        AND EXISTS (SELECT 1 FROM service WHERE id = $2 AND archived_at IS NULL) AS ok`,
+    [staffId, serviceId],
+  );
+  if (!rows[0]?.ok) throw new SlotNotOfferedError('the staff member or service was removed');
+}
+
+/**
  * What requireOfferedSlot needs. Narrower than BookingRequest — no customer —
  * so reschedule can reuse it without inventing customer data it is not
  * changing. BookingRequest satisfies it structurally.
@@ -223,6 +237,7 @@ export async function createBooking(
       );
       const row = rows[0];
       if (!row) throw new Error('appointment insert returned no row');
+      await requireNotArchived(client, request.staffId, request.serviceId);
 
       return {
         id: row.id,
