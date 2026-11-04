@@ -1,9 +1,9 @@
 // The product page, built as the design system's marketing tiles. Booking
 // happens in one place, the live tile at the top; the rail at the bottom links
-// each demo salon's full booking page. It exists only because this is a demo
+// each demo organization's full booking page. It exists only because this is a demo
 // of a multi-tenant app.
 //
-// The demo salons are literals, not fetched: there is deliberately no
+// The demo organizations are literals, not fetched: there is deliberately no
 // endpoint that lists tenants.
 
 import { useRef, type CSSProperties } from 'react';
@@ -72,7 +72,7 @@ export default function Landing() {
               Right when the clocks change
             </h2>
             <p className={styles.tileLine} data-reveal style={at(1)}>
-              Hours are kept in the salon's own time, so 9:00 is still 9:00 the morning after the
+              Hours are kept in the organization's own time, so 9:00 is still 9:00 the morning after the
               clocks go back.
             </p>
             <div className={styles.mock} aria-hidden="true">
@@ -101,9 +101,9 @@ export default function Landing() {
 
         <section className={styles.railTile} aria-labelledby="rail-title">
           <h2 id="rail-title" className={styles.tileTitle} data-reveal style={at(0)}>
-            Open a salon's full booking page
+            Open an organization's full booking page
           </h2>
-          <ul className={styles.rail} aria-label="Demo salons">
+          <ul className={styles.rail} aria-label="Demo organizations">
             <li>
               <Link className={`${styles.railItem} ${styles.sunk}`} to="/studio-wien">
                 <span className={styles.railName}>Studio Wien</span>
@@ -112,7 +112,7 @@ export default function Landing() {
             </li>
             <li>
               <Link className={`${styles.railItem} ${styles.paperEdge}`} to="/signup">
-                <span className={styles.railName}>Your salon</span>
+                <span className={styles.railName}>Your organization</span>
                 <span className={styles.railMeta}>Starts empty while owner tools are built</span>
               </Link>
             </li>

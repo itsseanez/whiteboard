@@ -54,9 +54,9 @@ function manageMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case 'appointment_not_found':
-        return 'This link does not match an appointment here. It may have been mistyped, or it may belong to a different salon.';
+        return 'This link does not match an appointment here. It may have been mistyped, or it may belong to a different organization.';
       case 'already_started':
-        return 'This appointment has already started, so it can no longer be changed from here. Call the salon.';
+        return 'This appointment has already started, so it can no longer be changed from here. Call the organization.';
       case 'not_booked':
         return 'This appointment is already cancelled or finished, so there is nothing to change.';
       case 'slot_taken':
@@ -100,7 +100,7 @@ export default function Manage() {
         setServiceId(loaded.services[0]?.id ?? null);
       })
       .catch(() => {
-        if (live) setProblem('Could not load this salon. Try again in a moment.');
+        if (live) setProblem('Could not load this organization. Try again in a moment.');
       });
     return () => {
       live = false;

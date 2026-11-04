@@ -2,7 +2,7 @@
 
 # Whiteboard
 
-**Multi-tenant booking software for salons and independent service businesses.**
+**Multi-tenant booking software for service-based organizations.**
 
 Computed availability across staff and room constraints · timezone-correct through DST · race-free reservation
 

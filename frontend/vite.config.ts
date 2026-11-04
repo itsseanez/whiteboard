@@ -12,7 +12,7 @@ export default defineConfig({
   // and there is no VITE_API_URL to forget to set.
   //
   // Anchored regexes, not plain prefixes: a prefix '/api' would also catch a
-  // salon at /apiary. Pages such as /studio-wien and /studio-wien/manage must
+  // organization at /apiary. Pages such as /studio-wien and /studio-wien/manage must
   // stay with Vite.
   server: {
     port: 5173,

@@ -1,12 +1,12 @@
-// Two steps: create the owner's account, then provision the salon. The second
+// Two steps: create the owner's account, then provision the organization. The second
 // is provision.ts, not this page. A visitor who already has a session — from
-// an interrupted sign-up — skips straight to the salon step.
+// an interrupted sign-up — skips straight to the organization step.
 
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { authClient, authMessage, UNREACHABLE, type AuthError } from '../auth';
-import { provisionSalon } from '../provision';
+import { provisionOrganization } from '../provision';
 import { slugify, slugProblem, SLUG_MAX } from '../slug';
 import Button from '../components/Button';
 import Field from '../components/Field';
@@ -49,7 +49,7 @@ export default function SignUp() {
   const [ownerName, setOwnerName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [salonName, setSalonName] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
   const [editedSlug, setEditedSlug] = useState<string | null>(null);
   const [timezone, setTimezone] = useState(browserZone);
 
@@ -62,15 +62,15 @@ export default function SignUp() {
   const [sending, setSending] = useState(false);
   const inFlight = useRef(false);
 
-  const slug = editedSlug ?? slugify(salonName);
+  const slug = editedSlug ?? slugify(organizationName);
   const slugError = slugProblem(slug);
   const zones = useMemo(() => zoneOptions(browserZone()), []);
 
-  const touched = salonName.trim() !== '' || editedSlug !== null;
+  const touched = organizationName.trim() !== '' || editedSlug !== null;
   // Shown only when something is wrong; the preview below says the rest.
   const slugHint =
     takenSlug === slug
-      ? 'Another salon already has this address. Pick another.'
+      ? 'Another organization already has this address. Pick another.'
       : touched && slugError
         ? slugError
         : null;
@@ -80,8 +80,8 @@ export default function SignUp() {
     event.preventDefault();
     if (inFlight.current) return;
 
-    if (!salonName.trim()) {
-      setProblem('Enter the salon name.');
+    if (!organizationName.trim()) {
+      setProblem('Enter the organization name.');
       return;
     }
     if (slugError) {
@@ -107,7 +107,7 @@ export default function SignUp() {
         setAccountMade(true);
       }
 
-      const result = await provisionSalon({ name: salonName.trim(), slug, timezone });
+      const result = await provisionOrganization({ name: organizationName.trim(), slug, timezone });
       if (result.ok) {
         navigate('/account');
       } else if (result.reason === 'slug_taken') {
@@ -115,7 +115,7 @@ export default function SignUp() {
         setProblem('That page address is taken. Your account is saved; pick another address.');
       } else {
         setProblem(
-          `Your account was created, but the salon was not.${result.detail ? ` ${result.detail}` : ''} Try again — only the salon step will repeat.`,
+          `Your account was created, but the organization was not.${result.detail ? ` ${result.detail}` : ''} Try again — only the organization step will repeat.`,
         );
       }
     } catch {
@@ -131,11 +131,11 @@ export default function SignUp() {
       <Link className={shell.wordmark} to="/">
         Whiteboard
       </Link>
-      <h1 className={shell.title}>Create a salon</h1>
+      <h1 className={shell.title}>Create an organization</h1>
       <p className={shell.lede}>
-        This gives your salon its own booking page. Adding staff, services and hours isn't built
+        This gives your organization its own booking page. Adding staff, services and hours isn't built
         yet, so the page won't take bookings. To see booking work, <Link to="/">open a demo
-        salon</Link>.
+        organization</Link>.
       </p>
 
       <form className={styles.form} onSubmit={submit}>
@@ -148,7 +148,7 @@ export default function SignUp() {
         <div className={styles.group}>
           <h2 className={styles.groupTitle}>Your account</h2>
           {hasAccount ? (
-            <p className={styles.note}>Signed in as {signedInAs}. Only the salon is left to set up.</p>
+            <p className={styles.note}>Signed in as {signedInAs}. Only the organization is left to set up.</p>
           ) : (
             <>
               <Field
@@ -183,11 +183,11 @@ export default function SignUp() {
         </div>
 
         <div className={styles.group}>
-          <h2 className={styles.groupTitle}>Your salon</h2>
+          <h2 className={styles.groupTitle}>Your organization</h2>
           <Field
-            label="Salon name"
-            value={salonName}
-            onChange={setSalonName}
+            label="Organization name"
+            value={organizationName}
+            onChange={setOrganizationName}
             autoComplete="organization"
             maxLength={200}
             required
@@ -212,7 +212,7 @@ export default function SignUp() {
 
         <div className={styles.actions}>
           <Button type="submit" disabled={sending}>
-            {sending ? 'Creating…' : hasAccount ? 'Create salon' : 'Create account and salon'}
+            {sending ? 'Creating…' : hasAccount ? 'Create organization' : 'Create account and organization'}
           </Button>
         </div>
       </form>

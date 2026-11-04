@@ -49,7 +49,7 @@ export interface ResourceConflict {
 
 /**
  * Why a grid time is unavailable regardless of which staff member is asked.
- * Evaluated before the per-staff reasons and short-circuits them: if the salon
+ * Evaluated before the per-staff reasons and short-circuits them: if the organization
  * shuts at 17:00, the stylists' schedules are irrelevant.
  */
 export type TenantReason =

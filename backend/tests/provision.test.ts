@@ -35,7 +35,7 @@ function provision(cookie: string, body: Record<string, unknown>) {
   return request(app).post('/me/tenants').set('Cookie', cookie).send(body);
 }
 
-const body = (slug: string) => ({ name: 'Test Salon', slug, timezone: 'Europe/Vienna' });
+const body = (slug: string) => ({ name: 'Test Organization', slug, timezone: 'Europe/Vienna' });
 
 async function countTenants(slug: string): Promise<number> {
   const { rows } = await ownerPool.query('SELECT count(*)::int AS n FROM tenant WHERE slug = $1', [slug]);

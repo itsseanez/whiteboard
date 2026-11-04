@@ -367,7 +367,7 @@ describe('POST /:slug/appointments — rejected requests', () => {
   });
 
   it('404s an unknown tenant slug', async () => {
-    const res = await request(app).post('/no-such-salon/appointments').send(valid());
+    const res = await request(app).post('/no-such-organization/appointments').send(valid());
 
     expect(res.status).toBe(404);
   });

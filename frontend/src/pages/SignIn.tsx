@@ -44,7 +44,7 @@ export default function SignIn() {
         Whiteboard
       </Link>
       <h1 className={shell.title}>Sign in</h1>
-      <p className={shell.lede}>For salon owners. Customers book without an account.</p>
+      <p className={shell.lede}>For organization owners. Customers book without an account.</p>
 
       <form className={styles.form} onSubmit={submit}>
         {problem ? (
@@ -76,7 +76,7 @@ export default function SignIn() {
       </form>
 
       <p className={styles.switch}>
-        No account? <Link to="/signup">Create a salon</Link>
+        No account? <Link to="/signup">Create an organization</Link>
       </p>
     </main>
   );

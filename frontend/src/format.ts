@@ -1,4 +1,4 @@
-// Dates and times, always in the SALON's zone — never the browser's.
+// Dates and times, always in the ORGANIZATION's zone — never the browser's.
 //
 // This is the whole reason the API returns `timeZone` next to the instants. A
 // customer in Kennesaw booking at Studio Wien must see 09:00, the time they
@@ -57,13 +57,13 @@ function viewerUsesTwelveHour(): boolean {
  *
  * THE ZONE AND THE NOTATION ARE DIFFERENT QUESTIONS
  *
- * Which MOMENT to show is the salon's business: the instant is always
- * rendered in the salon's zone, so a customer in Kennesaw sees the time they
+ * Which MOMENT to show is the organization's business: the instant is always
+ * rendered in the organization's zone, so a customer in Kennesaw sees the time they
  * will be standing in the doorway in Vienna. That never follows the viewer.
  *
  * How to WRITE that moment is the viewer's business, and follows their
  * locale. The two are independent, and conflating them is what made an
- * earlier version key notation off the salon's country.
+ * earlier version key notation off the organization's country.
  *
  * It also makes this file consistent with itself. weekdayLong and dayAndMonth
  * already format in the viewer's locale — an American reads 'October 16' and
@@ -129,7 +129,7 @@ export function duration(minutes: number): string {
 }
 
 /**
- * The salon's own calendar dates, as 'YYYY-MM-DD' strings for the API.
+ * The organization's own calendar dates, as 'YYYY-MM-DD' strings for the API.
  *
  * Built with `en-CA`, whose short date format is ISO, rather than by slicing
  * `toISOString()` — which would give the UTC date. At 23:00 in Vienna the UTC
@@ -137,7 +137,7 @@ export function duration(minutes: number): string {
  * every evening. That bug would be invisible in Kennesaw and permanent in
  * Vienna.
  */
-export function salonDate(date: Date, timeZone: string): string {
+export function organizationDate(date: Date, timeZone: string): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',
@@ -146,7 +146,7 @@ export function salonDate(date: Date, timeZone: string): string {
   }).format(date);
 }
 
-/** Today in the salon's zone, then the next `count - 1` days. */
+/** Today in the organization's zone, then the next `count - 1` days. */
 export function dateRange(timeZone: string, count: number): string[] {
   const dates: string[] = [];
   const now = Date.now();
@@ -155,7 +155,7 @@ export function dateRange(timeZone: string, count: number): string[] {
     // zone is safe across a clock change: the formatter decides what calendar
     // date each moment falls on, so a 23-hour day is never skipped and a
     // 25-hour day is never doubled. Adding to a local wall clock would do both.
-    dates.push(salonDate(new Date(now + i * 86_400_000), timeZone));
+    dates.push(organizationDate(new Date(now + i * 86_400_000), timeZone));
   }
   return dates;
 }

@@ -48,7 +48,7 @@ import {
   dayAndMonth,
   duration,
   fullMoment,
-  salonDate,
+  organizationDate,
   timeOfDay,
   weekdayLong,
 } from '../format';
@@ -125,7 +125,7 @@ export default function Booking() {
   const [problem, setProblem] = useState<string | null>(null);
   const [booked, setBooked] = useState<Booked | null>(null);
 
-  // --- the salon and what it offers ---------------------------------------
+  // --- the organization and what it offers ---------------------------------------
 
   useEffect(() => {
     let live = true;
@@ -139,9 +139,9 @@ export default function Booking() {
         if (!live) return;
         setLoadError(
           error instanceof ApiError && error.status === 404
-            ? { title: 'Not found', detail: 'No salon at this address.' }
+            ? { title: 'Not found', detail: 'No organization at this address.' }
             : {
-              title: "Can't reach the salon",
+              title: "Can't reach the organization",
               detail: 'Something went wrong loading this page. Try again in a moment.',
             },
         );
@@ -154,9 +154,9 @@ export default function Booking() {
   const timeZone = catalog?.tenant.timeZone;
   const service: Service | undefined = catalog?.services.find((s) => s.id === serviceId);
 
-  /** Today in the SALON's zone — a customer in Kennesaw at 20:00 is already on
+  /** Today in the ORGANIZATION's zone — a customer in Kennesaw at 20:00 is already on
    * tomorrow in Vienna, and every view has to agree about which day that is. */
-  const today = useMemo(() => (timeZone ? salonDate(new Date(), timeZone) : null), [timeZone]);
+  const today = useMemo(() => (timeZone ? organizationDate(new Date(), timeZone) : null), [timeZone]);
 
   useEffect(() => {
     if (today && !anchor) {
@@ -338,7 +338,7 @@ export default function Booking() {
       </Link>
 
       <div className={styles.head}>
-        <h1 className={styles.salon}>{catalog.tenant.name}</h1>
+        <h1 className={styles.organization}>{catalog.tenant.name}</h1>
         <span className={styles.zone}>All times {timeZone}</span>
       </div>
 

@@ -81,7 +81,7 @@
   padding-bottom: var(--space-6);
 }
 
-/* Which salon is shown. The 2px ink bar is the system's "current" cue; black
+/* Which organization is shown. The 2px ink bar is the system's "current" cue; black
  * stays with the booking itself. */
 .switcher {
   display: flex;

@@ -1,5 +1,5 @@
 // Where sign-in lands: a placeholder for owner pages that do not exist yet. It
-// lists the salons this account belongs to and says plainly what is missing.
+// lists the organizations this account belongs to and says plainly what is missing.
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -14,7 +14,7 @@ type State =
   | { kind: 'loading' }
   | { kind: 'signed-out' }
   | { kind: 'failed' }
-  | { kind: 'ready'; salons: Membership[] };
+  | { kind: 'ready'; organizations: Membership[] };
 
 export default function Account() {
   const navigate = useNavigate();
@@ -25,8 +25,8 @@ export default function Account() {
   useEffect(() => {
     let live = true;
     getMyOrganizations()
-      .then((salons) => {
-        if (live) setState({ kind: 'ready', salons });
+      .then((organizations) => {
+        if (live) setState({ kind: 'ready', organizations });
       })
       .catch((error: unknown) => {
         if (!live) return;
@@ -65,7 +65,7 @@ export default function Account() {
       <>
         <h1 className={shell.title}>Not signed in</h1>
         <p className={shell.lede}>
-          <Link to="/signin">Sign in</Link> to see your salon.
+          <Link to="/signin">Sign in</Link> to see your organization.
         </p>
       </>,
     );
@@ -90,23 +90,23 @@ export default function Account() {
         your calendar aren't built yet. They will live on this page.
       </p>
 
-      {state.salons.length === 0 ? (
+      {state.organizations.length === 0 ? (
         <p className={styles.note}>
-          This account is not linked to a salon. If you just signed up, setting up the salon did
-          not finish. <Link to="/signup">Finish setting up your salon</Link>.
+          This account is not linked to an organization. If you just signed up, setting up the organization did
+          not finish. <Link to="/signup">Finish setting up your organization</Link>.
         </p>
       ) : (
         <>
           <ul className={styles.list}>
-            {state.salons.map((salon) => (
-              <li key={salon.tenantId}>
-                <Link to={`/${salon.slug}`}>{`${window.location.host}/${salon.slug}`}</Link>
-                <span className={styles.meta}>Times in {salon.timezone}</span>
+            {state.organizations.map((organization) => (
+              <li key={organization.tenantId}>
+                <Link to={`/${organization.slug}`}>{`${window.location.host}/${organization.slug}`}</Link>
+                <span className={styles.meta}>Times in {organization.timezone}</span>
               </li>
             ))}
           </ul>
           <p className={styles.note}>
-            A new salon's page has nothing to book until it has staff, services and hours.
+            A new organization's page has nothing to book until it has staff, services and hours.
           </p>
         </>
       )}

@@ -112,7 +112,7 @@ function parseRequest(req: Request): Parsed {
  * The public view: day status and bookable times, nothing else.
  *
  * `excluded` is deliberately dropped. Its reasons carry appointment ids and the
- * exact spans staff are busy, which together are a readable map of the salon's
+ * exact spans staff are busy, which together are a readable map of the organization's
  * whole schedule. Coarsening them does not help — a greyed-out time labelled
  * 'busy' still maps the day. The full result, reasons included, belongs on the
  * owner's calendar.

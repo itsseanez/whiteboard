@@ -16,7 +16,7 @@
 }
 
 /* The wordmark is set tight and small rather than large: on a booking page the
- * customer is here to find a time, and the salon's own name is the heading
+ * customer is here to find a time, and the organization's own name is the heading
  * that matters. The product name stays out of the way. */
 .wordmark {
   display: inline-block;

@@ -205,7 +205,7 @@ export interface AvailabilityQuery {
   timeZone: string; // IANA id from tenant.timezone
   serviceId: string;
   preferredStaffId: string | null;
-  fromDate: string; // salon calendar date, "2026-10-25"
+  fromDate: string; // organization calendar date, "2026-10-25"
   throughDate: string;
   now: Date;
   /**

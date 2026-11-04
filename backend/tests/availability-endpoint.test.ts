@@ -214,7 +214,7 @@ describe('GET /:slug/availability — across a clock change', () => {
     // The phase gate, through the whole stack rather than in a unit test.
     //
     // Two Tuesdays either side of the next Vienna clock change. Both should open
-    // at 10:00 on the salon's wall clock, and the two moments should be 167 or
+    // at 10:00 on the organization's wall clock, and the two moments should be 167 or
     // 169 hours apart rather than the 168 of a seven-day week: one hour is
     // gained or lost in between.
     //
@@ -262,8 +262,8 @@ describe('GET /:slug/availability — across a clock change', () => {
 });
 
 describe('GET /:slug/availability — per-staff constraints', () => {
-  it('starts a day late when the stylist does, though the salon is open', async () => {
-    // Marina's opens at 09:00 on Thursdays; Marina works from 12:00. The salon
+  it('starts a day late when the stylist does, though the organization is open', async () => {
+    // Marina's opens at 09:00 on Thursdays; Marina works from 12:00. The organization
     // being open is not enough.
     const thursday = nextWeekday(4, NEW_YORK);
     const body = await fetchBody(MARINA_SLUG, { serviceId: CUT_SERVICE, from: thursday.toString() });
@@ -293,7 +293,7 @@ describe('GET /:slug/availability — per-staff constraints', () => {
 describe('GET /:slug/availability — what the public response must not contain', () => {
   it('omits the excluded reasons entirely', async () => {
     // The reasons carry appointment ids and the exact spans staff are busy —
-    // together a readable map of the salon's schedule. They belong on the
+    // together a readable map of the organization's schedule. They belong on the
     // owner's calendar, not here.
     const tuesday = nextWeekday(2, VIENNA);
     const body = await fetchBody(WIEN_SLUG, { serviceId: COLOR_SERVICE, from: tuesday.toString() });
@@ -366,7 +366,7 @@ describe('GET /:slug/availability — rejected requests', () => {
   });
 
   it('404s an unknown tenant slug', async () => {
-    const res = await get('no-such-salon', { serviceId: COLOR_SERVICE, from: tuesday() });
+    const res = await get('no-such-organization', { serviceId: COLOR_SERVICE, from: tuesday() });
     expect(res.status).toBe(404);
   });
 

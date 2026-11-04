@@ -20,7 +20,7 @@ function renderAccount() {
 }
 
 // Shape of GET /me/organizations, from backend/src/services/tenant.ts.
-const salon = (slug: string, timezone: string) => ({
+const organization = (slug: string, timezone: string) => ({
   tenantId: `id-${slug}`,
   slug,
   timezone,
@@ -39,21 +39,21 @@ describe('Account', () => {
     expect(screen.getByRole('link', { name: 'Sign in' }).getAttribute('href')).toBe('/signin');
   });
 
-  it('says plainly when the account has no salon', async () => {
+  it('says plainly when the account has no organization', async () => {
     fakeFetch({
       'GET /me/organizations': () => json(200, []),
       'GET /api/auth/get-session': replies.noSession,
     });
     renderAccount();
 
-    expect(await screen.findByText(/not linked to a salon/)).toBeTruthy();
+    expect(await screen.findByText(/not linked to an organization/)).toBeTruthy();
     expect(screen.getByRole('link', { name: /Finish setting up/ }).getAttribute('href')).toBe('/signup');
   });
 
-  it('links every salon the account belongs to', async () => {
+  it('links every organization the account belongs to', async () => {
     fakeFetch({
       'GET /me/organizations': () =>
-        json(200, [salon('studio-wien', 'Europe/Vienna'), salon('marinas-cuts-color', 'America/New_York')]),
+        json(200, [organization('studio-wien', 'Europe/Vienna'), organization('marinas-cuts-color', 'America/New_York')]),
       'GET /api/auth/get-session': replies.noSession,
     });
     renderAccount();
@@ -67,7 +67,7 @@ describe('Account', () => {
     );
   });
 
-  it('says it cannot load on a server error rather than claiming no salon', async () => {
+  it('says it cannot load on a server error rather than claiming no organization', async () => {
     fakeFetch({
       'GET /me/organizations': () => new Response('<html>', { status: 500 }),
       'GET /api/auth/get-session': replies.noSession,
@@ -75,12 +75,12 @@ describe('Account', () => {
     renderAccount();
 
     expect(await screen.findByText(/Can't load your account/)).toBeTruthy();
-    expect(screen.queryByText(/not linked to a salon/)).toBeNull();
+    expect(screen.queryByText(/not linked to an organization/)).toBeNull();
   });
 
   it('signs out through Better Auth and returns to the landing page', async () => {
     const calls = fakeFetch({
-      'GET /me/organizations': () => json(200, [salon('studio-wien', 'Europe/Vienna')]),
+      'GET /me/organizations': () => json(200, [organization('studio-wien', 'Europe/Vienna')]),
       'GET /api/auth/get-session': replies.noSession,
       'POST /api/auth/sign-out': () => json(200, { success: true }),
     });
@@ -93,7 +93,7 @@ describe('Account', () => {
 
   it('stays put and says so when signing out fails', async () => {
     fakeFetch({
-      'GET /me/organizations': () => json(200, [salon('studio-wien', 'Europe/Vienna')]),
+      'GET /me/organizations': () => json(200, [organization('studio-wien', 'Europe/Vienna')]),
       'GET /api/auth/get-session': replies.noSession,
       'POST /api/auth/sign-out': () => new Response('', { status: 500 }),
     });

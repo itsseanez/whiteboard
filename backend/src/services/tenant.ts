@@ -3,7 +3,7 @@ import { withContext } from '../withContext.js';
 
 export interface Tenant {
   id: string;
-  /** The salon's display name, for the public page's header. */
+  /** The organization's display name, for the public page's header. */
   name: string;
   slug: string;
   timezone: string; // IANA id, e.g. "Europe/Vienna"

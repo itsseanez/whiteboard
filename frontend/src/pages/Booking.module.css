@@ -7,11 +7,11 @@
   margin-bottom: var(--space-5);
 }
 
-.salon {
+.organization {
   font-size: var(--step-3);
 }
 
-/* The zone, stated plainly. Every time on this page is the salon's local time,
+/* The zone, stated plainly. Every time on this page is the organization's local time,
  * and a customer booking from another country has no way to know that unless
  * the page says it. */
 .zone {

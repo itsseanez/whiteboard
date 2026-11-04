@@ -20,7 +20,7 @@ describe('slugify', () => {
 });
 
 describe('slugProblem', () => {
-  it.each(['studio-wien', 'abc', 'salon-42', 'a'.repeat(40)])('accepts %j', (slug) => {
+  it.each(['studio-wien', 'abc', 'organization-42', 'a'.repeat(40)])('accepts %j', (slug) => {
     expect(slugProblem(slug)).toBeNull();
   });
 
@@ -37,7 +37,7 @@ describe('slugProblem', () => {
     expect(slugProblem(slug)).not.toBeNull();
   });
 
-  // Each of these is a path the app or API already owns; a salon there would
+  // Each of these is a path the app or API already owns; an organization there would
   // shadow it or be shadowed by it.
   it.each(['signin', 'signup', 'account', 'manage', 'api', 'me', 'tenant', 'assets'])(
     'rejects the reserved slug %j',

@@ -2,7 +2,7 @@
 // these every test spends ten lines on scaffolding before it says anything.
 //
 // `zoned()` is the one that matters: it turns a local wall-clock time in a zone
-// into the exact moment, so assertions read in the same vocabulary a salon
+// into the exact moment, so assertions read in the same vocabulary an organization
 // owner uses ("09:00 on the 25th") instead of in UTC.
 
 import type {

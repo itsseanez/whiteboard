@@ -21,7 +21,7 @@ interface CatalogBody {
 }
 
 describe('GET /:slug/services', () => {
-  it('returns the salon, its zone, and its services with qualified staff', async () => {
+  it('returns the organization, its zone, and its services with qualified staff', async () => {
     const res = await request(app).get(`/${WIEN_SLUG}/services`);
     expect(res.status, res.text.slice(0, 200)).toBe(200);
 
@@ -56,7 +56,7 @@ describe('GET /:slug/services', () => {
 
   it('leaks no staff across tenants', async () => {
     // staff_service gained tenant_id and RLS in the isolate-staff-service
-    // migration precisely so a stylist cannot appear under another salon's
+    // migration precisely so a stylist cannot appear under another organization's
     // service. This asserts the result of that.
     const marina = await request(app).get(`/${MARINA_SLUG}/services`);
     const names = (marina.body as CatalogBody).services.flatMap((s) => s.staff.map((m) => m.name));
@@ -66,7 +66,7 @@ describe('GET /:slug/services', () => {
 
   it('returns no internal scheduling fields', async () => {
     // Buffers and minimum notice are readable by whiteboard_public because the
-    // engine needs them, but they describe how the salon paces its day and
+    // engine needs them, but they describe how the organization paces its day and
     // have no use on a booking page.
     const res = await request(app).get(`/${WIEN_SLUG}/services`);
     const raw = JSON.stringify(res.body);
@@ -75,8 +75,8 @@ describe('GET /:slug/services', () => {
     expect(raw).not.toMatch(/tenantId/i);
   });
 
-  it('404s an unknown salon', async () => {
-    const res = await request(app).get('/no-such-salon/services');
+  it('404s an unknown organization', async () => {
+    const res = await request(app).get('/no-such-organization/services');
     expect(res.status).toBe(404);
   });
 });

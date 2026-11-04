@@ -1,9 +1,9 @@
-// The top of the product page: book a real time at a demo salon, right here.
+// The top of the product page: book a real time at a demo organization, right here.
 //
 // On arrival (wide screens, motion allowed) a short pinned scroll scene plays
 // Studio Wien's month: open days fill in, a day is picked, times appear, one
 // turns black. The first click anywhere in it hands over to the visitor, and
-// from then on it is the booking flow: switch salon, pick a day and a time,
+// from then on it is the booking flow: switch organization, pick a day and a time,
 // give a name and email, book.
 
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
@@ -19,7 +19,7 @@ import {
   type Slot,
 } from '../../api';
 import { rangeFor } from '../../calendar';
-import { dayAndMonth, duration, salonDate, timeOfDay, weekdayLong } from '../../format';
+import { dayAndMonth, duration, organizationDate, timeOfDay, weekdayLong } from '../../format';
 import Button from '../../components/Button';
 import DayTimes from '../../components/DayTimes';
 import Field from '../../components/Field';
@@ -28,7 +28,7 @@ import { sceneFrame } from './scene';
 import { prefersReducedMotion } from './useReveal';
 import styles from '../Landing.module.css';
 
-export const SALONS = [
+export const ORGANIZATIONS = [
   { slug: 'studio-wien', name: 'Studio Wien', place: 'Vienna' },
   { slug: 'marinas-cuts-color', name: "Marina's Cuts & Color", place: 'New York' },
 ] as const;
@@ -38,7 +38,7 @@ type Month =
   | { kind: 'failed' }
   | { kind: 'ready'; name: string; today: string; timeZone: string; service: Service | undefined; days: Map<string, Day> };
 
-/** A salon's month from today, in its own zone. A reload keeps the old month on screen. */
+/** An organization's month from today, in its own zone. A reload keeps the old month on screen. */
 function useMonth(slug: string, reload: number): Month {
   const [month, setMonth] = useState<Month>({ kind: 'loading' });
   const shownSlug = useRef(slug);
@@ -52,7 +52,7 @@ function useMonth(slug: string, reload: number): Month {
     (async (): Promise<Month> => {
       const catalog = await getCatalog(slug);
       const timeZone = catalog.tenant.timeZone;
-      const today = salonDate(new Date(), timeZone);
+      const today = organizationDate(new Date(), timeZone);
       const service = catalog.services[0];
       const days = new Map<string, Day>();
       if (service) {
@@ -124,7 +124,7 @@ function sceneAllowed(): boolean {
 
 export default function LiveBooking() {
   const [handedOver, setHandedOver] = useState(() => !sceneAllowed());
-  const [slug, setSlug] = useState<string>(SALONS[0].slug);
+  const [slug, setSlug] = useState<string>(ORGANIZATIONS[0].slug);
   const [reload, setReload] = useState(0);
   const month = useMonth(slug, reload);
 
@@ -199,7 +199,7 @@ export default function LiveBooking() {
 
   let product;
   if (month.kind === 'failed') {
-    product = <p className={styles.frameNote}>We couldn't load this salon's times. Try again in a moment.</p>;
+    product = <p className={styles.frameNote}>We couldn't load this organization's times. Try again in a moment.</p>;
   } else if (month.kind === 'loading') {
     product = <p className={styles.frameNote}>Loading times…</p>;
   } else if (booked) {
@@ -303,21 +303,21 @@ export default function LiveBooking() {
 
   return (
     <div ref={track} className={handedOver ? undefined : styles.sceneTrack}>
-      <section ref={tile} className={`${styles.tile} ${styles.paper} ${styles.live}`} aria-label="Book at a demo salon">
+      <section ref={tile} className={`${styles.tile} ${styles.paper} ${styles.live}`} aria-label="Book at a demo organization">
         <h1 className={styles.heroTitle}>Online booking platform.</h1>
         <p className={styles.tileLine}>
-          Book a real time at a demo salon, right here. Clients book themselves, any hour.
+          Book a real time at a demo organization, right here. Clients book themselves, any hour.
         </p>
-        <div className={styles.switcher} role="group" aria-label="Demo salon">
-          {SALONS.map((salon) => (
+        <div className={styles.switcher} role="group" aria-label="Demo organization">
+          {ORGANIZATIONS.map((organization) => (
             <button
-              key={salon.slug}
+              key={organization.slug}
               type="button"
               className={styles.switch}
-              aria-pressed={slug === salon.slug}
-              onClick={() => switchTo(salon.slug)}
+              aria-pressed={slug === organization.slug}
+              onClick={() => switchTo(organization.slug)}
             >
-              {salon.name}
+              {organization.name}
             </button>
           ))}
         </div>

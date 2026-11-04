@@ -26,7 +26,7 @@
 //   409  the appointment exists but cannot be changed, or the slot was lost
 //
 // 404 covers a wrong token, an expired-by-deletion appointment, and a valid
-// token belonging to another salon, all identically. That is the point: the
+// token belonging to another organization, all identically. That is the point: the
 // response must not confirm that a token is real but for a different tenant.
 
 import type { Request, Response } from 'express';

@@ -2,7 +2,7 @@
 //
 // GET /:slug/services
 //
-// The booking page's first request. Returns the salon's name and zone with the
+// The booking page's first request. Returns the organization's name and zone with the
 // services, so the page can render its header and format times without a
 // second round trip — the availability response carries the zone too, but the
 // page needs it before any service has been chosen.

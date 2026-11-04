@@ -165,7 +165,7 @@ describe('the manage token', () => {
   it('is rejected when it belongs to another tenant', async () => {
     const booked = await book(slots[0]!, `crosstenant@${TEST_DOMAIN}`);
 
-    // A real, live token — presented to the wrong salon. RLS makes it
+    // A real, live token — presented to the wrong organization. RLS makes it
     // indistinguishable from a wrong token, which is the point: the response
     // must not confirm the token is valid somewhere.
     const res = await cancel(booked.manageToken, MARINA_SLUG);
@@ -337,7 +337,7 @@ describe('POST /:slug/appointments/reschedule', () => {
   it('refuses a time that is not on offer', async () => {
     const booked = await book(slots[0]!, `closed@${TEST_DOMAIN}`);
 
-    // 03:00 local, which no salon in the seed is open for.
+    // 03:00 local, which no organization in the seed is open for.
     const middleOfTheNight = testDate
       .toPlainDateTime(Temporal.PlainTime.from('03:00'))
       .toZonedDateTime(VIENNA)

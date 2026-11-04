@@ -62,7 +62,7 @@ export interface Cancelled {
   cancelled: boolean;
 }
 
-/** One salon the signed-in user belongs to, from GET /me/organizations. */
+/** One organization the signed-in user belongs to, from GET /me/organizations. */
 export interface Membership {
   tenantId: string;
   slug: string;

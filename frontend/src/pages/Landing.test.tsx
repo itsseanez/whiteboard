@@ -87,7 +87,7 @@ describe('Landing live booking', () => {
     expect(timeButtons().filter((b) => b.getAttribute('aria-pressed') === 'true')).toHaveLength(0);
   });
 
-  it("asks for the rest of the salon's month, starting from the salon's today", async () => {
+  it("asks for the rest of the organization's month, starting from the organization's today", async () => {
     vi.setSystemTime(new Date('2026-11-02T23:30:00Z')); // already Tuesday in Vienna
     const calls = fakeFetch({
       'GET /studio-wien/services': wien,
@@ -207,7 +207,7 @@ describe('Landing live booking', () => {
     );
   });
 
-  it('says so when the salon cannot be reached', async () => {
+  it('says so when the organization cannot be reached', async () => {
     fakeFetch({ 'GET /studio-wien/services': () => new Response('<html>', { status: 500 }) });
     renderLanding();
 
@@ -223,12 +223,12 @@ describe('Landing', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Online booking platform.');
   });
 
-  it('has no other "book" links: booking happens in the tile, or from the three salon links', () => {
+  it('has no other "book" links: booking happens in the tile, or from the three organization links', () => {
     fakeFetch({});
     renderLanding();
 
     expect(screen.queryAllByRole('link', { name: /^book/i })).toHaveLength(0);
-    const rail = screen.getByRole('list', { name: 'Demo salons' });
+    const rail = screen.getByRole('list', { name: 'Demo organizations' });
     const hrefs = [...rail.querySelectorAll('a')].map((a) => a.getAttribute('href'));
     expect(hrefs).toEqual(['/studio-wien', '/signup','/marinas-cuts-color']);
   });
@@ -304,7 +304,7 @@ describe('Landing', () => {
       prefersReducedMotion(false);
       fakeFetch({});
       renderLanding();
-      const tile = screen.getByRole('region', { name: 'Book at a demo salon' });
+      const tile = screen.getByRole('region', { name: 'Book at a demo organization' });
       expect(tile.querySelectorAll('[data-reveal]')).toHaveLength(0);
     });
   });

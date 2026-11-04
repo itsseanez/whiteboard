@@ -16,7 +16,7 @@
 // cannot select a column the public role has no business reading, which is why
 // buffer and notice values are not in the SELECT list even though the role can
 // read them — the booking page has no use for them, and an endpoint that
-// returns a service's internal padding tells a competitor how the salon runs
+// returns a service's internal padding tells a competitor how the organization runs
 // its day.
 
 import type { Pool, PoolClient } from 'pg';
@@ -85,7 +85,7 @@ export async function getCatalog(pool: Pool, tenantId: string): Promise<CatalogS
     }
 
     // Services with no qualified staff are still returned, carrying an empty
-    // list. Hiding them would make a misconfigured salon look like an empty
+    // list. Hiding them would make a misconfigured organization look like an empty
     // one, and the page can say "nobody is set up for this yet" — which is a
     // useful thing for the owner to see on their own public page.
     return services.map((service) => ({

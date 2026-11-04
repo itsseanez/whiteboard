@@ -2,8 +2,8 @@
 //
 // WHY THERE IS NO TIME ZONE IN THIS FILE
 //
-// Deciding what today's date is in the salon's zone is a zone question, and
-// format.ts answers it with salonDate(). Everything after that — how many days
+// Deciding what today's date is in the organization's zone is a zone question, and
+// format.ts answers it with organizationDate(). Everything after that — how many days
 // October has, which weekday the 1st falls on, what the Sunday that starts a given week
 // is — is a property of the calendar, not of any zone. 2026-10-16 is a Friday
 // in Vienna and a Friday in Kennesaw.

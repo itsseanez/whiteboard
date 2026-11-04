@@ -14,12 +14,12 @@ export default function DayTimes({ day, timeZone, selected, onPick }: Props): Re
   if (!day) return <p className={styles.empty}>Loading times…</p>;
 
   if (day.status === 'closed') {
-    return <p className={styles.empty}>The salon is closed this day.</p>;
+    return <p className={styles.empty}>The organization is closed this day.</p>;
   }
 
   if (day.slots.length === 0) {
     // Open but nothing free. Distinct from closed, and worth saying so: the
-    // customer's next move is a different day, not a different salon.
+    // customer's next move is a different day, not a different organization.
     return <p className={styles.empty}>No times left this day. Try another.</p>;
   }
 

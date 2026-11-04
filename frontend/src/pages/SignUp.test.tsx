@@ -4,13 +4,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ProvisionResult, SalonInput } from '../provision';
+import type { ProvisionResult, OrganizationInput } from '../provision';
 
-// The one mock: provisionSalon has its own tests (provision.test.ts). These
+// The one mock: provisionOrganization has its own tests (provision.test.ts). These
 // tests pin the form's side of the contract — what it passes, and how it
 // reacts to each result.
-const provision = vi.hoisted(() => vi.fn<(input: SalonInput) => Promise<ProvisionResult>>());
-vi.mock('../provision', () => ({ provisionSalon: provision }));
+const provision = vi.hoisted(() => vi.fn<(input: OrganizationInput) => Promise<ProvisionResult>>());
+vi.mock('../provision', () => ({ provisionOrganization: provision }));
 
 import SignUp from './SignUp';
 
@@ -50,7 +50,7 @@ function fillValid() {
   type('Your name', 'Test Owner');
   type('Email', 'owner@example.com');
   type('Password', 'a-long-password');
-  type('Salon name', "Marina's Cuts & Color");
+  type('Organization name', "Marina's Cuts & Color");
 }
 
 const submit = () => fireEvent.submit(screen.getByRole('button', { name: /Create/ }));
@@ -58,14 +58,14 @@ const signUps = (calls: Call[]) =>
   calls.filter((c) => c.path === '/api/auth/sign-up/email');
 
 describe('SignUp', () => {
-  it('suggests the page address from the salon name until the owner edits it', () => {
+  it('suggests the page address from the organization name until the owner edits it', () => {
     fakeFetch({});
     renderSignUp();
-    type('Salon name', "Marina's Cuts & Color");
+    type('Organization name', "Marina's Cuts & Color");
     expect(screen.getByLabelText<HTMLInputElement>('Page address').value).toBe('marinas-cuts-color');
 
     type('Page address', 'marina');
-    type('Salon name', 'Something Else');
+    type('Organization name', 'Something Else');
     expect(screen.getByLabelText<HTMLInputElement>('Page address').value).toBe('marina');
   });
 
@@ -92,7 +92,7 @@ describe('SignUp', () => {
     expect(signUps(calls)).toHaveLength(0);
   });
 
-  it('creates the account, then provisions the salon, then lands on /account', async () => {
+  it('creates the account, then provisions the organization, then lands on /account', async () => {
     const calls = fakeFetch({
       'POST /api/auth/sign-up/email': signUpOk,
       'GET /api/auth/get-session': replies.noSession,
@@ -116,7 +116,7 @@ describe('SignUp', () => {
     });
   });
 
-  it('keeps the account when provisioning fails, and a retry repeats only the salon step', async () => {
+  it('keeps the account when provisioning fails, and a retry repeats only the organization step', async () => {
     const calls = fakeFetch({ 'POST /api/auth/sign-up/email': signUpOk });
     provision.mockResolvedValueOnce({ ok: false, reason: 'failed' });
     renderSignUp();
@@ -127,7 +127,7 @@ describe('SignUp', () => {
     expect(screen.getByText(/Signed in as owner@example.com/)).toBeTruthy();
 
     provision.mockResolvedValueOnce({ ok: true, slug: 'marinas-cuts-color' });
-    fireEvent.submit(screen.getByRole('button', { name: 'Create salon' }));
+    fireEvent.submit(screen.getByRole('button', { name: 'Create organization' }));
 
     await screen.findByText('account page');
     expect(signUps(calls)).toHaveLength(1);
@@ -141,7 +141,7 @@ describe('SignUp', () => {
     fillValid();
     submit();
 
-    expect(await screen.findByText(/Another salon already has this address/)).toBeTruthy();
+    expect(await screen.findByText(/Another organization already has this address/)).toBeTruthy();
     expect(screen.getByText(/Signed in as owner@example.com/)).toBeTruthy();
   });
 
@@ -158,26 +158,26 @@ describe('SignUp', () => {
   it('shows the address on the host the page is actually served from', () => {
     fakeFetch({});
     renderSignUp();
-    type('Salon name', 'Studio Wien');
+    type('Organization name', 'Studio Wien');
     expect(screen.getByText(`${window.location.host}/studio-wien`)).toBeTruthy();
   });
 
   it('explains the address problem when the name yields no usable address', () => {
     fakeFetch({});
     renderSignUp();
-    type('Salon name', 'Салон');
+    type('Organization name', 'Салон');
     expect(screen.getByText(/At least 3 characters/)).toBeTruthy();
   });
 
-  it('refuses a salon name that is only spaces', async () => {
+  it('refuses an organization name that is only spaces', async () => {
     const calls = fakeFetch({ 'POST /api/auth/sign-up/email': signUpOk });
     renderSignUp();
     fillValid();
-    type('Salon name', '   ');
-    type('Page address', 'my-salon');
+    type('Organization name', '   ');
+    type('Page address', 'my-organization');
     submit();
 
-    expect((await screen.findByRole('alert')).textContent).toMatch(/salon name/i);
+    expect((await screen.findByRole('alert')).textContent).toMatch(/organization name/i);
     expect(signUps(calls)).toHaveLength(0);
     expect(provision).not.toHaveBeenCalled();
   });

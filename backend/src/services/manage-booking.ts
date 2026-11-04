@@ -8,7 +8,7 @@
 // up by hash, and the lookup is the permission check — there is no separate
 // "does this person own this appointment" step to forget, because a row that
 // does not match the token is never fetched. RLS narrows it further to the
-// tenant in the URL, so a token from another salon finds nothing here.
+// tenant in the URL, so a token from another organization finds nothing here.
 //
 // WHY RESCHEDULE IS AN UPDATE AND NOT CANCEL-THEN-REBOOK
 //
@@ -130,7 +130,7 @@ function isExclusionViolation(error: unknown): boolean {
  * The appointment a token names, or null.
  *
  * No tenant_id in the WHERE clause — RLS applies it. The token is globally
- * unique, so the tenant filter is what makes a valid token from another salon
+ * unique, so the tenant filter is what makes a valid token from another organization
  * behave exactly like a wrong one.
  */
 async function fetchByToken(client: PoolClient, token: string): Promise<AppointmentRow | null> {

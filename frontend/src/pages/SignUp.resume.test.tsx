@@ -6,10 +6,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { ProvisionResult, SalonInput } from '../provision';
+import type { ProvisionResult, OrganizationInput } from '../provision';
 
-const provision = vi.hoisted(() => vi.fn<(input: SalonInput) => Promise<ProvisionResult>>());
-vi.mock('../provision', () => ({ provisionSalon: provision }));
+const provision = vi.hoisted(() => vi.fn<(input: OrganizationInput) => Promise<ProvisionResult>>());
+vi.mock('../provision', () => ({ provisionOrganization: provision }));
 
 import SignUp from './SignUp';
 
@@ -36,8 +36,8 @@ describe('SignUp, with a session already present', () => {
 
     await waitFor(() => expect(screen.queryByLabelText('Password')).toBeNull());
     expect(screen.getByText(/owner@example.com/)).toBeTruthy();
-    type('Salon name', 'Studio Wien');
-    fireEvent.submit(screen.getByRole('button', { name: 'Create salon' }));
+    type('Organization name', 'Studio Wien');
+    fireEvent.submit(screen.getByRole('button', { name: 'Create organization' }));
 
     await screen.findByText('account page');
     expect(signUps(calls)).toHaveLength(0);

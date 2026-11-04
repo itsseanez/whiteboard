@@ -33,7 +33,7 @@ export default function WeekGrid({
         return (
           <div key={date} className={styles.column}>
             <div className={`${styles.head} ${date === today ? styles.headToday : ''}`}>
-              {/* weekdayShort formats in the salon's zone, from a midday
+              {/* weekdayShort formats in the organization's zone, from a midday
                 * instant, so a date-only value cannot slip to the day before. */}
               <span className={styles.weekday}>{weekdayShort(dateToIso(date), timeZone)}</span>
               <span className={styles.date}>{Number(date.slice(8, 10))}</span>

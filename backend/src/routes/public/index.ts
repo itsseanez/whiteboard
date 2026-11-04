@@ -14,7 +14,7 @@ router.use(resolveTenantFromSlug); // every route below this line has req.tenant
 
 // GET /:slug/services
 //
-// The salon's name and zone, plus what it offers and who can do it. The
+// The organization's name and zone, plus what it offers and who can do it. The
 // booking page's first request: every other endpoint here needs a serviceId,
 // and nothing else hands one out.
 router.get('/services', getPublicServices);
@@ -31,7 +31,7 @@ router.get('/availability', getPublicAvailability);
 // { serviceId, staffId, startsAt, customer: { name, email, phone? } }
 //
 // `startsAt` is an instant copied back from an availability response, not a
-// local time — the client never has to know the salon's zone to book.
+// local time — the client never has to know the organization's zone to book.
 router.post('/appointments', postPublicBooking);
 
 // POST /:slug/appointments/cancel      { token }

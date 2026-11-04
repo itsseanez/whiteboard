@@ -203,7 +203,7 @@ export function expandOpenPeriods(
  *   unambiguous, which is what `seen` is for. The second pass is lost once a
  *   year, knowingly.
  *
- * First time is the period's start rounded UP to a quarter hour, so a salon
+ * First time is the period's start rounded UP to a quarter hour, so an organization
  * opening 09:10 offers 09:15. Last is strictly before the period's end — a
  * booking starting at closing has nowhere to go. Whether the service FITS
  * before closing is `evaluateGridTime`'s decision, not this one's.
@@ -307,7 +307,7 @@ function staffReasonFor(
  * Judge one candidate: a Slot with everyone who could take it, or an
  * ExcludedTime saying why not.
  *
- * Business-wide reasons come first and stop the rest — if the salon shuts at
+ * Business-wide reasons come first and stop the rest — if the organization shuts at
  * 17:00, "all six stylists are busy" is both useless and misleading.
  *
  * Resources are checked after staff, so a time failing both reports the staff
