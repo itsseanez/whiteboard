@@ -196,4 +196,10 @@ describe('POST /me/tenants', () => {
     expect(await countTenants(slug)).toBe(0);
   });
 
+  it('answers unknown /me paths itself instead of the /:slug router', async () => {
+    const { cookie } = await signUp('notfound');
+    const res = await request(app).get('/me/appointments').set('Cookie', cookie);
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('Not found');
+  });
 });
