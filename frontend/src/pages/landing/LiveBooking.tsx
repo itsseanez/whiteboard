@@ -304,7 +304,7 @@ export default function LiveBooking() {
   return (
     <div ref={track} className={handedOver ? undefined : styles.sceneTrack}>
       <section ref={tile} className={`${styles.tile} ${styles.paper} ${styles.live}`} aria-label="Book at a demo salon">
-        <h1 className={styles.heroTitle}>Online booking for salons</h1>
+        <h1 className={styles.heroTitle}>Online booking platform.</h1>
         <p className={styles.tileLine}>
           Book a real time at a demo salon, right here. Clients book themselves, any hour.
         </p>

@@ -220,7 +220,7 @@ describe('Landing', () => {
   it('says what it is, in the first heading', () => {
     fakeFetch({});
     renderLanding();
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Online booking for salons');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Online booking platform.');
   });
 
   it('has no other "book" links: booking happens in the tile, or from the three salon links', () => {

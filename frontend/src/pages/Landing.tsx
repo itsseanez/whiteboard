@@ -27,7 +27,7 @@ export default function Landing() {
         <span className={styles.brand}>Whiteboard</span>
         <nav className={styles.navLinks}>
           <Link to="/signin">Sign in</Link>
-          <Link to="/signup">Create a salon</Link>
+          <Link to="/signup">Don't have an account?</Link>
         </nav>
       </header>
 
@@ -92,8 +92,9 @@ export default function Landing() {
               Why it's called Whiteboard
             </h2>
             <p className={styles.tileLine} data-reveal style={at(1)}>
-              A salon in Austria took my booking on a whiteboard on the wall. Perfect for the shop;
-              for me, it meant standing in the room just to see a free time.
+              A salon in Austria took my booking on a whiteboard on the wall. Good enough for the shop but
+              for me, it meant leaving my hotel room just to schedule, cancel, or change my appointment. So
+              I created Whiteboard to help businesses everywhere.
             </p>
           </section>
         </div>
