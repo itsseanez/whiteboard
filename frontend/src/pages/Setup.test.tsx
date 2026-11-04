@@ -59,7 +59,7 @@ describe('Setup', () => {
     ready();
     renderSetup();
     expect(await screen.findByRole('button', { name: 'Save Ana' })).toBeTruthy();
-    expect(screen.getByText('Wash station', { selector: 'li' })).toBeTruthy();
+    expect(screen.getByText('Wash station', { selector: 'li span' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Save Color' })).toBeTruthy();
   });
 
@@ -117,6 +117,14 @@ describe('Setup', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove Color' }));
     fireEvent.click(screen.getByRole('button', { name: 'Yes, remove Color' }));
     await waitFor(() => expect(calls.filter((c) => c.path === `${base}/services`).length).toBe(2));
+  });
+
+  it("explains why a service's only resource can't be removed", async () => {
+    ready({ [`DELETE ${base}/resources/r1`]: () => json(409, { error: 'only_resource_for_service', services: ['Color'] }) });
+    renderSetup();
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Wash station' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, remove Wash station' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/only resource a service can use/);
   });
 
   it('sends the ticked staff and resources with a new service', async () => {

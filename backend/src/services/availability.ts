@@ -101,8 +101,9 @@ async function fetchCandidateStaffIds(
 async function fetchLinkedResourceIds(client: PoolClient, serviceId: string): Promise<string[]> {
   const { rows } = await client.query<{ resourceId: string }>(
     `SELECT resource_id AS "resourceId"
-     FROM service_resource
-     WHERE service_id = $1`,
+     FROM service_resource sr
+     JOIN resource r ON r.id = sr.resource_id AND r.archived_at IS NULL
+     WHERE sr.service_id = $1`,
     [serviceId],
   );
   return rows.map((r) => r.resourceId);

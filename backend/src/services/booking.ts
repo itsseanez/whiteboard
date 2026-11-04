@@ -122,13 +122,19 @@ async function upsertCustomer(
  * wait on an archive that holds the staff or service row, so a plain read here
  * sees that archive once it commits, and the booking rolls back.
  */
-export async function requireNotArchived(client: PoolClient, staffId: string, serviceId: string): Promise<void> {
+export async function requireNotArchived(
+  client: PoolClient,
+  staffId: string,
+  serviceId: string,
+  resourceId: string | null,
+): Promise<void> {
   const { rows } = await client.query<{ ok: boolean }>(
     `SELECT EXISTS (SELECT 1 FROM staff WHERE id = $1 AND archived_at IS NULL)
-        AND EXISTS (SELECT 1 FROM service WHERE id = $2 AND archived_at IS NULL) AS ok`,
-    [staffId, serviceId],
+        AND EXISTS (SELECT 1 FROM service WHERE id = $2 AND archived_at IS NULL)
+        AND ($3::uuid IS NULL OR EXISTS (SELECT 1 FROM resource WHERE id = $3 AND archived_at IS NULL)) AS ok`,
+    [staffId, serviceId, resourceId],
   );
-  if (!rows[0]?.ok) throw new SlotNotOfferedError('the staff member or service was removed');
+  if (!rows[0]?.ok) throw new SlotNotOfferedError('the staff member, service or resource was removed');
 }
 
 /**
@@ -237,7 +243,7 @@ export async function createBooking(
       );
       const row = rows[0];
       if (!row) throw new Error('appointment insert returned no row');
-      await requireNotArchived(client, request.staffId, request.serviceId);
+      await requireNotArchived(client, request.staffId, request.serviceId, resourceId);
 
       return {
         id: row.id,

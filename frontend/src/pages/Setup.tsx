@@ -39,6 +39,8 @@ const MESSAGES: Record<string, string> = {
   not_found: 'That no longer exists. Reload the page.',
   unknown_staff_or_resource: 'A selected staff member or resource no longer exists. Reload the page.',
   has_future_appointments: 'There are upcoming appointments. Move or cancel them in the calendar first.',
+  only_resource_for_service:
+    "It's the only resource a service can use. Give that service another resource, or remove the service, first.",
 };
 
 function messageFor(error: unknown): string {
@@ -136,7 +138,18 @@ export default function Setup() {
         <p className={styles.note}>Rooms, chairs or equipment a service needs. Any one free resource will do.</p>
         <ul className={styles.list}>
           {data.resources.map((r) => (
-            <li key={r.id}>{r.name}</li>
+            <li key={r.id} className={styles.row}>
+              <span>{r.name}</span>
+              <span className={styles.actions}>
+                <RemoveButton
+                  label={r.name}
+                  onRemove={async () => {
+                    await ownerApi.deleteResource(slug, r.id);
+                    reload();
+                  }}
+                />
+              </span>
+            </li>
           ))}
         </ul>
         <AddByName label="New resource" action="Add resource" onAdd={(name) => ownerApi.addResource(slug, name)} done={reload} />

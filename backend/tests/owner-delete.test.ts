@@ -99,6 +99,34 @@ describe('deleting staff and services', () => {
     expect(res.status).toBe(400);
   });
 
+  it("refuses to remove a service's only resource, then allows it once there's another", async () => {
+    const { staff } = await staffWithService('Eve');
+    const sink = (await send('post', '/resources', { name: 'Sink' })).body.id;
+    const color = (await send('post', '/services', { name: 'Color', durationMinutes: 60, staffIds: [staff], resourceIds: [sink] })).body.id;
+
+    const sole = await send('delete', `/resources/${sink}`);
+    expect(sole.status).toBe(409);
+    expect(sole.body).toEqual({ error: 'only_resource_for_service', services: ['Color'] });
+
+    const booked = await book(color, staff, '14:00');
+    expect(booked.status).toBe(201);
+    const second = (await send('post', '/resources', { name: 'Second sink' })).body.id;
+    await send('put', `/services/${color}`, { name: 'Color', durationMinutes: 60, staffIds: [staff], resourceIds: [sink, second] });
+
+    // The booking took the first sink, so it's still in use.
+    expect((await send('delete', `/resources/${sink}`)).body.error).toBe('has_future_appointments');
+    await send('post', `/appointments/${booked.body.appointmentId}/cancel`, {});
+
+    expect((await send('delete', `/resources/${sink}`)).status).toBe(204);
+    expect((await send('get', '/resources')).body.map((r: { id: string }) => r.id)).not.toContain(sink);
+    const svc = (await send('get', '/services')).body.find((x: { id: string }) => x.id === color);
+    expect(svc.resourceIds).toEqual([second]);
+    expect((await book(color, staff, '15:00')).status).toBe(201);
+
+    const res = await send('post', '/services', { name: 'Old sink', durationMinutes: 30, staffIds: [staff], resourceIds: [sink] });
+    expect(res.status).toBe(400);
+  });
+
   it('a booking racing an archive loses', async () => {
     const { staff, service } = await staffWithService('Dan');
     // Hold the archive open: row locked and marked, not yet committed.

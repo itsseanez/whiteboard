@@ -234,6 +234,7 @@ export const ownerApi = {
     send<OwnerService>(owner(slug, `/services/${id}`), write('PUT', input)),
   deleteStaff: (slug: string, id: string) => send<void>(owner(slug, `/staff/${id}`), { method: 'DELETE' }),
   deleteService: (slug: string, id: string) => send<void>(owner(slug, `/services/${id}`), { method: 'DELETE' }),
+  deleteResource: (slug: string, id: string) => send<void>(owner(slug, `/resources/${id}`), { method: 'DELETE' }),
 };
 
 // --- owner calendar ----------------------------------------------------------

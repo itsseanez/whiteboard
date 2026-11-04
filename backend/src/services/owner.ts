@@ -10,6 +10,13 @@ import { toHHMM, type HoursRange } from '../lib/weekly-hours.js';
 export class NotFoundError extends Error {}
 /** A staffId or resourceId in a service body that this tenant doesn't have. */
 export class UnknownLinkError extends Error {}
+/** Archiving a resource would leave these services with none, silently changing them to need none. */
+export class OnlyResourceError extends Error {
+  constructor(readonly services: string[]) {
+    super(`only resource for ${services.join(', ')}`);
+  }
+}
+
 /** Archiving is refused while future bookings depend on the row. */
 export class HasFutureAppointmentsError extends Error {
   constructor(readonly count: number) {
@@ -124,7 +131,9 @@ export interface Resource {
 
 export function listResources(tenantId: string): Promise<Resource[]> {
   return inTenant(tenantId, async (client) => {
-    const { rows } = await client.query<Resource>('SELECT id, name FROM resource ORDER BY created_at, name');
+    const { rows } = await client.query<Resource>(
+      'SELECT id, name FROM resource WHERE archived_at IS NULL ORDER BY created_at, name',
+    );
     return rows;
   });
 }
@@ -141,7 +150,7 @@ export function createResource(tenantId: string, name: string): Promise<Resource
 
 export function renameResource(tenantId: string, resourceId: string, name: string): Promise<void> {
   return inTenant(tenantId, async (client) => {
-    const { rowCount } = await client.query('UPDATE resource SET name = $2 WHERE id = $1', [resourceId, name]);
+    const { rowCount } = await client.query('UPDATE resource SET name = $2 WHERE id = $1 AND archived_at IS NULL', [resourceId, name]);
     if (rowCount === 0) throw new NotFoundError();
   });
 }
@@ -194,6 +203,11 @@ async function replaceLinks(client: PoolClient, tenantId: string, serviceId: str
     [input.staffIds],
   );
   if (rows[0]!.n !== input.staffIds.length) throw new UnknownLinkError();
+  const resources = await client.query<{ n: number }>(
+    'SELECT count(*)::int AS n FROM resource WHERE id = ANY($1::uuid[]) AND archived_at IS NULL',
+    [input.resourceIds],
+  );
+  if (resources.rows[0]!.n !== input.resourceIds.length) throw new UnknownLinkError();
   await client.query('DELETE FROM staff_service WHERE service_id = $1', [serviceId]);
   await client.query('DELETE FROM service_resource WHERE service_id = $1', [serviceId]);
   try {
@@ -248,8 +262,8 @@ export function updateService(tenantId: string, serviceId: string, input: Servic
 // booking commits first and is counted here, or it waits and then finds the row
 // archived (booking.ts checks after its insert).
 
-async function archive(tenantId: string, table: 'staff' | 'service', id: string): Promise<void> {
-  const column = table === 'staff' ? 'staff_id' : 'service_id';
+async function archive(tenantId: string, table: 'staff' | 'service' | 'resource', id: string): Promise<void> {
+  const column = { staff: 'staff_id', service: 'service_id', resource: 'resource_id' }[table];
   return inTenant(tenantId, async (client) => {
     const { rowCount } = await client.query(`SELECT 1 FROM ${table} WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, [id]);
     if (rowCount === 0) throw new NotFoundError();
@@ -258,11 +272,27 @@ async function archive(tenantId: string, table: 'staff' | 'service', id: string)
       [id],
     );
     if (rows[0]!.n > 0) throw new HasFutureAppointmentsError(rows[0]!.n);
+    if (table === 'resource') {
+      // A service with no linked resource needs none, so removing its last one would change it.
+      const { rows: sole } = await client.query<{ name: string }>(
+        `SELECT s.name FROM service s
+         JOIN service_resource sr ON sr.service_id = s.id AND sr.resource_id = $1
+         WHERE s.archived_at IS NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM service_resource o JOIN resource r ON r.id = o.resource_id
+             WHERE o.service_id = s.id AND o.resource_id <> $1 AND r.archived_at IS NULL)
+         ORDER BY s.name`,
+        [id],
+      );
+      if (sole.length > 0) throw new OnlyResourceError(sole.map((s) => s.name));
+    }
     await client.query(`UPDATE ${table} SET archived_at = now() WHERE id = $1`, [id]);
     // An archived staff member stops being offered for any service.
     if (table === 'staff') await client.query('DELETE FROM staff_service WHERE staff_id = $1', [id]);
+    if (table === 'resource') await client.query('DELETE FROM service_resource WHERE resource_id = $1', [id]);
   });
 }
 
 export const archiveStaff = (tenantId: string, staffId: string) => archive(tenantId, 'staff', staffId);
 export const archiveService = (tenantId: string, serviceId: string) => archive(tenantId, 'service', serviceId);
+export const archiveResource = (tenantId: string, resourceId: string) => archive(tenantId, 'resource', resourceId);

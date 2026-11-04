@@ -22,6 +22,9 @@ function handle(fn: Handler): RequestHandler {
     } catch (err) {
       if (err instanceof owner.NotFoundError) return res.status(404).json({ error: 'not_found' });
       if (err instanceof owner.UnknownLinkError) return res.status(400).json({ error: 'unknown_staff_or_resource' });
+      if (err instanceof owner.OnlyResourceError) {
+        return res.status(409).json({ error: 'only_resource_for_service', services: err.services });
+      }
       if (err instanceof owner.HasFutureAppointmentsError) {
         return res.status(409).json({ error: 'has_future_appointments', count: err.count });
       }
@@ -170,5 +173,12 @@ export const deleteService = handle(async (req, res) => {
   const id = idParam(req);
   if (!id) return res.status(404).json({ error: 'not_found' });
   await owner.archiveService(tenantId(req), id);
+  res.status(204).end();
+});
+
+export const deleteResource = handle(async (req, res) => {
+  const id = idParam(req);
+  if (!id) return res.status(404).json({ error: 'not_found' });
+  await owner.archiveResource(tenantId(req), id);
   res.status(204).end();
 });

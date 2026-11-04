@@ -12,8 +12,8 @@ router.use(requireAuth);
 router.use(resolveTenantFromSession); // every route below this line has req.tenant and req.membership set
 router.get('/', getContext);
 
-// Owner setup and calendar. Deleting staff or a service archives it, and is
-// refused while future bookings depend on it. Resources can't be deleted yet.
+// Owner setup and calendar. Deleting staff, a service or a resource archives
+// it, and is refused while future bookings depend on it.
 router.use(requireOwner);
 router.get('/staff', owner.getStaff);
 router.post('/staff', owner.postStaff);
@@ -25,6 +25,7 @@ router.put('/business-hours', owner.putBusinessHours);
 router.get('/resources', owner.getResources);
 router.post('/resources', owner.postResource);
 router.patch('/resources/:id', owner.patchResource);
+router.delete('/resources/:id', owner.deleteResource);
 router.get('/services', owner.getServices);
 router.post('/services', owner.postService);
 router.put('/services/:id', owner.putService);
