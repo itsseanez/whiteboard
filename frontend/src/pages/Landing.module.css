@@ -44,7 +44,6 @@
 /* For a paper tile inside a rail, where the inset rule is the only edge. */
 .paperEdge {
   background: var(--paper);
-  box-shadow: inset 0 0 0 1px var(--rule);
 }
 
 .sunk {
@@ -298,9 +297,15 @@
   gap: var(--space-1);
   height: 100%;
   padding: var(--space-6) var(--space-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
   text-align: center;
   text-decoration: none;
-  transition: background 120ms ease;
+  transition: border-color 120ms ease;
+}
+
+.railItem:hover {
+  border-color: var(--ink);
 }
 
 .railName {
