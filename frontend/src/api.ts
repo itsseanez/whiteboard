@@ -232,6 +232,8 @@ export const ownerApi = {
     send<OwnerService>(owner(slug, '/services'), write('POST', input)),
   saveService: (slug: string, id: string, input: ServiceInput) =>
     send<OwnerService>(owner(slug, `/services/${id}`), write('PUT', input)),
+  deleteStaff: (slug: string, id: string) => send<void>(owner(slug, `/staff/${id}`), { method: 'DELETE' }),
+  deleteService: (slug: string, id: string) => send<void>(owner(slug, `/services/${id}`), { method: 'DELETE' }),
 };
 
 // --- owner calendar ----------------------------------------------------------
@@ -250,7 +252,8 @@ export interface CalendarAppointment {
 
 export interface CalendarData {
   timeZone: string;
-  staff: StaffMember[];
+  /** archived: removed, shown only on days with their past appointments. */
+  staff: (StaffMember & { archived: boolean })[];
   businessHours: HoursRange[];
   timeOff: { staffId: string; startsAt: string; endsAt: string; reason: string | null }[];
   appointments: CalendarAppointment[];

@@ -38,6 +38,7 @@ const MESSAGES: Record<string, string> = {
   owner_only: 'Only owners can change this.',
   not_found: 'That no longer exists. Reload the page.',
   unknown_staff_or_resource: 'A selected staff member or resource no longer exists. Reload the page.',
+  has_future_appointments: 'There are upcoming appointments. Move or cancel them in the calendar first.',
 };
 
 function messageFor(error: unknown): string {
@@ -144,7 +145,7 @@ export default function Setup() {
       <section className={styles.section}>
         <h2 className={styles.heading}>Staff</h2>
         {data.staff.map((s) => (
-          <StaffCard key={s.id} slug={slug} member={s} />
+          <StaffCard key={s.id} slug={slug} member={s} removed={reload} />
         ))}
         <AddByName label="New staff member" action="Add staff member" onAdd={(name) => ownerApi.addStaff(slug, name)} done={reload} />
       </section>
@@ -213,7 +214,27 @@ function AddByName({
   );
 }
 
-function StaffCard({ slug, member }: { slug: string; member: StaffMember }) {
+/** Two clicks, so a stray one can't remove anything. Past appointments keep their history. */
+function RemoveButton({ label, onRemove }: { label: string; onRemove: () => Promise<unknown> }) {
+  const [confirming, setConfirming] = useState(false);
+  const save = useSave();
+  return (
+    <>
+      {confirming ? (
+        <Button variant="secondary" disabled={save.busy} onClick={() => save.run(onRemove)}>
+          Yes, remove {label}
+        </Button>
+      ) : (
+        <Button variant="secondary" disabled={save.busy} onClick={() => setConfirming(true)}>
+          Remove {label}
+        </Button>
+      )}
+      {save.line}
+    </>
+  );
+}
+
+function StaffCard({ slug, member, removed }: { slug: string; member: StaffMember; removed: () => void }) {
   const [name, setName] = useState(member.name);
   const [hours, setHours] = useState(member.hours);
   const save = useSave();
@@ -233,6 +254,13 @@ function StaffCard({ slug, member }: { slug: string; member: StaffMember }) {
         >
           Save {member.name}
         </Button>
+        <RemoveButton
+          label={member.name}
+          onRemove={async () => {
+            await ownerApi.deleteStaff(slug, member.id);
+            removed();
+          }}
+        />
       </div>
       {save.line}
     </div>
@@ -310,6 +338,15 @@ function ServiceForm({
         <Button type="submit" variant={service ? 'primary' : 'secondary'} disabled={save.busy || !form.name.trim()}>
           {service ? `Save ${service.name}` : 'Add service'}
         </Button>
+        {service ? (
+          <RemoveButton
+            label={service.name}
+            onRemove={async () => {
+              await ownerApi.deleteService(slug, service.id);
+              done();
+            }}
+          />
+        ) : null}
       </div>
       {save.line}
     </form>

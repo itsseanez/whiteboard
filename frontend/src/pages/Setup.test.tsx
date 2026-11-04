@@ -97,6 +97,28 @@ describe('Setup', () => {
     expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ hours: [{ weekday: 1, start: '09:00', end: '00:00' }] });
   });
 
+  it('removes a staff member after a second click, and explains a refusal', async () => {
+    const calls = ready({
+      [`DELETE ${base}/staff/s1`]: () => json(409, { error: 'has_future_appointments', count: 2 }),
+    });
+    renderSetup();
+    await screen.findByRole('button', { name: 'Save Ana' });
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Ana' }));
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, remove Ana' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/upcoming appointments/);
+    expect(calls.find((c) => c.method === 'DELETE')?.path).toBe(`${base}/staff/s1`);
+  });
+
+  it('removes a service and reloads', async () => {
+    const calls = ready({ [`DELETE ${base}/services/v1`]: () => new Response(null, { status: 204 }) });
+    renderSetup();
+    await screen.findByRole('button', { name: 'Save Color' });
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Color' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, remove Color' }));
+    await waitFor(() => expect(calls.filter((c) => c.path === `${base}/services`).length).toBe(2));
+  });
+
   it('sends the ticked staff and resources with a new service', async () => {
     const calls = ready({ [`POST ${base}/services`]: () => json(201, { ...color, id: 'v2', name: 'Cut' }) });
     renderSetup();

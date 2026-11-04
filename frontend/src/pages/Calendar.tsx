@@ -282,6 +282,7 @@ function DayView({
         {data.staff.map((s) => (
           <div key={s.id} className={styles.staffHead}>
             {s.name}
+            {s.archived ? <span className={styles.muted}> · removed</span> : null}
             {service && !service.staffIds.includes(s.id) ? <span className={styles.muted}> · doesn't do {service.name}</span> : null}
           </div>
         ))}
