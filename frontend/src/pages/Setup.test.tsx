@@ -1,0 +1,106 @@
+// @vitest-environment jsdom
+import { fakeFetch, json } from '../test/fake-api'; // first: see the file
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import Setup from './Setup';
+
+afterEach(cleanup);
+
+const base = '/tenant/acme';
+const ana = { id: 's1', name: 'Ana', hours: [{ weekday: 1, start: '09:00', end: '12:00' }] };
+const wash = { id: 'r1', name: 'Wash station' };
+const color = {
+  id: 'v1',
+  name: 'Color',
+  durationMinutes: 90,
+  bufferBeforeMinutes: 0,
+  bufferAfterMinutes: 15,
+  minimumNoticeMinutes: 60,
+  staffIds: ['s1'],
+  resourceIds: ['r1'],
+};
+
+function ready(extra: Record<string, () => Response> = {}) {
+  return fakeFetch({
+    [`GET ${base}/business-hours`]: () => json(200, { hours: [] }),
+    [`GET ${base}/resources`]: () => json(200, [wash]),
+    [`GET ${base}/staff`]: () => json(200, [ana]),
+    [`GET ${base}/services`]: () => json(200, [color]),
+    ...extra,
+  });
+}
+
+function renderSetup() {
+  render(
+    <MemoryRouter initialEntries={['/manage/acme']}>
+      <Routes>
+        <Route path="/manage/:slug" element={<Setup />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe('Setup', () => {
+  it('says so when the account is not an owner', async () => {
+    fakeFetch({ [`GET ${base}/business-hours`]: () => json(403, { error: 'owner_only' }) });
+    renderSetup();
+    expect(await screen.findByText(/Only owners can set up/)).toBeTruthy();
+  });
+
+  it("doesn't reveal whether someone else's organization exists", async () => {
+    fakeFetch({ [`GET ${base}/business-hours`]: () => json(404, { error: 'Tenant not found' }) });
+    renderSetup();
+    expect(await screen.findByText(/don't have an organization at this address/)).toBeTruthy();
+  });
+
+  it('shows what is already set up', async () => {
+    ready();
+    renderSetup();
+    expect(await screen.findByRole('button', { name: 'Save Ana' })).toBeTruthy();
+    expect(screen.getByText('Wash station', { selector: 'li' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save Color' })).toBeTruthy();
+  });
+
+  it('adds a staff member and reloads', async () => {
+    const calls = ready({ [`POST ${base}/staff`]: () => json(201, { id: 's2', name: 'Ben', hours: [] }) });
+    renderSetup();
+    fireEvent.change(await screen.findByLabelText('New staff member'), { target: { value: ' Ben ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add staff member' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path === `${base}/staff`)).toBe(true));
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ name: 'Ben' });
+  });
+
+  it('saves opening hours as one week and shows the server refusing an overlap', async () => {
+    const calls = ready({
+      [`PUT ${base}/business-hours`]: () => json(400, { error: '09:00–17:00 and 12:00–18:00 overlap' }),
+    });
+    renderSetup();
+    await screen.findByRole('button', { name: 'Save opening hours' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add hours' })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Save opening hours' }));
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(/overlap/);
+    const put = calls.find((c) => c.method === 'PUT');
+    expect(put?.body).toEqual({ hours: [{ weekday: 1, start: '09:00', end: '17:00' }] });
+  });
+
+  it('sends the ticked staff and resources with a new service', async () => {
+    const calls = ready({ [`POST ${base}/services`]: () => json(201, { ...color, id: 'v2', name: 'Cut' }) });
+    renderSetup();
+    const form = (await screen.findByText('New service')).closest('form')!;
+    const name = form.querySelector('input[type="text"]') as HTMLInputElement;
+    fireEvent.change(name, { target: { value: 'Cut' } });
+    const boxes = form.querySelectorAll('input[type="checkbox"]');
+    fireEvent.click(boxes[0]!); // Ana
+    fireEvent.click(screen.getByRole('button', { name: 'Add service' }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
+    expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({
+      name: 'Cut',
+      staffIds: ['s1'],
+      resourceIds: [],
+    });
+  });
+});

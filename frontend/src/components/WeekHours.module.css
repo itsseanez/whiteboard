@@ -1,0 +1,79 @@
+.week {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.legend {
+  font-size: var(--step--1);
+  color: var(--muted);
+  margin-bottom: var(--space-2);
+}
+
+.day {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.dayName {
+  font-weight: 500;
+}
+
+.ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+}
+
+.range {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.range input {
+  font: inherit;
+  color: inherit;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  padding: var(--space-1) var(--space-2);
+}
+
+.closed {
+  color: var(--muted);
+}
+
+.link {
+  font: inherit;
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link:hover {
+  color: var(--ink);
+}
+
+.hint {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+@media (max-width: 30rem) {
+  .day {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}

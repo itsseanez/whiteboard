@@ -133,8 +133,8 @@ export default function SignUp() {
       </Link>
       <h1 className={shell.title}>Create an organization</h1>
       <p className={shell.lede}>
-        This gives your organization its own booking page. Adding staff, services and hours isn't built
-        yet, so the page won't take bookings. To see booking work, <Link to="/">open a demo
+        This gives your organization its own booking page. Next you'll add hours, staff and services,
+        and then it takes bookings. To see booking work first, <Link to="/">open a demo
         organization</Link>.
       </p>
 

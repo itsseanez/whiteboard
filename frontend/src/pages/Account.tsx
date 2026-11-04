@@ -86,8 +86,8 @@ export default function Account() {
     <>
       <h1 className={shell.title}>Your account</h1>
       <p className={shell.lede}>
-        {email ? `Signed in as ${email}. ` : ''}Tools for managing staff, services, hours and
-        your calendar aren't built yet. They will live on this page.
+        {email ? `Signed in as ${email}. ` : ''}Set up hours, staff, resources and services for each
+        organization you own.
       </p>
 
       {state.organizations.length === 0 ? (
@@ -101,7 +101,15 @@ export default function Account() {
             {state.organizations.map((organization) => (
               <li key={organization.tenantId}>
                 <Link to={`/${organization.slug}`}>{`${window.location.host}/${organization.slug}`}</Link>
-                <span className={styles.meta}>Times in {organization.timezone}</span>
+                <span className={styles.meta}>
+                  Times in {organization.timezone}
+                  {organization.role === 'owner' ? (
+                    <>
+                      {' · '}
+                      <Link to={`/manage/${organization.slug}`}>Set up</Link>
+                    </>
+                  ) : null}
+                </span>
               </li>
             ))}
           </ul>

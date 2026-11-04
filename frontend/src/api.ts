@@ -110,6 +110,8 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(response.status, code);
   }
 
+  // PATCH answers 204 with no body.
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
@@ -172,3 +174,62 @@ export function getMyOrganizations(): Promise<Membership[]> {
 export function createTenant(body: { name: string; slug: string; timezone: string }): Promise<{ slug: string }> {
   return send<{ slug: string }>('/me/tenants', { method: 'POST', body: JSON.stringify(body) });
 }
+
+// --- owner setup, under /tenant/:slug (owners only) --------------------------
+
+/** Weekday is ISO, 1 = Monday. Times are HH:MM local; an end of 00:00 is midnight. */
+export interface HoursRange {
+  weekday: number;
+  start: string;
+  end: string;
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  hours: HoursRange[];
+}
+
+export interface Resource {
+  id: string;
+  name: string;
+}
+
+export interface ServiceInput {
+  name: string;
+  durationMinutes: number;
+  bufferBeforeMinutes: number;
+  bufferAfterMinutes: number;
+  minimumNoticeMinutes: number;
+  staffIds: string[];
+  resourceIds: string[];
+}
+
+export interface OwnerService extends ServiceInput {
+  id: string;
+}
+
+const owner = (slug: string, path: string) => `/tenant/${encodeURIComponent(slug)}${path}`;
+const write = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
+
+export const ownerApi = {
+  staff: (slug: string) => send<StaffMember[]>(owner(slug, '/staff')),
+  addStaff: (slug: string, name: string) => send<StaffMember>(owner(slug, '/staff'), write('POST', { name })),
+  renameStaff: (slug: string, id: string, name: string) =>
+    send<void>(owner(slug, `/staff/${id}`), write('PATCH', { name })),
+  saveStaffHours: (slug: string, id: string, hours: HoursRange[]) =>
+    send<{ hours: HoursRange[] }>(owner(slug, `/staff/${id}/hours`), write('PUT', { hours })),
+
+  businessHours: (slug: string) => send<{ hours: HoursRange[] }>(owner(slug, '/business-hours')),
+  saveBusinessHours: (slug: string, hours: HoursRange[]) =>
+    send<{ hours: HoursRange[] }>(owner(slug, '/business-hours'), write('PUT', { hours })),
+
+  resources: (slug: string) => send<Resource[]>(owner(slug, '/resources')),
+  addResource: (slug: string, name: string) => send<Resource>(owner(slug, '/resources'), write('POST', { name })),
+
+  services: (slug: string) => send<OwnerService[]>(owner(slug, '/services')),
+  addService: (slug: string, input: ServiceInput) =>
+    send<OwnerService>(owner(slug, '/services'), write('POST', input)),
+  saveService: (slug: string, id: string, input: ServiceInput) =>
+    send<OwnerService>(owner(slug, `/services/${id}`), write('PUT', input)),
+};

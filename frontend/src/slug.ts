@@ -6,7 +6,7 @@ const RESERVED = new Set([
   'signin', // page
   'signup', // page
   'account', // page
-  'manage', // no collision today; held for a future owner route
+  'manage', // /manage/:slug, the owner setup page
   'api', // /api/auth/* — Better Auth
   'me', // /me/* would shadow an organization's /me/services
   'tenant', // /tenant/:slug would shadow an organization's /tenant/services
