@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import type { HoursRange } from '../api';
+import { timeOfDay } from '../format';
 import styles from './WeekHours.module.css';
+
+// "12:00 AM" or "00:00", whichever the viewer's time picker shows for midnight.
+const MIDNIGHT = timeOfDay('2000-01-01T00:00:00Z', 'UTC');
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -56,7 +60,9 @@ export default function WeekHours({ label, hours, onChange, disabled }: Props): 
           </div>
         );
       })}
-      <p className={styles.hint}>An end of 00:00 means midnight. Add a second range for a split shift.</p>
+      <p className={styles.hint}>
+        An end of {MIDNIGHT} means open until midnight. Add hours twice on one day for a split shift.
+      </p>
     </fieldset>
   );
 }

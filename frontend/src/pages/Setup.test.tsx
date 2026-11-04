@@ -86,6 +86,17 @@ describe('Setup', () => {
     expect(put?.body).toEqual({ hours: [{ weekday: 1, start: '09:00', end: '17:00' }] });
   });
 
+  it('sends a midnight end as 00:00', async () => {
+    const calls = ready({ [`PUT ${base}/business-hours`]: () => json(200, { hours: [] }) });
+    renderSetup();
+    await screen.findByRole('button', { name: 'Save opening hours' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add hours' })[0]!);
+    fireEvent.change(screen.getAllByLabelText('Monday end')[0]!, { target: { value: '00:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save opening hours' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true));
+    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ hours: [{ weekday: 1, start: '09:00', end: '00:00' }] });
+  });
+
   it('sends the ticked staff and resources with a new service', async () => {
     const calls = ready({ [`POST ${base}/services`]: () => json(201, { ...color, id: 'v2', name: 'Cut' }) });
     renderSetup();
