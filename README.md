@@ -38,7 +38,8 @@ Those two experiences pull against each other, and most booking products resolve
 | **Deliberate time handling** | Working hours stored as local wall time plus zone ID; appointments in UTC. 2pm remains 2pm across a DST transition, and tenants in different regions do not share a constant offset. |
 | **Race-free reservation** | Check-then-insert has a race window. Reservation is enforced by a Postgres exclusion constraint, so two concurrent requests for the same slot produce exactly one booking and one clean error. |
 | **Structural tenant isolation** | Enforced below the query layer rather than by a `WHERE tenant_id = ?` a developer can forget, with a test proving cross-tenant reads fail. |
-| **Least-privilege database roles** | Four application roles, none of them the owner, none bypassing RLS — one each for authenticated tenant queries, signup provisioning, anonymous public reads, and authentication. Each connects through its own pool. |
+| **Least-privilege database roles** | Four application roles, none of them the owner, none bypassing RLS — one each for authenticated tenant queries, signup provisioning, anonymous public reads, and authentication. Each connects through its own pool and holds per-table grants for only what its code does. |
+| **Explainable gaps** | The owner calendar says why a time isn't bookable — who is busy and with what, who isn't working, which room is taken — straight from the engine's own reasons. |
 
 Detailed write-ups live in [`docs/`](docs/).
 
@@ -137,9 +138,13 @@ In active development since August 2026.
 
 - [x] Tenancy, authentication, roles, core model, deployed
 - [x] Availability engine
-- [ ] Booking flow, public page, concurrency
-- [ ] Calendars, reschedule, cancel, notifications, audit trail
-- [ ] Hardening, API docs, demo tenants
+- [x] Booking flow, public page, concurrency
+- [x] Self-serve sign-up and owner setup: staff, hours, services, resources
+- [x] Owner calendar: day and week views, why a time isn't bookable, book, move and cancel
+- [x] Customers cancel and reschedule by link
+- [x] Demo tenants
+- [ ] Email notifications, audit trail, webhooks
+- [ ] Staff calendars, API docs
 
 ## License
 

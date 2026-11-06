@@ -29,8 +29,11 @@ The database role model is in [`docs/database-roles.md`](docs/database-roles.md)
 - **Availability is computed, never stored.** Bookable times are derived per request by intersecting business hours, staff working hours, approved time off, existing appointments plus buffers, and resource conflicts. No pre-generated slot rows. See [`docs/availability.md`](docs/availability.md) for the algorithm.
 - **Invariants live in the database, not application code.** Booking races are prevented by a Postgres exclusion constraint on `(staff_id =, during &&)` via `btree_gist`, so the check and the write are one atomic operation. Check-then-insert has a race window; this does not.
 - **Tenant isolation is enforced below the query layer**, by row-level security with a session variable — not by a `WHERE tenant_id = ?` a developer can forget. A test proves cross-tenant reads fail.
-- **One database role per access path, none of them the owner.** `whiteboard_app`, `whiteboard_signup`, `whiteboard_public`, `whiteboard_auth` — each scoped to what it needs, none bypassing RLS. Better Auth originally ran on an inline pool as the owner role, which meant password hashes and session validation bypassed RLS on every table in the database; it now has its own role scoped to seven tables and no domain access. See [`docs/database-roles.md`](docs/database-roles.md).
+- **One database role per access path, none of them the owner.** `whiteboard_app`, `whiteboard_signup`, `whiteboard_public`, `whiteboard_auth` — each scoped to what it needs, none bypassing RLS. Better Auth originally ran on an inline pool as the owner role, which meant password hashes and session validation bypassed RLS on every table in the database; it now has its own role scoped to seven tables and no domain access. In November 2026 `whiteboard_app` was narrowed the same way: it had every privilege on every table, Better Auth's included, and now holds per-table grants matching what the code does, with no default privileges for future tables. See [`docs/database-roles.md`](docs/database-roles.md).
 - **Migrations must not hardcode a database or role name.** `current_database()` and `current_user` via `format()`. Both bugs were found by CI running against a fresh cluster, and both would have run clean in production and stayed latent.
+- **Sign-up provisions across two connections, so it can't be one transaction.** The organization and its owner membership are created through Better Auth; the tenant row through the sign-up role, with the organization link set in the insert itself so a tenant can never exist unlinked. A retry resumes from whatever the last attempt left, and every branch decides from what is in the database rather than from an error code, which also covers two sign-ups racing for one address. "Address taken" only ever means another account holds it.
+- **Deleting staff, a service or a resource archives it.** Appointments reference all three and past ones are history, so the row gets `archived_at` and drops out of setup, booking and availability. A delete is refused while future bookings depend on the row, and a resource can't be removed while it is the only one a service can use, because a service with no linked resource needs none. A booking racing an archive loses: the archive locks the row, the booking's foreign key waits on that lock, and the booking re-checks after its insert.
+- **Owners book through the same rules as customers.** Owner bookings and moves from the calendar pass the same offered-slot check and exclusion constraints as the public page, so an owner can't book a time the engine refuses. The calendar's "why isn't this time bookable" comes straight from the engine's per-staff reasons, which the public endpoint strips.
 - **UUID primary keys** (`gen_random_uuid()` via pgcrypto). Sequential ids are enumerable, and appointment ids go in emailed links.
 - **Time:** wall-clock rules (business hours, working hours) stored as local time plus an IANA zone id on the tenant. Appointment instants as `timestamptz`. Never a fixed offset like `+01:00` — offsets don't survive DST, and tenants in different regions don't shift on the same dates.
 - **Schema hedges that cost nothing now:** a capacity column defaulting to 1, and staff nullable on appointment. Keeps group classes and resource-only booking possible later without a painful migration.
@@ -52,13 +55,15 @@ Several of those are how a commercial version would make money. None of them mat
 | Tenancy, auth, roles, core model, **deployed** | Two tenants live at a URL; a test proves neither can read the other |
 | Availability engine | Correct slots from hours, time off, buffers, bookings, and resources — including across a DST boundary |
 | Booking flow, public page, concurrency | Two simultaneous requests for one slot; exactly one wins |
-| Calendars, reschedule, cancel, notifications, audit | A stylist sees their week; a customer reschedules from an email link |
+| Calendars, reschedule, cancel, notifications, audit | A staff member sees their week; a customer reschedules from an email link |
 | Hardening: seed data, API docs, demo tenants | A stranger books an appointment from the URL with no instructions |
 
 **Deployed in phase one, not at the end.** An empty app was live at a real address over TLS, with an automated pipeline, before it did anything interesting.
 
 ## Definition of done
 
-Sign up as a new salon. Add two stylists with awkward hours and one wash station. Define a service that needs the station and one that doesn't. Open the public page and book both.
+Sign up as a new organization. Add two staff members with awkward hours and one wash station. Define a service that needs the station and one that doesn't. Open the public page and book both.
 
 Then explain why a particular time slot did not appear.
+
+Met on production on 6 November 2026: self-serve sign-up, owner setup, and the owner calendar, whose "why isn't this time bookable" answers the last line.
