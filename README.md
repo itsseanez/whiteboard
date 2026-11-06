@@ -66,6 +66,8 @@ as arguments and returns bookable times plus the reason for every gap, which is
 what lets the owner calendar explain itself. Routes are listed in
 [`docs/api.md`](docs/api.md).
 
+![The owner calendar: one column per staff member, with a service picked so bookable times are marked, and a new appointment being booked for a customer](docs/screenshots/owner-calendar.png)
+
 ## Tech stack
 
 | Layer | Choice |
