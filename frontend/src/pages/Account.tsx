@@ -9,6 +9,7 @@ import { authClient } from '../auth';
 import Button from '../components/Button';
 import shell from '../shell.module.css';
 import styles from './Auth.module.css';
+import Problem from '../components/Problem';
 
 type State =
   | { kind: 'loading' }
@@ -122,9 +123,9 @@ export default function Account() {
       )}
 
       {problem ? (
-        <p className={styles.problem} role="alert">
+        <Problem role="alert">
           {problem}
-        </p>
+        </Problem>
       ) : null}
 
       <div className={styles.actions}>

@@ -19,6 +19,7 @@ import IconButton, { TrashIcon } from '../components/IconButton';
 import WeekHours from '../components/WeekHours';
 import shell from '../shell.module.css';
 import styles from './Setup.module.css';
+import Problem from '../components/Problem';
 
 interface Data {
   businessHours: HoursRange[];
@@ -66,9 +67,13 @@ function useSave() {
     }
   }
   const line = status ? (
-    <p className={status.ok ? styles.saved : styles.problem} role={status.ok ? 'status' : 'alert'}>
-      {status.text}
-    </p>
+    status.ok ? (
+      <p className={styles.saved} role="status">
+        {status.text}
+      </p>
+    ) : (
+      <Problem role="alert">{status.text}</Problem>
+    )
   ) : null;
   return { run, busy, line };
 }

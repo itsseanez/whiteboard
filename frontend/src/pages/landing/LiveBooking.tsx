@@ -27,6 +27,7 @@ import MonthGrid from '../../components/MonthGrid';
 import { sceneFrame } from './scene';
 import { prefersReducedMotion } from './useReveal';
 import styles from '../Landing.module.css';
+import Problem from '../../components/Problem';
 
 export const ORGANIZATIONS = [
   { slug: 'studio-wien', name: 'Studio Wien', place: 'Vienna' },
@@ -255,9 +256,9 @@ export default function LiveBooking() {
         />
         <div className={styles.day}>
           {problem ? (
-            <div ref={outcome} className={styles.problem} role="alert">
+            <Problem as="div" ref={outcome} className={styles.problem} role="alert">
               {problem}
-            </div>
+            </Problem>
           ) : null}
           {shownDay && (!frame || frame.slots > 0) ? (
             <DayTimes

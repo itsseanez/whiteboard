@@ -359,11 +359,3 @@
   margin-bottom: var(--space-3);
   color: var(--ink-soft);
 }
-
-/* Fifth copy of the problem box. */
-.problem {
-  border-left: 2px solid var(--black);
-  padding: var(--space-2) var(--space-3);
-  background: var(--sunk);
-  font-size: var(--step--1);
-}

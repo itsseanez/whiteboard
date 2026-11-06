@@ -24,6 +24,7 @@ import Field from '../components/Field';
 import { dateToIso, dayAndMonth, organizationDate, timeOfDay, weekdayLong, weekdayShort } from '../format';
 import shell from '../shell.module.css';
 import styles from './Calendar.module.css';
+import Problem from '../components/Problem';
 
 const STEP = 15; // minutes per row
 const ROW = 20; // px per row
@@ -441,7 +442,7 @@ function BookForm({
       <Field label="Customer name" value={customer.name} onChange={(name) => setCustomer({ ...customer, name })} required maxLength={200} />
       <Field label="Email" type="email" value={customer.email} onChange={(email) => setCustomer({ ...customer, email })} required maxLength={320} />
       <Field label="Phone (optional)" type="tel" value={customer.phone} onChange={(phone) => setCustomer({ ...customer, phone })} maxLength={40} />
-      {error ? <p className={styles.problem} role="alert">{error}</p> : null}
+      {error ? <Problem role="alert">{error}</Problem> : null}
       <Button type="submit" disabled={busy || !customer.name.trim() || !customer.email.trim()}>Book</Button>
     </form>
   );
@@ -512,7 +513,7 @@ function AppointmentPanel({
         <dt>Email</dt><dd><a href={`mailto:${a.customer.email}`}>{a.customer.email}</a></dd>
         {a.customer.phone ? (<><dt>Phone</dt><dd><a href={`tel:${a.customer.phone}`}>{a.customer.phone}</a></dd></>) : null}
       </dl>
-      {error ? <p className={styles.problem} role="alert">{error}</p> : null}
+      {error ? <Problem role="alert">{error}</Problem> : null}
 
       {moving ? (
         <div className={styles.move}>

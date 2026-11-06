@@ -13,6 +13,7 @@ import Field from '../components/Field';
 import Select from '../components/Select';
 import shell from '../shell.module.css';
 import styles from './Auth.module.css';
+import Problem from '../components/Problem';
 
 const PASSWORD_MIN = 8; // Better Auth's default minPasswordLength
 const SHORT_PASSWORD = `Use at least ${PASSWORD_MIN} characters for the password.`;
@@ -140,9 +141,9 @@ export default function SignUp() {
 
       <form className={styles.form} onSubmit={submit}>
         {problem ? (
-          <p className={styles.problem} role="alert">
+          <Problem role="alert">
             {problem}
-          </p>
+          </Problem>
         ) : null}
 
         <div className={styles.group}>

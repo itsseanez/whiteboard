@@ -47,6 +47,7 @@ import {
 import Button from '../components/Button';
 import shell from '../shell.module.css';
 import styles from './Manage.module.css';
+import Problem from '../components/Problem';
 
 const WINDOW_DAYS = 14;
 
@@ -235,7 +236,7 @@ export default function Manage() {
     return (
       <main className={`${shell.page} ${shell.narrow}`}>
         {header}
-        {problem && <p className={styles.note}>{problem}</p>}
+        {problem && <Problem className={styles.note}>{problem}</Problem>}
       </main>
     );
   }
@@ -255,7 +256,7 @@ export default function Manage() {
         Move it to another time, or cancel it. Both take effect straight away.
       </p>
 
-      {problem && <p className={styles.note}>{problem}</p>}
+      {problem && <Problem className={styles.note}>{problem}</Problem>}
 
       {!moving ? (
         <div className={styles.actions}>

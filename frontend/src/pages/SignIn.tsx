@@ -6,6 +6,7 @@ import Button from '../components/Button';
 import Field from '../components/Field';
 import shell from '../shell.module.css';
 import styles from './Auth.module.css';
+import Problem from '../components/Problem';
 
 export default function SignIn() {
   const navigate = useNavigate();
@@ -48,9 +49,9 @@ export default function SignIn() {
 
       <form className={styles.form} onSubmit={submit}>
         {problem ? (
-          <p className={styles.problem} role="alert">
+          <Problem role="alert">
             {problem}
-          </p>
+          </Problem>
         ) : null}
         <Field
           label="Email"

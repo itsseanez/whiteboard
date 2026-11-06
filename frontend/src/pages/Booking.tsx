@@ -60,6 +60,7 @@ import Field from '../components/Field';
 import Button from '../components/Button';
 import shell from '../shell.module.css';
 import styles from './Booking.module.css';
+import Problem from '../components/Problem';
 
 type View = 'month' | 'week' | 'day';
 
@@ -461,7 +462,7 @@ export default function Booking() {
             {service.name}, {duration(service.durationMinutes)}
           </p>
 
-          {problem ? <p className={styles.problem}>{problem}</p> : null}
+          {problem ? <Problem className={styles.problem}>{problem}</Problem> : null}
 
           <div className={styles.fields}>
             <Field

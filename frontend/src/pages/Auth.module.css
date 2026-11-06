@@ -25,13 +25,6 @@
   margin-top: var(--space-2);
 }
 
-/* Third copy of Booking's .problem and Manage's .note — next to extract. */
-.problem {
-  border-left: 2px solid var(--black);
-  padding: var(--space-2) var(--space-3);
-  background: var(--sunk);
-  font-size: var(--step--1);
-}
 
 /* The one emphasised element on sign-up: the address the owner is choosing.
  * Same sunk panel as Booking's manage link — the app's way of saying "this is

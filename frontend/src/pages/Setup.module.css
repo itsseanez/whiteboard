@@ -118,11 +118,3 @@ main.page {
   font-size: var(--step--1);
   color: var(--ink-soft);
 }
-
-/* Fourth copy of the problem box; extract it when the next one appears. */
-.problem {
-  border-left: 2px solid var(--black);
-  padding: var(--space-2) var(--space-3);
-  background: var(--sunk);
-  font-size: var(--step--1);
-}
