@@ -16,10 +16,24 @@
   color: var(--muted);
 }
 
+.brand:is(a) {
+  text-decoration: none;
+}
+
+.brand:is(a):hover {
+  color: var(--ink);
+}
+
 .navLinks {
   display: flex;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-4);
   font-size: var(--step--1);
+}
+
+.signedIn {
+  color: var(--muted);
 }
 
 .tiles {

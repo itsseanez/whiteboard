@@ -9,6 +9,7 @@
 import { useRef, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 
+import { authClient } from '../auth';
 import LiveBooking from './landing/LiveBooking';
 import { useReveal } from './landing/useReveal';
 import shell from '../shell.module.css';
@@ -23,13 +24,7 @@ export default function Landing() {
 
   return (
     <main ref={page} className={shell.page}>
-      <header className={styles.nav}>
-        <span className={styles.brand}>Whiteboard</span>
-        <nav className={styles.navLinks}>
-          <Link to="/signin">Sign in</Link>
-          <Link to="/signup">Don't have an account?</Link>
-        </nav>
-      </header>
+      <TopBar />
 
       <div className={styles.tiles}>
         <LiveBooking />
@@ -130,5 +125,37 @@ export default function Landing() {
         <a href="https://github.com/itsseanez/whiteboard">Source on GitHub</a>
       </footer>
     </main>
+  );
+}
+
+/** Who is signed in, if anyone. Nothing shows until the session is known, so a
+ * signed-in owner never sees "Sign in" flash first. */
+function TopBar() {
+  const session = authClient.useSession();
+  const user = session.data?.user;
+
+  return (
+    <header className={styles.nav}>
+      {user ? (
+        <Link className={styles.brand} to="/account">
+          Whiteboard
+        </Link>
+      ) : (
+        <span className={styles.brand}>Whiteboard</span>
+      )}
+      <nav className={styles.navLinks} aria-label="Account">
+        {session.isPending ? null : user ? (
+          <>
+            <span className={styles.signedIn}>Signed in as {user.email}</span>
+            <Link to="/account">Your account</Link>
+          </>
+        ) : (
+          <>
+            <Link to="/signin">Sign in</Link>
+            <Link to="/signup">Don't have an account?</Link>
+          </>
+        )}
+      </nav>
+    </header>
   );
 }

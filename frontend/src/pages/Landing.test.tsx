@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fakeFetch, json, type Call } from '../test/fake-api'; // first: see the file
+import { fakeFetch, json, replies, type Call } from '../test/fake-api'; // first: see the file
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -307,5 +307,18 @@ describe('Landing', () => {
       const tile = screen.getByRole('region', { name: 'Book at a demo organization' });
       expect(tile.querySelectorAll('[data-reveal]')).toHaveLength(0);
     });
+  });
+});
+
+describe('top bar', () => {
+  afterEach(cleanup);
+
+  it('offers sign in and sign up to a visitor', async () => {
+    fakeFetch({ 'GET /api/auth/get-session': replies.noSession });
+    renderLanding();
+    const nav = await screen.findByRole('navigation', { name: 'Account' });
+    expect(await screen.findByRole('link', { name: 'Sign in' })).toBeTruthy();
+    expect(nav.textContent).toContain("Don't have an account?");
+    expect(screen.queryByRole('link', { name: 'Your account' })).toBeNull();
   });
 });
