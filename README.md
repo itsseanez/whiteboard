@@ -17,6 +17,8 @@ Computed availability across staff and room constraints · timezone-correct thro
 
 ---
 
+![The public booking page for a demo organization: pick a service and staff, then a day shows how many times are open](docs/screenshots/booking-page.png)
+
 ## Why this exists
 
 A salon in Austria took my booking by writing my name and a time on a whiteboard on the wall.
