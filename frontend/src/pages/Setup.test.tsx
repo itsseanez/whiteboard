@@ -127,6 +127,15 @@ describe('Setup', () => {
     expect((await screen.findByRole('alert')).textContent).toMatch(/only resource a service can use/);
   });
 
+  it("removes one range from a staff member's week with the trash button", async () => {
+    const calls = ready({ [`PUT ${base}/staff/s1/hours`]: () => json(200, { hours: [] }) });
+    renderSetup();
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Monday 09:00–12:00' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save Ana' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true));
+    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ hours: [] });
+  });
+
   it('sends the ticked staff and resources with a new service', async () => {
     const calls = ready({ [`POST ${base}/services`]: () => json(201, { ...color, id: 'v2', name: 'Cut' }) });
     renderSetup();

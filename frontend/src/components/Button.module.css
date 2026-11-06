@@ -1,6 +1,10 @@
 .button {
   padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-press);
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 .primary {

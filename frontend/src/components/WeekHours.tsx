@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { HoursRange } from '../api';
 import { timeOfDay } from '../format';
+import IconButton, { TrashIcon } from './IconButton';
 import styles from './WeekHours.module.css';
 
 // "12:00 AM" or "00:00", whichever the viewer's time picker shows for midnight.
@@ -48,9 +49,9 @@ export default function WeekHours({ label, hours, onChange, disabled }: Props): 
                     value={h.end}
                     onChange={(e) => update(i, { end: e.target.value })}
                   />
-                  <button type="button" className={styles.link} onClick={() => remove(i)}>
-                    Remove
-                  </button>
+                  <IconButton size="small" label={`Remove ${day} ${h.start}–${h.end}`} onClick={() => remove(i)}>
+                    <TrashIcon />
+                  </IconButton>
                 </span>
               ))}
               <button type="button" className={styles.link} onClick={() => add(weekday)}>

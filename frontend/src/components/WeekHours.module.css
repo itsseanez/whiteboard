@@ -35,10 +35,11 @@
 .range {
   display: inline-flex;
   gap: var(--space-2);
-  align-items: baseline;
+  align-items: center;
 }
 
 .range input {
+  transition: border-color 120ms ease;
   font: inherit;
   color: inherit;
   background: var(--paper);
@@ -52,6 +53,7 @@
 }
 
 .link {
+  transition: color 120ms ease;
   font: inherit;
   font-size: var(--step--1);
   color: var(--ink-soft);

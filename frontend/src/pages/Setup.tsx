@@ -15,6 +15,7 @@ import {
 } from '../api';
 import Button from '../components/Button';
 import Field from '../components/Field';
+import IconButton, { TrashIcon } from '../components/IconButton';
 import WeekHours from '../components/WeekHours';
 import shell from '../shell.module.css';
 import styles from './Setup.module.css';
@@ -238,9 +239,9 @@ function RemoveButton({ label, onRemove }: { label: string; onRemove: () => Prom
           Yes, remove {label}
         </Button>
       ) : (
-        <Button variant="secondary" disabled={save.busy} onClick={() => setConfirming(true)}>
-          Remove {label}
-        </Button>
+        <IconButton label={`Remove ${label}`} disabled={save.busy} onClick={() => setConfirming(true)}>
+          <TrashIcon />
+        </IconButton>
       )}
       {save.line}
     </>

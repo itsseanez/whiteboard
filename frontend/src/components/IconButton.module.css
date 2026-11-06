@@ -1,0 +1,31 @@
+/* Just the icon: no border or fill. The square stays as the click target,
+ * and the icon darkens over the same 120ms ease every other control uses. */
+.icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  transition: color 120ms ease;
+}
+
+.regular {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.small {
+  width: 2rem;
+  height: 2rem;
+}
+
+.icon:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.icon:disabled {
+  color: var(--rule-strong);
+  cursor: default;
+}
