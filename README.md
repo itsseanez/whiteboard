@@ -11,13 +11,11 @@ Computed availability across staff and room constraints · timezone-correct thro
 [![Node](https://img.shields.io/badge/Node-26-5FA04E.svg)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791.svg)](https://www.postgresql.org/)
 
-[Live demo](https://whiteboardhq.app) · [API docs](#) · [Design notes](docs/)
+[Live demo](https://whiteboardhq.app) · [API docs](docs/api.md) · [Design notes](docs/)
 
 </div>
 
 ---
-
-> _screenshot: public booking page_
 
 ## Why this exists
 
@@ -48,16 +46,23 @@ Detailed write-ups live in [`docs/`](docs/).
 ```mermaid
 flowchart LR
   A[Public booking page] --> C[REST API]
-  B[Staff & owner console] --> C
+  B[Owner setup and calendar] --> C
+  C --> H[Better Auth]
   C --> D[Availability engine]
   C --> E[Booking service]
-  D --> F[(PostgreSQL)]
-  E --> F
   E --> D
-  E --> G[Notification worker]
+  D --> F[(PostgreSQL + RLS)]
+  E --> F
+  H --> F
 ```
 
-> _screenshot: staff calendar view_
+One Express process serves the API and the built React app. Each path into the
+database connects as its own role — public, sign-up, owner, auth — so row-level
+security and per-table grants decide what each can touch. The availability
+engine is a pure function: it takes hours, time off, appointments and resources
+as arguments and returns bookable times plus the reason for every gap, which is
+what lets the owner calendar explain itself. Routes are listed in
+[`docs/api.md`](docs/api.md).
 
 ## Tech stack
 
@@ -65,7 +70,8 @@ flowchart LR
 |---|---|
 | Backend | Node 26, TypeScript, Express |
 | Database | PostgreSQL 18, `node-pg-migrate`, `pg` |
-| Frontend | React 19, TypeScript, Vite, TanStack Query, Tailwind |
+| Auth | Better Auth (organization plugin), with its own database role |
+| Frontend | React 19, TypeScript, Vite, CSS Modules, Temporal for time zones |
 | Testing | Vitest, Supertest, dedicated test database |
 | Infrastructure | AWS EC2, Docker Compose, Caddy (automatic TLS), GitHub Actions (CI + deploy via SSM), SSM Parameter Store |
 
@@ -102,7 +108,7 @@ Open `backend/.env` and set real values:
 ```bash
 npm install
 npm run migrate up            # apply migrations, including creating app-specific DB roles
-npx tsx scripts/seed-auth.ts  # create demo users + organizations, link to seeded tenants
+npm run seed                  # create demo users + organizations, link to seeded tenants
 npm run dev                   # API on :3000
 
 cd ../frontend
@@ -111,6 +117,28 @@ npm run dev                   # UI on :5173
 ```
 
 Seed data creates two demo tenants in different timezones, each with a linked demo account — printed to the console when the seed script runs.
+
+### Running the tests
+
+The backend tests run against a separate `whiteboard_test` database, through
+the same four roles, so they exercise row-level security for real. Docker
+creates that database on first boot (`db-init/create-test-db.sh`).
+
+```bash
+cd backend
+cp .env.test.example .env.test   # every URL points at whiteboard_test; use the same role passwords as .env
+# in .env, set TEST_DATABASE_URL to the owner URL for whiteboard_test
+npm run migrate:test up
+npm run seed:test
+npm test
+
+cd ../frontend && npm test
+```
+
+After pulling new migrations, run both `npm run migrate up` and
+`npm run migrate:test up`; the tests fail on a missing column otherwise. CI
+builds a fresh test database on every push and checks that new migrations run
+both on it and on top of the ones already deployed.
 
 ### Scripts
 
@@ -123,6 +151,8 @@ Seed data creates two demo tenants in different timezones, each with a linked de
 | `npm test` | Vitest against `whiteboard_test` |
 | `npm run migrate up` | Migrations against `DATABASE_URL` |
 | `npm run migrate:test up` | Migrations against `TEST_DATABASE_URL` |
+| `npm run seed` | Demo users and organizations, linked to the seeded tenants |
+| `npm run seed:test` | The same, against the test database in `.env.test` |
 
 Because `dev` does not typecheck, run `npm run typecheck` before pushing. CI runs it too.
 
@@ -134,7 +164,7 @@ Rationale for each of these is in [`DECISIONS.md`](DECISIONS.md); the database r
 
 ## Status
 
-In active development since August 2026.
+In active development since August 2026. The full definition of done in [`DECISIONS.md`](DECISIONS.md#definition-of-done) runs on production.
 
 - [x] Tenancy, authentication, roles, core model, deployed
 - [x] Availability engine

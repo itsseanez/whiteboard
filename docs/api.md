@@ -1,0 +1,110 @@
+# API
+
+A JSON REST API served by the same Express process as the frontend. Every
+route below is live at `https://whiteboardhq.app`. Times go in and out as ISO
+instants with an offset or `Z`; dates as `YYYY-MM-DD` in the organization's own
+zone. Errors are `{ "error": "<code or message>" }` with a 4xx status.
+
+There are three audiences, and each has its own database role
+([`database-roles.md`](database-roles.md)):
+
+| Prefix | Who | Auth |
+|---|---|---|
+| `/:slug/...` | Customers booking with an organization | None |
+| `/me/...` | Any signed-in user | Session cookie |
+| `/tenant/:slug/...` | An organization's owners | Session cookie, owner membership |
+
+Sign-up, sign-in and sessions are Better Auth's own routes under `/api/auth/*`.
+
+## Public: `/:slug`
+
+| Method | Path | Does |
+|---|---|---|
+| `GET` | `/:slug/services` | The organization, its zone, and its services with the staff who perform each |
+| `GET` | `/:slug/availability?serviceId&from[&through][&staffId]` | Bookable times per day, up to 31 days |
+| `POST` | `/:slug/appointments` | Book a time that availability offered |
+| `POST` | `/:slug/appointments/cancel` | Cancel, with the token from booking |
+| `POST` | `/:slug/appointments/reschedule` | Move to another offered time, with the same token |
+
+```http
+GET /studio-wien/availability?serviceId=…&from=2026-11-17
+```
+
+```json
+{
+  "timeZone": "Europe/Vienna",
+  "days": [
+    {
+      "date": "2026-11-17",
+      "status": "open",
+      "slots": [{ "startsAt": "2026-11-17T09:00:00Z", "endsAt": "2026-11-17T09:45:00Z", "staffIds": ["…"] }]
+    }
+  ]
+}
+```
+
+A closed day is `{ "date": …, "status": "closed" }` with no `slots`. The public
+response never says why a time is missing; that is owner-only.
+
+```http
+POST /studio-wien/appointments
+{ "serviceId": "…", "staffId": "…", "startsAt": "2026-11-17T09:00:00Z",
+  "customer": { "name": "Jo", "email": "jo@example.com", "phone": "optional" } }
+```
+
+`201` returns `appointmentId`, `staffId`, `startsAt`, `endsAt` and `manageToken`.
+The token is returned once and stored only as a hash; it is what the cancel and
+reschedule routes take (`{ "token": … }`, plus `startsAt` and an optional
+`staffId` to reschedule). A time that was never offered is `409
+slot_not_available`; one somebody else just took is `409 slot_taken`.
+
+## Signed in: `/me`
+
+| Method | Path | Does |
+|---|---|---|
+| `GET` | `/me/organizations` | The organizations the user belongs to, with their role |
+| `POST` | `/me/tenants` | Create an organization `{ name, slug, timezone }`; the caller becomes its owner |
+
+`POST /me/tenants` answers `201` when it created the organization, `200` when an
+earlier attempt already had (it is safe to retry), `409 slug_taken` when another
+account holds the address, and `400` for a reserved or malformed slug, an
+unknown time zone, or a bad name.
+
+## Owners: `/tenant/:slug`
+
+`GET /tenant/:slug` returns the tenant and the caller's membership. Everything
+else needs the `owner` role (`403 owner_only` otherwise); a slug the caller
+doesn't belong to is `404`, the same as one that doesn't exist.
+
+| Method | Path | Does |
+|---|---|---|
+| `GET` `PUT` | `/business-hours` | Opening hours, replaced a whole week at a time |
+| `GET` `POST` | `/staff` | List, add `{ name }` |
+| `PATCH` `DELETE` | `/staff/:id` | Rename; remove (archive) |
+| `PUT` | `/staff/:id/hours` | Replace one staff member's week |
+| `GET` `POST` | `/resources` | List, add `{ name }` |
+| `PATCH` `DELETE` | `/resources/:id` | Rename; remove (archive) |
+| `GET` `POST` | `/services` | List, add |
+| `PUT` `DELETE` | `/services/:id` | Replace; remove (archive) |
+| `GET` | `/calendar?from[&through]` | Staff, hours, time off and booked appointments with customer details, up to 7 days |
+| `GET` | `/availability/explain?serviceId&from[&through][&staffId]` | Availability with the reason every missing time is missing |
+| `POST` | `/appointments` | Book on a customer's behalf, same body as the public route |
+| `POST` | `/appointments/:id/cancel` | Cancel |
+| `POST` | `/appointments/:id/reschedule` | Move `{ startsAt, staffId? }` |
+
+A week of hours is `{ "hours": [{ "weekday": 1, "start": "09:00", "end": "12:00" }, …] }`:
+ISO weekday (1 is Monday), local `HH:MM`, several ranges per day for a split
+shift, and an end of `00:00` meaning midnight. Overlapping or reversed ranges
+are refused and leave the saved week unchanged.
+
+A service is `{ name, durationMinutes, bufferBeforeMinutes, bufferAfterMinutes,
+minimumNoticeMinutes, staffIds, resourceIds }`. `resourceIds` empty means it
+needs no resource; otherwise any one of them must be free.
+
+Removing staff, a service or a resource archives it: it disappears from setup,
+booking and availability, and past appointments keep it. It is refused with
+`409 has_future_appointments` while future bookings depend on it, and a
+resource with `409 only_resource_for_service` while it is a service's only one.
+
+Owner bookings and moves go through the same checks as customers': an owner
+can't book a time availability doesn't offer.
