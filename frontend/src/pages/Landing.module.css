@@ -32,8 +32,27 @@
   font-size: var(--step--1);
 }
 
+.navLinks {
+  align-items: center;
+}
+
 .signedIn {
   color: var(--muted);
+}
+
+/* Same treatment as the trash icon: no box, darkens over 120ms. */
+.account {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-block: -0.5rem;
+  color: var(--ink-soft);
+  transition: color 120ms ease;
+}
+
+.account:hover {
+  color: var(--ink);
 }
 
 .tiles {

@@ -10,6 +10,7 @@ import { useRef, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 
 import { authClient } from '../auth';
+import PersonIcon from '../components/PersonIcon';
 import LiveBooking from './landing/LiveBooking';
 import { useReveal } from './landing/useReveal';
 import shell from '../shell.module.css';
@@ -147,7 +148,9 @@ function TopBar() {
         {session.isPending ? null : user ? (
           <>
             <span className={styles.signedIn}>Signed in as {user.email}</span>
-            <Link to="/account">Your account</Link>
+            <Link className={styles.account} to="/account" aria-label="Your account" title="Your account">
+              <PersonIcon />
+            </Link>
           </>
         ) : (
           <>
