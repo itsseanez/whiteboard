@@ -8,7 +8,8 @@
 
 .times {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
+  /* Wide enough for "10:15 AM" on one line in a twelve-hour locale. */
+  grid-template-columns: repeat(auto-fill, minmax(6.25rem, 1fr));
   gap: var(--space-2);
 }
 
@@ -20,6 +21,7 @@
   font-size: var(--step-0);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   transition:
     background 120ms ease,
     color 120ms ease,
