@@ -6,7 +6,7 @@ import { withContext } from '../src/withContext.js';
 // password hashes and live sessions; the app reaches them only through Better
 // Auth's own role.
 const app = new Pool({ connectionString: process.env.APP_DATABASE_URL });
-const owner = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
+const owner = new Pool({ connectionString: process.env.DATABASE_URL });
 afterAll(async () => {
   await app.end();
   await owner.end();

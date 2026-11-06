@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { createApp } from '../src/app.js';
 
 const app = createApp();
-const ownerPool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
+const ownerPool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const run = randomUUID().slice(0, 8);
 const slug = `cal-${run}`;

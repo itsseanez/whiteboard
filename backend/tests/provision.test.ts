@@ -7,7 +7,7 @@ import { auth } from '../src/lib/auth.js';
 
 const app = createApp();
 // Owner role: sets up states the app can't reach on its own, and cleans up.
-const ownerPool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
+const ownerPool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const run = randomUUID().slice(0, 8);
 const slugs: string[] = [];

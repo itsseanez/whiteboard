@@ -7,7 +7,7 @@ import { createApp } from '../src/app.js';
 // A fresh organization per run, set up through the owner endpoints exactly as
 // the definition of done describes, then booked from the public API.
 const app = createApp();
-const ownerPool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
+const ownerPool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const run = randomUUID().slice(0, 8);
 const slug = `owner-${run}`;
