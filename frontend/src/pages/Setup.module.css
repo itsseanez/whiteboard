@@ -114,6 +114,12 @@ main.page {
   gap: var(--space-3);
 }
 
+.unsaved {
+  font-size: var(--step--1);
+  font-weight: 500;
+  color: var(--ink);
+}
+
 .saved {
   font-size: var(--step--1);
   color: var(--ink-soft);

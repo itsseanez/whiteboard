@@ -136,6 +136,37 @@ describe('Setup', () => {
     expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ hours: [] });
   });
 
+  it('marks an edited card as unsaved until it is saved', async () => {
+    ready({ [`PUT ${base}/staff/s1/hours`]: () => json(200, { hours: [] }) });
+    renderSetup();
+    await screen.findByRole('button', { name: 'Save Ana' });
+    expect(screen.queryByText('Unsaved changes')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Monday 09:00–12:00' }));
+    expect(screen.getByText('Unsaved changes')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Ana' }));
+    await waitFor(() => expect(screen.queryByText('Unsaved changes')).toBeNull());
+  });
+
+  it('asks the browser to confirm leaving while edits are unsaved', async () => {
+    ready({ [`PUT ${base}/business-hours`]: () => json(200, { hours: [{ weekday: 1, start: '09:00', end: '17:00' }] }) });
+    renderSetup();
+    await screen.findByRole('button', { name: 'Save opening hours' });
+    const leave = () => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(leave()).toBe(false);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add hours' })[0]!);
+    expect(leave()).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save opening hours' }));
+    await waitFor(() => expect(leave()).toBe(false));
+  });
+
   it('sends the ticked staff and resources with a new service', async () => {
     const calls = ready({ [`POST ${base}/services`]: () => json(201, { ...color, id: 'v2', name: 'Cut' }) });
     renderSetup();
