@@ -99,6 +99,11 @@
   right: var(--space-2);
   transform: translateY(-50%);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.times .firstTime {
+  transform: none;
 }
 
 .column {

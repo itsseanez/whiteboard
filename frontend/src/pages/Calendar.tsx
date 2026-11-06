@@ -278,7 +278,7 @@ function DayView({
     <div className={styles.dayWrap}>
       {service && day?.status === 'closed' ? <p className={styles.note}>Closed for bookings on this day.</p> : null}
       {service && explained?.noQualifiedStaff ? <p className={styles.note}>Nobody is set up to do {service.name}.</p> : null}
-      <div className={styles.day} style={{ gridTemplateColumns: `4rem repeat(${data.staff.length}, minmax(9rem, 1fr))` }}>
+      <div className={styles.day} style={{ gridTemplateColumns: `5.5rem repeat(${data.staff.length}, minmax(9rem, 1fr))` }}>
         <div className={styles.corner} />
         {data.staff.map((s) => (
           <div key={s.id} className={styles.staffHead}>
@@ -290,7 +290,10 @@ function DayView({
 
         <div className={styles.times} style={{ height: rows.length * ROW }}>
           {rows.filter((m) => m % 60 === 0).map((m) => (
-            <span key={m} style={{ top: top(m) }}>{timeOfDay(`2000-01-01T${toHHMM(m)}:00Z`, 'UTC')}</span>
+            // The first label sits on the top edge; centring it on the line would hide its top half.
+            <span key={m} className={m === start ? styles.firstTime : undefined} style={{ top: top(m) }}>
+              {timeOfDay(`2000-01-01T${toHHMM(m)}:00Z`, 'UTC')}
+            </span>
           ))}
         </div>
 
