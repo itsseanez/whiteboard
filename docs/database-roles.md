@@ -221,13 +221,25 @@ go through it rather than setting session variables by hand.
 
 **`whiteboard_app`**
 - `CONNECT` on the current database, `USAGE` on schema `public`
-- `SELECT, INSERT, UPDATE, DELETE` on all tables currently in `public`
-- `ALTER DEFAULT PRIVILEGES` for the owner role in schema `public` — any
-  table created in a future migration automatically grants the same four
-  privileges, with no separate grant needed per new table
-- On `tenant` specifically, visibility is further restricted by the
-  `tenant_select_app` RLS policy — the blanket grant is necessary but not
-  sufficient for reading `tenant` rows
+- Per table, exactly what the code does (narrowed 6 Nov 2026; until then it
+  had all four privileges on every table, Better Auth's included):
+
+  | Table | Privileges |
+  |---|---|
+  | `tenant`, `organization`, `member` | `SELECT` |
+  | `staff`, `service`, `resource` | `SELECT, INSERT, UPDATE` (a delete is an archive) |
+  | `staff_service`, `service_resource`, `staff_working_hours`, `business_hours` | `SELECT, INSERT, DELETE` (replaced as a set) |
+  | `time_off` | `SELECT` |
+  | `customer`, `appointment` | `SELECT, INSERT, UPDATE` |
+
+- Nothing on `account`, `session`, `user`, `verification`, `invitation` or
+  `pgmigrations`.
+- **No default privileges.** A table created by a later migration gives
+  `whiteboard_app` nothing until that migration grants it.
+- `SELECT ON member` is load-bearing: `tenant_select_app`'s membership branch
+  reads it as `whiteboard_app`. Without it, tenant resolution returns zero rows
+  for every user, silently.
+- `tests/app-role-grants.test.ts` checks all of this.
 
 **`whiteboard_signup`**
 - `CONNECT` on the current database, `USAGE` on schema `public`
@@ -278,22 +290,9 @@ and neither variable set (fails closed — zero rows, no thrown error).
 
 ## Open design questions
 
-**Blanket `DELETE` on the future audit table.** `whiteboard_app`'s grant
-includes `DELETE` on every table in `public`, including whatever
-audit-trail table gets built later, and `ALTER DEFAULT PRIVILEGES` means
-it will be granted automatically. The scope doc requires every appointment
-state change to be auditable — a blanket `DELETE` means an application bug
-could delete an audit row as easily as a stale appointment. Decide once
-that table exists: either `REVOKE DELETE` on it specifically (append-only
-at the database level) or accept the risk knowingly.
-
-**`whiteboard_app` depends on `SELECT ON member`, undocumented until now.**
-The `tenant_select_app` policy's `EXISTS` branch reads `member`, evaluated
-in `whiteboard_app`'s context. It currently works via the blanket
-`ALL TABLES` grant. If that grant is ever narrowed — which the audit-table
-question above may force — `SELECT ON member` must be granted explicitly,
-or tenant resolution silently returns zero rows for every user whose tenant
-is not already resolved. Silent, not an error.
+**The future audit table.** With no default privileges, the migration that
+creates it decides what `whiteboard_app` gets. Grant `SELECT, INSERT` only, so
+the table is append-only at the database level.
 
 ## Known gaps / not yet granted
 

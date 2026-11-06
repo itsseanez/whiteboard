@@ -16,9 +16,17 @@ const TENANT_B = '22222222-2222-2222-2222-222222222222';
 const STAFF_A = 'a1111111-1111-1111-1111-111111111111';
 const STAFF_B = 'a2222222-2222-2222-2222-222222222222';
 
-const RLS_VIOLATION = '42501';
+const RLS_VIOLATION = '42501'; // insufficient_privilege: an RLS refusal and a missing grant share it
 
 const TABLES = ['business_hours', 'staff_working_hours', 'time_off'] as const;
+
+// What whiteboard_app is granted on each table. A write it isn't granted is
+// refused outright (42501, permission denied) before RLS is even consulted.
+const GRANTED: Record<(typeof TABLES)[number], { update: boolean; delete: boolean }> = {
+  business_hours: { update: false, delete: true },
+  staff_working_hours: { update: false, delete: true },
+  time_off: { update: false, delete: false },
+};
 type Table = (typeof TABLES)[number];
 
 // One fixture row per table per tenant, created in beforeAll.
@@ -98,23 +106,31 @@ describe.each(TABLES)('%s isolation (as whiteboard_app)', (table) => {
   });
 
   it("cannot update another tenant's row", async () => {
-    const rowCount = await withContext(appPool, { tenantId: TENANT_A }, async (client) => {
+    const update = withContext(appPool, { tenantId: TENANT_A }, async (client) => {
       const result = await client.query(
         `UPDATE ${table} SET updated_at = now() WHERE id = $1`,
         [fixtures[table].b],
       );
       return result.rowCount;
     });
+    if (!GRANTED[table].update) {
+      expect(await errorCode(update)).toBe(RLS_VIOLATION);
+      return;
+    }
     // RLS makes the row invisible, so the UPDATE matches nothing rather than erroring.
-    expect(rowCount).toBe(0);
+    expect(await update).toBe(0);
   });
 
   it("cannot delete another tenant's row", async () => {
-    const rowCount = await withContext(appPool, { tenantId: TENANT_A }, async (client) => {
+    const remove = withContext(appPool, { tenantId: TENANT_A }, async (client) => {
       const result = await client.query(`DELETE FROM ${table} WHERE id = $1`, [fixtures[table].b]);
       return result.rowCount;
     });
-    expect(rowCount).toBe(0);
+    if (!GRANTED[table].delete) {
+      expect(await errorCode(remove)).toBe(RLS_VIOLATION);
+      return;
+    }
+    expect(await remove).toBe(0);
   });
 
   it('cannot insert a row for another tenant', async () => {
