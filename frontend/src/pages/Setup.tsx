@@ -99,7 +99,7 @@ export default function Setup() {
   }, [slug]);
 
   const frame = (body: ReactNode) => (
-    <main className={shell.page}>
+    <main className={`${shell.page} ${styles.page}`}>
       <Link className={shell.wordmark} to="/account">
         Whiteboard
       </Link>

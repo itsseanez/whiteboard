@@ -1,10 +1,15 @@
+/* One centred column, as wide as the forms, rather than forms pinned to the
+ * left of the wide shell. `main` lifts it above shell.page's max-width. */
+main.page {
+  max-width: calc(48rem + 2 * var(--space-4));
+}
+
 .section {
   display: grid;
   gap: var(--space-3);
   margin-top: var(--space-6);
   padding-top: var(--space-4);
   border-top: 1px solid var(--rule);
-  max-width: 48rem;
 }
 
 .heading {
