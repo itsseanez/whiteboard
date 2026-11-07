@@ -94,6 +94,17 @@ export async function invite(
   return { invitationId };
 }
 
+/** Every member, a page at a time; Better Auth returns a page and the total. */
+export async function allMembers(organizationId: string, headers: Headers) {
+  const page = 200;
+  const all: Awaited<ReturnType<typeof auth.api.listMembers>>['members'] = [];
+  for (let offset = 0; ; offset += page) {
+    const { members, total } = await auth.api.listMembers({ query: { organizationId, limit: page, offset }, headers });
+    all.push(...members);
+    if (members.length < page || all.length >= total) return all;
+  }
+}
+
 // --- listing -----------------------------------------------------------------
 
 export interface Person {
@@ -118,8 +129,8 @@ export async function listPeople(
   organizationId: string,
   headers: Headers,
 ): Promise<{ members: Person[]; invitations: PendingInvitation[] }> {
-  const [{ members }, invitations, links] = await Promise.all([
-    auth.api.listMembers({ query: { organizationId, limit: 500 }, headers }),
+  const [members, invitations, links] = await Promise.all([
+    allMembers(organizationId, headers),
     auth.api.listInvitations({ query: { organizationId }, headers }),
     withContext(appPool, scope, async (client) => {
       const { rows } = await client.query<{ id: string; userId: string }>(
@@ -159,7 +170,7 @@ export async function removeMember(
   memberId: string,
   headers: Headers,
 ): Promise<void> {
-  const { members } = await auth.api.listMembers({ query: { organizationId, limit: 500 }, headers });
+  const members = await allMembers(organizationId, headers);
   const member = members.find((m) => m.id === memberId);
   if (!member) throw new PeopleError(404, 'not_found');
   if (member.role === 'owner') throw new PeopleError(409, 'cannot_remove_owner');

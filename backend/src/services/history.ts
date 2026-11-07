@@ -2,7 +2,7 @@
 // writes. RLS limits it to owners and managers of the tenant.
 
 import { appPool } from '../db.js';
-import { auth } from '../lib/auth.js';
+import { allMembers } from './people.js';
 import { withContext } from '../withContext.js';
 import { NotFoundError, type Scope } from './owner.js';
 
@@ -66,7 +66,7 @@ export async function appointmentHistory(
   // Every appointment has at least its booking line, so none means not yours.
   if (rows.length === 0) throw new NotFoundError();
 
-  const { members } = await auth.api.listMembers({ query: { organizationId, limit: 1000 }, headers });
+  const members = await allMembers(organizationId, headers);
   const names = new Map(members.map((m) => [m.userId, m.user.name]));
 
   return rows.map((r) => {

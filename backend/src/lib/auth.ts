@@ -7,6 +7,8 @@ import { authPool } from "../db.js";
 import { getTenantsByUserId } from "../services/tenant.js";
 import { sendResetPassword, sendVerification } from "./auth-emails.js";
 
+export const MEMBERSHIP_LIMIT = 1000;
+
 // "admin" is a manager: owner minus people. Managers invite staff, but only an
 // owner invites managers (beforeCreateInvitation) or changes and removes members.
 const ac = createAccessControl(defaultStatements);
@@ -109,6 +111,9 @@ export const auth = betterAuth({
             ac,
             roles: { owner, admin: manager, member: staff },
             invitationExpiresIn: 60 * 60 * 24 * 7,
+            // Better Auth's default is 100: the 101st invitation can't be
+            // accepted, and listing members looks up at most this many users.
+            membershipLimit: MEMBERSHIP_LIMIT,
             // Which staff row the invitation is for; linked when it's accepted.
             schema: {
                 invitation: {
