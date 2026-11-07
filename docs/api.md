@@ -25,6 +25,7 @@ Sign-up, sign-in and sessions are Better Auth's own routes under `/api/auth/*`.
 | `POST` | `/:slug/appointments` | Book a time that availability offered |
 | `POST` | `/:slug/appointments/cancel` | Cancel, with the token from booking |
 | `POST` | `/:slug/appointments/reschedule` | Move to another offered time, with the same token |
+| `POST` | `/:slug/appointments/availability` | Times this appointment can move to, with the same token |
 
 ```http
 GET /studio-wien/availability?serviceId=…&from=2026-11-17
@@ -62,6 +63,13 @@ The token is returned once and stored only as a hash; it is what the cancel and
 reschedule routes take (`{ "token": … }`, plus `startsAt` and an optional
 `staffId` to reschedule). A time that was never offered is `409
 slot_not_available`; one somebody else just took is `409 slot_taken`.
+
+`POST /:slug/appointments/availability` takes `{ "token", "from", "through"? }`
+and answers in the same shape as `GET /availability`, for the appointment's own
+service and stylist with the appointment itself left out. Those come from the
+token, not the request, so every time it offers is one reschedule accepts. It
+fails like reschedule: `404` for a token that matches nothing here, `409` once
+the appointment is cancelled, finished or begun.
 
 ## Signed in: `/me`
 
