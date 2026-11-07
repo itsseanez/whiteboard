@@ -178,7 +178,8 @@ In active development since August 2026. The full definition of done in [`DECISI
 - [x] Customers cancel and reschedule by link
 - [x] Demo tenants
 - [ ] Email notifications, audit trail, webhooks
-- [ ] Staff calendars, API docs
+- [x] Staff and manager accounts by emailed invitation; staff see their own week, enforced by RLS
+- [x] API docs
 
 ## License
 

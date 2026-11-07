@@ -12,7 +12,7 @@ There are three audiences, and each has its own database role
 |---|---|---|
 | `/:slug/...` | Customers booking with an organization | None |
 | `/me/...` | Any signed-in user | Session cookie |
-| `/tenant/:slug/...` | An organization's owners | Session cookie, owner membership |
+| `/tenant/:slug/...` | An organization's owners, managers and staff | Session cookie, membership |
 
 Sign-up, sign-in and sessions are Better Auth's own routes under `/api/auth/*`.
 
@@ -64,17 +64,43 @@ slot_not_available`; one somebody else just took is `409 slot_taken`.
 |---|---|---|
 | `GET` | `/me/organizations` | The organizations the user belongs to, with their role |
 | `POST` | `/me/tenants` | Create an organization `{ name, slug, timezone }`; the caller becomes its owner |
+| `POST` | `/me/invitations/:id/accept` | Join the organization that invited the caller |
 
 `POST /me/tenants` answers `201` when it created the organization, `200` when an
 earlier attempt already had (it is safe to retry), `409 slug_taken` when another
 account holds the address, and `400` for a reserved or malformed slug, an
 unknown time zone, or a bad name.
 
-## Owners: `/tenant/:slug`
+Accepting answers `{ slug, role }` and is safe to repeat. It refuses an
+invitation sent to another address (`403 wrong_account`), an expired one
+(`410 invitation_expired`) or one that was cancelled (`410 invitation_closed`).
+A staff invitation links the caller to its staff row; `409 staff_unavailable`
+means the row was removed or taken in the meantime.
 
-`GET /tenant/:slug` returns the tenant and the caller's membership. Everything
-else needs the `owner` role (`403 owner_only` otherwise); a slug the caller
-doesn't belong to is `404`, the same as one that doesn't exist.
+## Organizations: `/tenant/:slug`
+
+`GET /tenant/:slug` returns the tenant and the caller's membership. Roles are
+Better Auth's: `owner`, `admin` (shown as manager) and `member` (staff). A slug
+the caller doesn't belong to is `404`, the same as one that doesn't exist.
+
+### Staff: their own page
+
+| Method | Path | Does |
+|---|---|---|
+| `GET` | `/me/week?from[&through]` | The calendar's shape, holding only the caller's own row and appointments, up to 7 days |
+| `PUT` | `/me/hours` | Replace the caller's own week of hours |
+
+Both answer `404 not_staff` for a member with no staff row here.
+
+### Owners and managers
+
+Everything below needs `owner` or `admin` (`403 managers_only` otherwise).
+
+| Method | Path | Does |
+|---|---|---|
+| `GET` | `/people` | Members with their role and linked staff row, and pending invitations |
+| `POST` | `/invitations` | Invite `{ email, role: "staff", staffId }` or `{ email, role: "manager" }` |
+| `DELETE` | `/members/:memberId` | Owner only: end a member's access and free their staff row |
 
 | Method | Path | Does |
 |---|---|---|
@@ -105,6 +131,14 @@ Removing staff, a service or a resource archives it: it disappears from setup,
 booking and availability, and past appointments keep it. It is refused with
 `409 has_future_appointments` while future bookings depend on it, and a
 resource with `409 only_resource_for_service` while it is a service's only one.
+
+An invitation emails a link that works for 7 days; inviting the same address
+again sends it again. A manager invite needs an owner (`403 owner_only`). A
+staff invite is refused with `409 staff_has_login` when the row already has a
+login, and `409 already_member` when the address already belongs here.
+`503 email_unavailable` means email isn't configured, and nothing was saved;
+`502 email_failed` means the invitation was saved but the email didn't send,
+so inviting again resends it.
 
 Owner bookings and moves go through the same checks as customers': an owner
 can't book a time availability doesn't offer.

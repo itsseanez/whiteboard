@@ -178,6 +178,31 @@ repository compromise yields command execution, not the database password.
 
 The production `.env` never enters git.
 
+## Email: Amazon SES
+
+Invitations are sent through SES with the instance profile's credentials, so
+there is no API key to store. In production without `MAIL_TRANSPORT=ses` and
+`MAIL_FROM`, the app logs that email isn't configured at startup and
+inviting answers `503 email_unavailable`; everything else keeps working.
+Development prints each email to the console, and tests keep them in memory.
+
+Setup, once:
+
+1. In SES (the region in `AWS_REGION`), verify the domain `whiteboardhq.app`
+   and add the DKIM CNAME records it gives you to DNS. Add a custom MAIL FROM
+   domain and SPF if you want DMARC alignment.
+2. Request production access. Until it's granted, SES only delivers to
+   addresses you have verified one by one, which is enough to demo.
+3. Give the instance role `ses:SendEmail` on that identity.
+4. Raise the instance metadata hop limit to 2
+   (`aws ec2 modify-instance-metadata-options --instance-id … --http-put-response-hop-limit 2 --http-tokens required`).
+   The app runs in a container on Docker's bridge network, one hop further
+   than the default of 1 allows, so without this the SDK finds no credentials.
+5. Add `/whiteboard/prod/MAIL_TRANSPORT` (`ses`), `/whiteboard/prod/MAIL_FROM`
+   (e.g. `Whiteboard <invites@whiteboardhq.app>`) and
+   `/whiteboard/prod/AWS_REGION`, and raise the parameter count that
+   `/opt/whiteboard/deploy.sh` checks by three.
+
 ## Instance sizing
 
 - **t3.micro in Standard credit mode**, not Unlimited. Unlimited is the T3

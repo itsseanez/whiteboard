@@ -231,9 +231,9 @@ go through it rather than setting session variables by hand.
   | `staff_service`, `service_resource`, `staff_working_hours`, `business_hours` | `SELECT, INSERT, DELETE` (replaced as a set) |
   | `time_off` | `SELECT` |
   | `customer`, `appointment` | `SELECT, INSERT, UPDATE` |
+  | `invitation` | `SELECT` (accepting decides from the row) |
 
-- Nothing on `account`, `session`, `user`, `verification`, `invitation` or
-  `pgmigrations`.
+- Nothing on `account`, `session`, `user`, `verification` or `pgmigrations`.
 - **No default privileges.** A table created by a later migration gives
   `whiteboard_app` nothing until that migration grants it.
 - `SELECT ON member` is load-bearing: `tenant_select_app`'s membership branch
@@ -262,9 +262,39 @@ go through it rather than setting session variables by hand.
 
 The auth tables are seven, not four — `account` (which holds password
 hashes for email/password auth), `verification`, and `invitation` come
-from Better Auth and its organization plugin. `invitation` exists because
-the organization plugin enables invite flows; nothing uses it yet and it
-has no RLS policy.
+from Better Auth and its organization plugin. `invitation` holds staff and
+manager invitations, with a `staffId` column for the staff row an invitation
+is for. It has no RLS policy: its id is the secret in the emailed link, and
+the app only reads it by id.
+
+## RLS by role, for `whiteboard_app`
+
+On `appointment`, `customer` and `staff_working_hours`, the original
+tenant-only policies now apply to `whiteboard_public` alone, and
+`whiteboard_app` gets its own, which also look at who the caller is. Two
+functions read the session variables:
+
+- **`app_caller_manages()`** — is the `app.user_id` caller an `owner` or
+  `admin` member of the `app.tenant_id` tenant?
+- **`app_caller_staff_id()`** — the caller's own staff row in that tenant,
+  or `NULL` if they have none or it is archived.
+
+Both are wrapped as `(SELECT …)` in the policies so Postgres runs them once
+per query rather than once per row.
+
+| Table | Read | Write |
+|---|---|---|
+| `appointment` | manager, or `staff_id` is the caller's own | managers only |
+| `customer` | manager, or has an appointment with the caller | managers only |
+| `staff_working_hours` | anyone in the tenant | manager, or the caller's own rows |
+
+So every `whiteboard_app` call that touches these tables sets both
+`tenantId` and `userId` in `withContext`; the services take a `Scope` for
+that. A call with no user set reads zero rows and writes nothing, which is
+the failure the policies are built to have. The public booking path keeps
+reading every appointment in the tenant, because availability needs them,
+and never returns customer details. `tests/staff-accounts.test.ts` proves
+the staff boundary directly against the database.
 
 ## RLS policies on `tenant`
 
