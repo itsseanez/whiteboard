@@ -10,6 +10,7 @@ import Button from '../components/Button';
 import Field from '../components/Field';
 import shell from '../shell.module.css';
 import styles from './Auth.module.css';
+import { ChangeEmail, ChangePassword } from './AccountCredentials';
 import Problem from '../components/Problem';
 import Tabs, { type Tab } from '../components/Tabs';
 
@@ -203,6 +204,8 @@ export default function Account() {
             Sign out
           </Button>
         </div>
+        {user ? <ChangeEmail current={user.email} /> : null}
+        <ChangePassword />
         <DeleteAccount />
       </>
     ),

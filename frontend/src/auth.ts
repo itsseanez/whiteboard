@@ -17,6 +17,7 @@ export const authClient = createAuthClient({
 export interface AuthError {
   status: number;
   code?: string | undefined;
+  message?: string | undefined;
 }
 
 export function authMessage(error: AuthError): string {

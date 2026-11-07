@@ -140,3 +140,14 @@
   padding-top: var(--space-4);
   border-top: 1px solid var(--rule);
 }
+
+/* One account setting on the Account tab, ruled off from the next. */
+.setting {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+
+.setting > .subheading {
+  margin-top: 0;
+}
