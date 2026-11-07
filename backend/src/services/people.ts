@@ -9,7 +9,8 @@ import { auth } from '../lib/auth.js';
 import { appPool } from '../db.js';
 import { withContext } from '../withContext.js';
 import { getMembershipByUserIdAndOrgId } from './tenant.js';
-import { appUrl, getMailer, MailNotConfiguredError } from '../lib/mailer.js';
+import { appUrl } from '../lib/mailer.js';
+import { queueMail } from '../jobs/queue.js';
 import type { Scope } from './owner.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -46,9 +47,8 @@ export async function requireInvitableStaff(scope: Scope, staffId: string): Prom
 }
 
 /**
- * Sent here rather than from Better Auth's sendInvitationEmail, which runs as a
- * background task and swallows a failed send: the owner would see "sent" and
- * nothing would arrive.
+ * Queued here rather than sent from Better Auth's sendInvitationEmail, so the
+ * outbox retries it. Useful for the invitation's seven days.
  */
 export async function invite(
   scope: Scope,
@@ -58,13 +58,6 @@ export async function invite(
   headers: Headers,
 ): Promise<{ invitationId: string }> {
   if (input.role === 'staff') await requireInvitableStaff(scope, input.staffId!);
-  let mailer;
-  try {
-    mailer = getMailer();
-  } catch (err) {
-    if (err instanceof MailNotConfiguredError) throw new PeopleError(503, 'email_unavailable');
-    throw err;
-  }
   let invitationId: string;
   try {
     const invitation = await auth.api.createInvitation({
@@ -86,21 +79,18 @@ export async function invite(
     throw err;
   }
 
-  // The invitation is saved first; if the email fails, inviting again resends it.
   const link = appUrl(`/invite/${invitationId}?email=${encodeURIComponent(input.email)}`);
-  try {
-    await mailer.send({
+  await queueMail(
+    {
       to: input.email,
       subject: `Join ${from.organizationName} on Whiteboard`,
       text:
         `${from.inviterName} invited you to ${from.organizationName} as ${input.role === 'manager' ? 'a manager' : 'a staff member'}.\n\n` +
         `Accept the invitation: ${link}\n\n` +
         `The link works for 7 days. If you weren't expecting this, ignore it.`,
-    });
-  } catch (err) {
-    console.error('Invitation email failed:', err);
-    throw new PeopleError(502, 'email_failed');
-  }
+    },
+    { hours: 24 * 7 },
+  );
   return { invitationId };
 }
 

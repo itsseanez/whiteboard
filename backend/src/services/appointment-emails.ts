@@ -1,11 +1,12 @@
 // Emails to the customer about their own appointment: a confirmation with the
 // manage link, and a notice when it's cancelled or moved, by them or by the
-// business. Sent after the change is committed, and never allowed to undo it:
-// a failed or unconfigured send is logged and the booking still stands.
+// business. Queued after the change is committed, and never allowed to undo
+// it; the outbox retries until the email stops being useful.
 
 import type { Pool } from 'pg';
 import { withContext } from '../withContext.js';
-import { appUrl, getMailer, MailNotConfiguredError, type Mail } from '../lib/mailer.js';
+import { appUrl, type Mail } from '../lib/mailer.js';
+import { queueMail } from '../jobs/queue.js';
 
 export type AppointmentEmail =
   | { kind: 'booked'; manageToken: string }
@@ -89,7 +90,14 @@ export function compose(org: Organization, d: Details, email: AppointmentEmail):
   }
 }
 
-/** Resolves to whether the email went. Never throws. */
+/** Until the appointment for news about it; a week for a cancellation. */
+function usefulUntil(email: AppointmentEmail, startsAt: Date): Date {
+  const soon = Date.now() + 3_600_000;
+  if (email.kind === 'booked' || email.kind === 'moved') return new Date(Math.max(startsAt.getTime(), soon));
+  return new Date(Date.now() + 7 * 24 * 3_600_000);
+}
+
+/** Resolves to whether the email is queued. Never throws. */
 export async function emailCustomer(
   pool: Pool,
   org: Organization,
@@ -98,15 +106,12 @@ export async function emailCustomer(
   userId?: string,
 ): Promise<boolean> {
   try {
-    const mailer = getMailer();
     const d = await details(pool, org.id, userId, appointmentId);
     if (!d) return false;
-    await mailer.send(compose(org, d, email));
+    await queueMail(compose(org, d, email), { until: usefulUntil(email, d.startsAt) });
     return true;
   } catch (error) {
-    if (!(error instanceof MailNotConfiguredError)) {
-      console.error(`Appointment email (${email.kind}) for ${appointmentId} failed:`, error);
-    }
+    console.error(`Queueing appointment email (${email.kind}) for ${appointmentId} failed:`, error);
     return false;
   }
 }

@@ -25,8 +25,17 @@ afterAll(async () => {
   await ownerPool.end();
 });
 
-describe('inviting without email configured', () => {
-  it('answers 503 email_unavailable rather than a 500', async () => {
+/** The unfinished outbox rows addressed to someone. */
+async function waiting(to: string) {
+  const { rows } = await ownerPool.query<{ attempts: number }>(
+    `SELECT attempts FROM job WHERE finished_at IS NULL AND payload->>'to' = $1`,
+    [to],
+  );
+  return rows;
+}
+
+describe('without email configured', () => {
+  it('still invites, and the email waits in the outbox without spending attempts', async () => {
     const signUp = await request(app).post('/api/auth/sign-up/email').send({ name: 'O', email, password: 'test-password-123' });
     const cookie = (signUp.headers['set-cookie'] as unknown as string[]).find((c) => c.startsWith('better-auth.session_token='))!;
     await request(app).post('/me/tenants').set('Cookie', cookie).send({ name: 'No Mail', slug, timezone: 'UTC' });
@@ -35,11 +44,12 @@ describe('inviting without email configured', () => {
       .post(`/tenant/${slug}/invitations`)
       .set('Cookie', cookie)
       .send({ email: `ana-${run}@test.example`, role: 'staff', staffId: staff.body.id });
-    expect(res.status).toBe(503);
-    expect(res.body.error).toBe('email_unavailable');
+    expect(res.status).toBe(201);
+    expect(await waiting(`ana-${run}@test.example`)).toEqual([{ attempts: 0 }]);
+    await ownerPool.query(`DELETE FROM job WHERE payload->>'to' = $1`, [`ana-${run}@test.example`]);
   });
 
-  it('still books, and says the confirmation did not go', async () => {
+  it('still books, with the confirmation queued for when email works', async () => {
     // Marina on a Friday: no other test books her that day.
     let date = Temporal.Now.plainDateISO('America/New_York').add({ days: 2 });
     while (date.dayOfWeek !== 5) date = date.add({ days: 1 });
@@ -52,9 +62,11 @@ describe('inviting without email configured', () => {
         .post('/marinas-cuts-color/appointments')
         .send({ serviceId: cut, staffId: slot.staffIds[0], startsAt: slot.startsAt, customer: { name: 'No Mail', email: customer } });
       expect(res.status).toBe(201);
-      expect(res.body.emailed).toBe(false);
+      expect(res.body.emailed).toBe(true);
       expect(res.body.manageToken).toBeTruthy();
+      expect(await waiting(customer)).toHaveLength(1);
     } finally {
+      await ownerPool.query(`DELETE FROM job WHERE payload->>'to' = $1`, [customer]);
       await ownerPool.query(
         `WITH mine AS (SELECT id FROM customer WHERE email = $1),
               cleared AS (DELETE FROM appointment WHERE customer_id IN (SELECT id FROM mine))

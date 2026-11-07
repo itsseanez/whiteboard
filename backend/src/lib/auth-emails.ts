@@ -1,16 +1,16 @@
 // The two emails Better Auth asks us to send: a password reset and an address
-// check. Neither may fail the request: a reset must answer the same whether or
-// not the address has an account, and verification is never required. So a
-// failed or unconfigured send is logged and dropped. Until SES leaves its
-// sandbox, that is most of them.
+// check. Both go to the outbox and are useful for an hour, as long as their
+// tokens last. Queueing can't fail the request in a way that tells anyone
+// whether the address has an account; if it throws, that's logged.
 
-import { appUrl, getMailer } from './mailer.js';
+import { appUrl } from './mailer.js';
+import { queueMail } from '../jobs/queue.js';
 
 async function send(to: string, subject: string, text: string): Promise<void> {
   try {
-    await getMailer().send({ to, subject, text });
+    await queueMail({ to, subject, text }, { hours: 1 });
   } catch (err) {
-    console.error(`${subject} email to ${to} failed:`, err);
+    console.error(`Queueing "${subject}" for ${to} failed:`, err);
   }
 }
 
