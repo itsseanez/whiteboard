@@ -443,6 +443,29 @@ export const timeOffApi = {
     }),
 };
 
+export interface WebhookDelivery {
+  label: string;
+  outcome: 'sent' | 'expired' | 'cancelled' | 'failed' | null;
+  attempts: number;
+  lastError: string | null;
+  createdAt: string;
+}
+
+export interface Webhook {
+  id: string;
+  url: string;
+  createdAt: string;
+  deliveries: WebhookDelivery[];
+}
+
+/** Owners only. The secret comes back once, from add. */
+export const webhookApi = {
+  list: (slug: string) => send<{ webhooks: Webhook[] }>(owner(slug, '/webhooks')),
+  add: (slug: string, url: string) => send<{ id: string; url: string; secret: string }>(owner(slug, '/webhooks'), write('POST', { url })),
+  remove: (slug: string, id: string) => send<void>(owner(slug, `/webhooks/${id}`), { method: 'DELETE' }),
+  test: (slug: string, id: string) => send<void>(owner(slug, `/webhooks/${id}/test`), { method: 'POST' }),
+};
+
 /** POST /me/tenants/:slug/reopen. The owner, within 30 days of closing. */
 export function reopenOrganization(slug: string): Promise<{ slug: string }> {
   return send(`/me/tenants/${encodeURIComponent(slug)}/reopen`, { method: 'POST' });

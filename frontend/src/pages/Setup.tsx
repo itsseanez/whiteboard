@@ -31,6 +31,7 @@ import Problem from '../components/Problem';
 import Tabs from '../components/Tabs';
 import { CalendarView } from './Calendar';
 import TimeOff from '../components/TimeOff';
+import Webhooks from '../components/Webhooks';
 import Select from '../components/Select';
 import { useSettledSession } from '../auth';
 
@@ -282,6 +283,22 @@ export default function Setup() {
               </div>
             ),
           },
+          ...(data.role === 'owner'
+            ? [
+                {
+                  id: 'webhooks',
+                  label: 'Webhooks',
+                  panel: (
+                    <div className={styles.column}>
+                      <section className={styles.section}>
+                        <h2 className={styles.heading}>Webhooks</h2>
+                        <Webhooks slug={slug} />
+                      </section>
+                    </div>
+                  ),
+                },
+              ]
+            : []),
           {
             id: 'accounts',
             label: 'Accounts',

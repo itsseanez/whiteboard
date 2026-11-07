@@ -1,0 +1,81 @@
+.webhooks {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.note,
+.when {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.secret {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-press);
+}
+
+.secret code {
+  overflow-wrap: anywhere;
+  font-size: var(--step-0);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.hook {
+  display: grid;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.url {
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.deliveries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--step--1);
+}
+
+.deliveries li {
+  display: grid;
+  grid-template-columns: 11rem 1fr auto;
+  gap: var(--space-2);
+  padding: 2px 0;
+}
+
+.deliveries li[data-outcome='failed'],
+.deliveries li[data-outcome='expired'] {
+  font-weight: 500;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+}
