@@ -168,3 +168,34 @@ export function dateToIso(date: string): string {
   // either way, which no real zone offset comes close to.
   return `${date}T12:00:00Z`;
 }
+
+/** 'HH:MM' on a 24-hour clock in the zone, for telling a whole day from a timed one. */
+function clock24(iso: string, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
+    new Date(iso),
+  );
+}
+
+/**
+ * Time off as a person would say it: 'Thu 24 December', 'Thu 24 December –
+ * Sat 26 December', 'Thu 24 December, 09:00–12:00'. A boundary at midnight in
+ * the organization's zone is a whole-day edge, so an end at midnight belongs
+ * to the day before.
+ */
+export function timeOffLabel(startsAt: string, endsAt: string, timeZone: string): string {
+  const startTimed = clock24(startsAt, timeZone) !== '00:00';
+  const endTimed = clock24(endsAt, timeZone) !== '00:00';
+  const startDay = organizationDate(new Date(startsAt), timeZone);
+  const endDay = organizationDate(new Date(new Date(endsAt).getTime() - (endTimed ? 0 : 1)), timeZone);
+  const day = (d: string) => `${weekdayShort(dateToIso(d), timeZone)} ${dayAndMonth(dateToIso(d), timeZone)}`;
+
+  if (startDay === endDay) {
+    if (!startTimed && !endTimed) return day(startDay);
+    const from = startTimed ? timeOfDay(startsAt, timeZone) : 'start of day';
+    const until = endTimed ? timeOfDay(endsAt, timeZone) : 'end of day';
+    return `${day(startDay)}, ${from}–${until}`;
+  }
+  const from = `${day(startDay)}${startTimed ? `, ${timeOfDay(startsAt, timeZone)}` : ''}`;
+  const until = `${day(endDay)}${endTimed ? `, ${timeOfDay(endsAt, timeZone)}` : ''}`;
+  return `${from} – ${until}`;
+}
