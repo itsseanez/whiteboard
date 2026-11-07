@@ -225,6 +225,12 @@ describe('Landing', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Online booking platform.');
   });
 
+  it('links to the privacy page from the footer', () => {
+    fakeFetch({});
+    renderLanding();
+    expect(screen.getByRole('contentinfo').querySelector('a[href="/privacy"]')?.textContent).toBe('Privacy');
+  });
+
   it('has no other "book" links: booking happens in the tile, or from the three organization links', () => {
     fakeFetch({});
     renderLanding();
