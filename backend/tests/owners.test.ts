@@ -45,7 +45,7 @@ async function invitedAndAccepted(label: string, role: 'staff' | 'manager', staf
   const address = email(label);
   expect((await api.post('/invitations', { email: address, role, ...(staffId ? { staffId } : {}) }, founder.cookie)).status).toBe(201);
   const user = await signUp(address);
-  const id = [...outbox].reverse().find((m) => m.to === address)?.text.match(/\/invite\/([^?\s]+)/)?.[1];
+  const id = [...outbox].reverse().find((m) => m.to === address && m.text.includes('/invite/'))?.text.match(/\/invite\/([^?\s]+)/)?.[1];
   expect((await request(app).post(`/me/invitations/${id}/accept`).set('Cookie', user.cookie)).status).toBe(200);
   return user;
 }

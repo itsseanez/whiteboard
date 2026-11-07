@@ -58,7 +58,7 @@ async function invitedAndAccepted(label: string, role: 'staff' | 'manager', staf
   const sent = await api.post('/invitations', { email: address, role, ...(staffId ? { staffId } : {}) }, owner);
   expect(sent.status).toBe(201);
   const user = await signUp(address);
-  const mail = [...outbox].reverse().find((m) => m.to === address);
+  const mail = [...outbox].reverse().find((m) => m.to === address && m.text.includes('/invite/'));
   const id = mail?.text.match(/\/invite\/([^?\s]+)/)?.[1];
   const accepted = await request(app).post(`/me/invitations/${id}/accept`).set('Cookie', user.cookie);
   expect(accepted.status).toBe(200);

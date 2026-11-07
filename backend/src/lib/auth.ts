@@ -5,6 +5,7 @@ import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements, ownerAc, memberAc } from "better-auth/plugins/organization/access";
 import { authPool } from "../db.js";
 import { getTenantsByUserId } from "../services/tenant.js";
+import { sendResetPassword, sendVerification } from "./auth-emails.js";
 
 // "admin" is a manager: owner minus people. Managers invite staff, but only an
 // owner invites managers (beforeCreateInvitation) or changes and removes members.
@@ -29,12 +30,21 @@ async function roleIn(organizationId: string, userId: string): Promise<string | 
 
 export const auth = betterAuth({
     database: authPool,
-    emailAndPassword: { 
-        enabled: true, 
+    emailAndPassword: {
+        enabled: true,
+        sendResetPassword,
+        // A reset is usually a lost or leaked password, so every session ends.
+        revokeSessionsOnPasswordReset: true,
+    },
+    // Sent at sign-up and on request, never required: until SES leaves its
+    // sandbox most of these can't be delivered, and sign-up must still work.
+    emailVerification: {
+        sendVerificationEmail: sendVerification,
+        sendOnSignUp: true,
     },
     // Better Auth would let a session less than a day old delete its account
     // without a password. A stolen cookie shouldn't be enough, so always ask.
-    // Changing the email gets the same check: while nobody's email is verified it
+    // Changing the email gets the same check: for an unverified address it
     // applies at once, so a stolen cookie could otherwise hand the account away.
     hooks: {
         before: createAuthMiddleware(async (ctx) => {
@@ -61,7 +71,8 @@ export const auth = betterAuth({
     // memberships and invitations you sent go with it (foreign keys cascade);
     // a staff row you were linked to stays, unlinked.
     user: {
-        // Nobody can verify an email yet, so a change applies straight away.
+        // Unverified: the change applies at once and the new address gets a
+        // check. Verified: the new address gets a link, and the change waits for it.
         changeEmail: { enabled: true, updateEmailWithoutVerification: true },
         deleteUser: {
             enabled: true,

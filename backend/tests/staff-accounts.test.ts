@@ -54,7 +54,7 @@ const api = {
 
 /** The invitation id from the newest email to this address. */
 function invitationFor(address: string): string {
-  const mail = [...outbox].reverse().find((m) => m.to === address);
+  const mail = [...outbox].reverse().find((m) => m.to === address && m.text.includes('/invite/'));
   const id = mail?.text.match(/\/invite\/([^?\s]+)/)?.[1];
   if (!id) throw new Error(`No invitation email to ${address}`);
   return id;
