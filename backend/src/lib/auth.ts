@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { organization } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements, ownerAc, memberAc } from "better-auth/plugins/organization/access";
@@ -34,11 +34,26 @@ export const auth = betterAuth({
     },
     // Better Auth would let a session less than a day old delete its account
     // without a password. A stolen cookie shouldn't be enough, so always ask.
+    // Changing the email gets the same check: while nobody's email is verified it
+    // applies at once, so a stolen cookie could otherwise hand the account away.
     hooks: {
         before: createAuthMiddleware(async (ctx) => {
             const body = ctx.body as { password?: unknown } | undefined;
             if (ctx.path === "/delete-user" && (typeof body?.password !== "string" || body.password === "")) {
                 throw new APIError("BAD_REQUEST", { code: "PASSWORD_REQUIRED", message: "Enter your password to delete your account." });
+            }
+            if (ctx.path === "/change-email") {
+                const password = body?.password;
+                if (typeof password !== "string" || password === "") {
+                    throw new APIError("BAD_REQUEST", { code: "PASSWORD_REQUIRED", message: "Enter your password to change your email." });
+                }
+                const session = await getSessionFromCtx(ctx);
+                if (!session) throw new APIError("UNAUTHORIZED", { code: "UNAUTHORIZED", message: "Unauthorized" });
+                const account = (await ctx.context.internalAdapter.findAccounts(session.user.id))
+                    .find((a) => a.providerId === "credential");
+                if (!account?.password || !(await ctx.context.password.verify({ hash: account.password, password }))) {
+                    throw new APIError("BAD_REQUEST", { code: "INVALID_PASSWORD", message: "Invalid password" });
+                }
             }
         }),
     },
@@ -46,6 +61,8 @@ export const auth = betterAuth({
     // memberships and invitations you sent go with it (foreign keys cascade);
     // a staff row you were linked to stays, unlinked.
     user: {
+        // Nobody can verify an email yet, so a change applies straight away.
+        changeEmail: { enabled: true, updateEmailWithoutVerification: true },
         deleteUser: {
             enabled: true,
             beforeDelete: async (user) => {
