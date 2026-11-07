@@ -65,6 +65,7 @@ export function createApp(options: AppOptions = {}): Express {
     app.get('/signin/reset', page);
     app.get('/signup', page);
     app.get('/account', page);
+    app.get('/account/inbox', page);
     app.get('/manage/:slug', page);
     app.get('/manage/:slug/calendar', page);
     app.get('/manage/:slug/me', page);
