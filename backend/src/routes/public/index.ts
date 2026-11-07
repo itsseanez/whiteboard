@@ -6,6 +6,7 @@ import { getPublicServices } from '../../controllers/catalog.js';
 import { postPublicBooking } from '../../controllers/booking.js';
 import {
   postCancelBooking,
+  postMoveAvailability,
   postRescheduleBooking,
 } from '../../controllers/manage-booking.js';
 
@@ -46,6 +47,12 @@ router.post('/appointments', postPublicBooking);
 // these never shadow it.
 router.post('/appointments/cancel', postCancelBooking);
 router.post('/appointments/reschedule', postRescheduleBooking);
+
+// POST /:slug/appointments/availability { token, from, through? }
+//
+// Times this appointment can move to: its own service and stylist, itself
+// excluded. POST for the same reason as above: the token is a credential.
+router.post('/appointments/availability', postMoveAvailability);
 
 // Mounted last so it only catches paths no route above claimed. Without it an
 // unknown path under /:slug falls through to Express's HTML 404, which is a

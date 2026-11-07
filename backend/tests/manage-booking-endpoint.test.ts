@@ -403,3 +403,126 @@ describe('POST /:slug/appointments/reschedule', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('POST /:slug/appointments/availability', () => {
+  const WIEN = '22222222-2222-2222-2222-222222222222';
+  const SHORT_SERVICE = 'c8888888-8888-4888-8888-888888888881'; // 30 min, no resource
+  const BEA = 'c8888888-8888-4888-8888-888888888882'; // a second colorist
+
+  function moveTimes(token: string, body: Record<string, unknown> = { from: testDate.toString() }, slug = WIEN_SLUG) {
+    return request(app).post(`/${slug}/appointments/availability`).send({ token, ...body });
+  }
+
+  function openSlots(res: { body: unknown }): Slot[] {
+    const day = (res.body as { days: { status: string; slots?: Slot[] }[] }).days[0];
+    return day?.status === 'open' ? (day.slots ?? []) : [];
+  }
+
+  beforeAll(async () => {
+    const { rows } = await owner.query<{ id: string }>(`SELECT id FROM tenant WHERE slug = $1`, [WIEN_SLUG]);
+    expect(rows[0]?.id).toBe(WIEN);
+    await owner.query(
+      `INSERT INTO service (id, tenant_id, name, duration_minutes) VALUES ($1, $2, 'Fringe trim', 30)`,
+      [SHORT_SERVICE, WIEN],
+    );
+    await owner.query(`INSERT INTO staff (id, tenant_id, name) VALUES ($1, $2, 'Bea Test')`, [BEA, WIEN]);
+    await owner.query(
+      `INSERT INTO staff_service (staff_id, service_id, tenant_id) VALUES ($2, $3, $4), ($1, $5, $4)`,
+      [ANNA, BEA, COLOR_SERVICE, WIEN, SHORT_SERVICE],
+    );
+    await owner.query(
+      `INSERT INTO staff_working_hours (staff_id, tenant_id, weekday, start_time, end_time)
+       SELECT $1, tenant_id, weekday, start_time, end_time FROM staff_working_hours WHERE staff_id = $2`,
+      [BEA, ANNA],
+    );
+  });
+
+  afterAll(async () => {
+    await owner.query(`DELETE FROM staff_working_hours WHERE staff_id = $1`, [BEA]);
+    await owner.query(`DELETE FROM staff_service WHERE staff_id = $1 OR service_id = $2`, [BEA, SHORT_SERVICE]);
+    await owner.query(`DELETE FROM staff WHERE id = $1`, [BEA]);
+    await owner.query(`DELETE FROM service WHERE id = $1`, [SHORT_SERVICE]);
+  });
+
+  it('offers times overlapping where the appointment already sits', async () => {
+    const booked = await book(slots[1]!, `movetimes-own@${TEST_DOMAIN}`);
+
+    const res = await moveTimes(booked.manageToken);
+    expect(res.status, explain(res)).toBe(200);
+    expect(openSlots(res).map((s) => s.startsAt)).toContain(slots[1]!.startsAt);
+  });
+
+  it("asks about the appointment's own stylist, not anyone qualified", async () => {
+    const booked = await book(slots[0]!, `movetimes-staff@${TEST_DOMAIN}`);
+
+    // The public endpoint now offers Bea too; a move keeps Anna.
+    const everyone = await fetchSlots(testDate);
+    expect(everyone.some((s) => s.staffIds.includes(BEA))).toBe(true);
+
+    const res = await moveTimes(booked.manageToken);
+    expect(res.status, explain(res)).toBe(200);
+    const offered = openSlots(res);
+    expect(offered.length).toBeGreaterThan(0);
+    for (const slot of offered) expect(slot.staffIds).toEqual([ANNA]);
+  });
+
+  it("asks about the appointment's own service, not the catalog's first", async () => {
+    const shortRes = await request(app)
+      .get(`/${WIEN_SLUG}/availability`)
+      .query({ serviceId: SHORT_SERVICE, staffId: ANNA, from: testDate.toString() });
+    const first = openSlots(shortRes)[0];
+    expect(first, explain(shortRes)).toBeDefined();
+    const bookedRes = await request(app)
+      .post(`/${WIEN_SLUG}/appointments`)
+      .send({
+        serviceId: SHORT_SERVICE,
+        staffId: ANNA,
+        startsAt: first!.startsAt,
+        customer: { name: 'Manage Test', email: `movetimes-service@${TEST_DOMAIN}` },
+      });
+    expect(bookedRes.status, explain(bookedRes)).toBe(201);
+
+    const res = await moveTimes((bookedRes.body as Booked).manageToken);
+    expect(res.status, explain(res)).toBe(200);
+    for (const slot of openSlots(res)) {
+      const minutes = Temporal.Instant.from(slot.startsAt).until(slot.endsAt).total('minutes');
+      expect(minutes).toBe(30);
+    }
+  });
+
+  it('offers only times reschedule accepts', async () => {
+    const booked = await book(slots[0]!, `movetimes-accept@${TEST_DOMAIN}`);
+    const offered = openSlots(await moveTimes(booked.manageToken));
+    const last = offered[offered.length - 1]!;
+
+    const res = await reschedule(booked.manageToken, { startsAt: last.startsAt });
+    expect(res.status, explain(res)).toBe(200);
+  });
+
+  it('answers like cancel and reschedule for a wrong, foreign or used-up token', async () => {
+    const booked = await book(slots[0]!, `movetimes-errors@${TEST_DOMAIN}`);
+
+    const foreign = await moveTimes(booked.manageToken, { from: testDate.toString() }, MARINA_SLUG);
+    expect(foreign.status).toBe(404);
+    expect(foreign.body).toEqual({ error: 'appointment_not_found' });
+
+    expect((await moveTimes('A'.repeat(43))).status).toBe(404);
+
+    await cancel(booked.manageToken);
+    const cancelled = await moveTimes(booked.manageToken);
+    expect(cancelled.status).toBe(409);
+    expect(cancelled.body).toEqual({ error: 'not_booked' });
+  });
+
+  it('rejects a missing token or a bad range with 400', async () => {
+    const booked = await book(slots[0]!, `movetimes-400@${TEST_DOMAIN}`);
+    expect((await request(app).post(`/${WIEN_SLUG}/appointments/availability`).send({ from: testDate.toString() })).status).toBe(400);
+    expect((await moveTimes(booked.manageToken, {})).status).toBe(400);
+    expect((await moveTimes(booked.manageToken, { from: 'tomorrow' })).status).toBe(400);
+    const tooLong = await moveTimes(booked.manageToken, {
+      from: testDate.toString(),
+      through: testDate.add({ days: 40 }).toString(),
+    });
+    expect(tooLong.status).toBe(400);
+  });
+});

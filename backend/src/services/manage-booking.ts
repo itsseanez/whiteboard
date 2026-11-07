@@ -55,7 +55,8 @@
 
 import type { Pool, PoolClient } from 'pg';
 import { withContext } from '../withContext.js';
-import { ServiceNotFoundError } from './availability.js';
+import { ServiceNotFoundError, getAvailability } from './availability.js';
+import type { AvailabilityResult } from '../availability/types.js';
 import {
   SlotNotOfferedError,
   SlotTakenError,
@@ -302,5 +303,55 @@ export async function rescheduleBooking(
       }
       throw error;
     }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Times to move to
+// ---------------------------------------------------------------------------
+
+export interface MoveAvailabilityRequest {
+  tenantId: string;
+  timeZone: string;
+  token: string;
+  fromDate: string;
+  throughDate: string;
+  now: Date;
+}
+
+/**
+ * The times this appointment can move to: its own service and stylist, with
+ * itself left out of the busy set. Exactly the question reschedule's check
+ * asks, so every time offered here is one reschedule accepts.
+ *
+ * The service and stylist come from the row, not the request. The page cannot
+ * know them (there is no read endpoint for a token), and letting it say would
+ * reopen the mismatch this exists to close.
+ */
+export async function moveAvailability(
+  pool: Pool,
+  request: MoveAvailabilityRequest,
+): Promise<AvailabilityResult> {
+  const appointment = await withContext(pool, { tenantId: request.tenantId }, (client) =>
+    fetchByRef(client, { token: request.token }),
+  );
+  if (!appointment) throw new AppointmentNotFoundError();
+  if (appointment.status !== 'BOOKED') throw new AppointmentNotManageableError('not_booked');
+  if (appointment.startsAt.getTime() <= request.now.getTime()) {
+    throw new AppointmentNotManageableError('already_started');
+  }
+  if (!appointment.staffId) {
+    throw new SlotNotOfferedError('this appointment has no stylist and cannot be rescheduled here');
+  }
+
+  return getAvailability(pool, {
+    tenantId: request.tenantId,
+    timeZone: request.timeZone,
+    serviceId: appointment.serviceId,
+    preferredStaffId: appointment.staffId,
+    fromDate: request.fromDate,
+    throughDate: request.throughDate,
+    now: request.now,
+    excludeAppointmentId: appointment.id,
   });
 }

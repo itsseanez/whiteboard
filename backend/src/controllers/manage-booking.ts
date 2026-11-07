@@ -2,6 +2,7 @@
 //
 // POST /:slug/appointments/cancel      { token }
 // POST /:slug/appointments/reschedule  { token, startsAt, staffId? }
+// POST /:slug/appointments/availability { token, from, through? }
 //
 // WHY THE TOKEN IS IN THE BODY AND NOT THE PATH
 //
@@ -32,12 +33,14 @@
 import type { Request, Response } from 'express';
 import { publicPool } from '../db.js';
 import { emailCustomer } from '../services/appointment-emails.js';
+import { parseDateRange, toPublicResponse } from './availability.js';
 import { ServiceNotFoundError } from '../services/availability.js';
 import { SlotNotOfferedError, SlotTakenError } from '../services/booking.js';
 import {
   AppointmentNotFoundError,
   AppointmentNotManageableError,
   cancelBooking,
+  moveAvailability,
   rescheduleBooking,
 } from '../services/manage-booking.js';
 
@@ -185,6 +188,36 @@ export async function postRescheduleBooking(req: Request, res: Response): Promis
       startsAt: result.startsAt.toString(),
       endsAt: result.endsAt.toString(),
     });
+  } catch (error) {
+    if (!sendManageError(res, error)) throw error;
+  }
+}
+
+export async function postMoveAvailability(req: Request, res: Response): Promise<void> {
+  const parsed = parseTokenRequest(req);
+  if (!parsed.ok) {
+    res.status(400).json({ error: parsed.error });
+    return;
+  }
+
+  const body = req.body as Record<string, unknown>;
+  const range = parseDateRange(asString(body.from), asString(body.through) || undefined);
+  if (!range.ok) {
+    res.status(range.status).json({ error: range.error });
+    return;
+  }
+
+  try {
+    const result = await moveAvailability(publicPool, {
+      tenantId: parsed.tenantId,
+      timeZone: parsed.timeZone,
+      token: parsed.token,
+      fromDate: range.fromDate,
+      throughDate: range.throughDate,
+      now: new Date(),
+    });
+    // The same public shape as GET /availability: no reasons, no resources.
+    res.status(200).json(toPublicResponse(result, parsed.timeZone));
   } catch (error) {
     if (!sendManageError(res, error)) throw error;
   }
