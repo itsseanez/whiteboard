@@ -249,6 +249,12 @@ export default function Booking() {
 
   // --- booking -------------------------------------------------------------
 
+  /** A new time clears the last failure, which was about another one. */
+  function pick(next: Slot) {
+    setSlot(next);
+    setProblem(null);
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!slot || !serviceId || sending) return;
@@ -430,16 +436,23 @@ export default function Booking() {
             selected={slot}
             onPick={(picked, chosen) => {
               setDate(picked);
-              setSlot(chosen);
+              pick(chosen);
             }}
           />
         ) : (
           // No heading here: the period label above already names the day, and
           // repeating it is the sort of duplication that only shows up once you
           // look at the rendered page.
-          <DayTimes day={chosenDay} timeZone={timeZone} selected={slot} onPick={setSlot} />
+          <DayTimes day={chosenDay} timeZone={timeZone} selected={slot} onPick={pick} />
         )}
       </div>
+
+      {/* Outside the form: a failed booking clears the time, which hides the form. */}
+      {problem ? (
+        <Problem className={styles.problem} role="alert">
+          {problem}
+        </Problem>
+      ) : null}
 
       {!slot ? (
         <p className={styles.hint}>
@@ -456,8 +469,6 @@ export default function Booking() {
             {weekdayLong(slot.startsAt, timeZone)} {dayAndMonth(slot.startsAt, timeZone)} ·{' '}
             {service.name}, {duration(service.durationMinutes)}
           </p>
-
-          {problem ? <Problem className={styles.problem}>{problem}</Problem> : null}
 
           <div className={styles.fields}>
             <Field
