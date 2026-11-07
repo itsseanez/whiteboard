@@ -148,7 +148,7 @@ export default function TimeOff({ slug, timeZone, staff, onDirty, onChange }: Pr
 
   const privacy = staff
     ? 'Only owners, managers and that staff member see the reason.'
-    : 'Only you and the managers see the reason.';
+    : 'Only you, owners and managers see the reason.';
 
   return (
     <div className={styles.timeOff}>
