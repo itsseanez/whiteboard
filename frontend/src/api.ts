@@ -317,6 +317,22 @@ export interface Explain {
   days: ExplainDay[];
 }
 
+export type HistoryActor = { kind: 'customer' } | { kind: 'member'; name: string } | { kind: 'unknown' };
+
+export interface HistoryEvent {
+  kind: 'booked' | 'moved' | 'status';
+  at: string;
+  actor: HistoryActor;
+  staffName: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  status: string | null;
+  previousStaffName: string | null;
+  previousStartsAt: string | null;
+  previousEndsAt: string | null;
+  previousStatus: string | null;
+}
+
 export const calendarApi = {
   calendar: (slug: string, from: string, through: string) =>
     send<CalendarData>(owner(slug, `/calendar?${new URLSearchParams({ from, through })}`)),
@@ -332,6 +348,8 @@ export const calendarApi = {
   cancel: (slug: string, id: string) => send<Cancelled>(owner(slug, `/appointments/${id}/cancel`), write('POST', {})),
   move: (slug: string, id: string, startsAt: string, staffId?: string) =>
     send<Rescheduled>(owner(slug, `/appointments/${id}/reschedule`), write('POST', staffId ? { startsAt, staffId } : { startsAt })),
+  history: (slug: string, id: string) =>
+    send<{ timeZone: string; events: HistoryEvent[] }>(owner(slug, `/appointments/${id}/history`)),
 };
 
 /** GET /tenant/:slug — the signed-in owner's view of their own tenant. */

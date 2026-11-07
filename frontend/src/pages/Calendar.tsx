@@ -16,7 +16,9 @@ import {
   type Explain,
   type ExcludedTime,
   type OwnerService,
+  type HistoryEvent,
 } from '../api';
+import { historyLine } from '../calendar-history';
 import { explain, explainFor, type ReasonContext } from '../calendar-reasons';
 import { addDays, endMinutes, localHHMM, toHHMM, toMinutes, weekStart, weekdayOf } from '../calendar-grid';
 import Button from '../components/Button';
@@ -472,7 +474,19 @@ function AppointmentPanel({
   const [times, setTimes] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [history, setHistory] = useState<HistoryEvent[] | null | 'closed'>('closed');
   const a = appointment;
+
+  async function toggleHistory() {
+    if (history !== 'closed') return setHistory('closed');
+    setHistory(null);
+    try {
+      setHistory((await calendarApi.history(slug, a.id)).events);
+    } catch (e) {
+      setError(messageFor(e));
+      setHistory('closed');
+    }
+  }
 
   useEffect(() => {
     if (!moving || !moveStaff) return;
@@ -547,6 +561,25 @@ function AppointmentPanel({
         </div>
       )}
       <p className={styles.muted}>The customer is emailed when you move or cancel this.</p>
+      <div>
+        <Button variant="secondary" onClick={() => void toggleHistory()}>
+          {history === 'closed' ? 'History' : 'Hide history'}
+        </Button>
+      </div>
+      {history === null ? <p className={styles.muted}>Loading history…</p> : null}
+      {Array.isArray(history) ? (
+        <ol className={styles.history} aria-label="History">
+          {history.map((event, i) => {
+            const line = historyLine(event, timeZone);
+            return (
+              <li key={i}>
+                <span>{line.what}</span>
+                <span className={styles.muted}>{line.when}</span>
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
     </div>
   );
 }

@@ -103,6 +103,25 @@ describe('Calendar', () => {
     await waitFor(() => expect(calls.some((c) => c.path === `${base}/appointments/a1/cancel`)).toBe(true));
   });
 
+  it("shows an appointment's history on request", async () => {
+    setup({
+      [`GET ${base}/appointments/a1/history`]: () =>
+        json(200, {
+          timeZone: 'UTC',
+          events: [
+            { kind: 'booked', at: '2031-02-01T13:03:00Z', actor: { kind: 'customer' }, staffName: 'Ana', startsAt: '2031-02-03T09:00:00Z', endsAt: '2031-02-03T09:30:00Z', status: 'BOOKED', previousStaffName: null, previousStartsAt: null, previousEndsAt: null, previousStatus: null },
+            { kind: 'status', at: '2031-02-02T10:00:00Z', actor: { kind: 'member', name: 'Hanna' }, staffName: null, startsAt: null, endsAt: null, status: 'CANCELLED', previousStaffName: null, previousStartsAt: null, previousEndsAt: null, previousStatus: 'BOOKED' },
+          ],
+        }),
+    });
+    renderCalendar();
+    fireEvent.click(await screen.findByRole('button', { name: /Cut\s*Jo Bloggs/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    const list = await screen.findByRole('list', { name: 'History' });
+    expect(list.textContent).toMatch(/Booked for .* by the customer/);
+    expect(list.textContent).toMatch(/Cancelled by Hanna/);
+  });
+
   it('explains why a time is not bookable once a service is picked', async () => {
     setup();
     renderCalendar();
