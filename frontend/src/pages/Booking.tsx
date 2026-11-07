@@ -317,7 +317,7 @@ export default function Booking() {
           </p>
           <p className={shell.lede}>
             {booked.emailed
-              ? "We've emailed you this link too. It's the only way to change or cancel this appointment."
+              ? "We're emailing you this link too. It's the only way to change or cancel this appointment, so keep it."
               : "Keep this link. It's the only way to change or cancel this appointment, and the email with it didn't go, so it isn't shown again."}
           </p>
           <a className={styles.manage} href={manageUrl}>
