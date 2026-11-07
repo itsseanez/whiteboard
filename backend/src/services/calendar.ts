@@ -56,7 +56,7 @@ export function getCalendar(scope: Scope, timeZone: string, from: string, throug
     );
     const timeOff = await client.query<{ staffId: string; startsAt: Date; endsAt: Date; reason: string | null }>(
       `SELECT staff_id AS "staffId", starts_at AS "startsAt", ends_at AS "endsAt", reason
-       FROM time_off WHERE starts_at < $2 AND ends_at > $1 ORDER BY starts_at`,
+       FROM time_off WHERE status = 'approved' AND starts_at < $2 AND ends_at > $1 ORDER BY starts_at`,
       [start, end],
     );
     const appointments = await client.query<{

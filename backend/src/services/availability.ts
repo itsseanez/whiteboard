@@ -144,13 +144,14 @@ async function fetchTimeOff(
 ): Promise<TimeOffRow[]> {
   // Overlap, not containment: a holiday that began last week still blocks the
   // first day of this window. Half-open on both sides, matching the [start,end)
-  // rule used everywhere else.
+  // rule used everywhere else. Only approved time off blocks; a request doesn't.
   const { rows } = await client.query<TimeOffRow>(
     `SELECT staff_id  AS "staffId",
             starts_at AS "startsAt",
             ends_at   AS "endsAt"
      FROM time_off
      WHERE staff_id = ANY($1::uuid[])
+       AND status = 'approved'
        AND starts_at < $3
        AND ends_at   > $2`,
     [staffIds, windowStart, windowEnd],
