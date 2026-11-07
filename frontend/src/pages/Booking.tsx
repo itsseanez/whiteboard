@@ -25,6 +25,7 @@ import { useParams } from 'react-router-dom';
 
 import {
   ApiError,
+  RATE_LIMITED,
   createBooking,
   getAvailability,
   getCatalog,
@@ -78,6 +79,7 @@ function bookingMessage(error: unknown): string {
     if (error.code === 'slot_not_available') {
       return 'That time is no longer free. Pick another.';
     }
+    if (error.code === 'rate_limited') return RATE_LIMITED;
     if (error.status === 400) {
       return 'Check the details above and try again.';
     }
@@ -192,8 +194,10 @@ export default function Booking() {
       .then((loaded) => {
         if (live) setAvailability(loaded);
       })
-      .catch(() => {
-        if (live) setProblem('Could not load times. Try again in a moment.');
+      .catch((error: unknown) => {
+        if (!live) return;
+        const limited = error instanceof ApiError && error.code === 'rate_limited';
+        setProblem(limited ? RATE_LIMITED : 'Could not load times. Try again in a moment.');
       });
 
     return () => {

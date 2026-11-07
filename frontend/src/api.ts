@@ -94,6 +94,9 @@ export class ApiError extends Error {
   }
 }
 
+/** What to tell a person whose connection hit a public rate limit. */
+export const RATE_LIMITED = 'Too many tries from your connection. Wait a few minutes and try again.';
+
 async function send<T>(path: string, init?: RequestInit): Promise<T> {
   // Spread rather than `headers: cond ? x : undefined`. Under
   // exactOptionalPropertyTypes an optional property may be absent or a

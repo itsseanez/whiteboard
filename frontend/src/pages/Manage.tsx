@@ -24,6 +24,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   ApiError,
+  RATE_LIMITED,
   cancelBooking,
   closedOrganizationFor,
   getCatalog,
@@ -65,6 +66,8 @@ function manageMessage(error: unknown): string {
         return 'Someone else took that time while you were choosing. Pick another.';
       case 'slot_not_available':
         return 'That time is not on offer. Pick another from the list.';
+      case 'rate_limited':
+        return RATE_LIMITED;
       default:
         break;
     }

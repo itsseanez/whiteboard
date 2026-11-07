@@ -84,4 +84,16 @@ describe('Manage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Move it' }));
     expect(await screen.findByText(/already cancelled or finished/)).toBeTruthy();
   });
+
+  it('tells a rate-limited customer to wait rather than that something broke', async () => {
+    fakeFetch({
+      'POST /links/closed': () => json(404, { error: 'not_closed' }),
+      'GET /studio-wien/services': () =>
+        json(200, { tenant: { name: 'Studio Wien', timeZone: 'UTC' }, services: [], staff: [] }),
+      'POST /studio-wien/appointments/cancel': () => json(429, { error: 'rate_limited' }),
+    });
+    renderManage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel it' }));
+    expect(await screen.findByText(/Too many tries from your connection/)).toBeTruthy();
+  });
 });
