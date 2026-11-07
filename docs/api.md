@@ -170,6 +170,10 @@ Everything below needs `owner` or `admin` (`403 managers_only` otherwise).
 | `POST` | `/appointments/:id/cancel` | Cancel |
 | `POST` | `/appointments/:id/reschedule` | Move `{ startsAt, staffId? }` |
 | `GET` | `/appointments/:id/history` | Every booking, move and status change, with who did it (`customer`, a member by name, or `unknown` before history was kept) |
+| `GET` | `/webhooks` | Owners: endpoints and their latest deliveries |
+| `POST` | `/webhooks` | Owners: add `{ url }`; answers `{ id, url, secret }`, the secret shown once |
+| `DELETE` | `/webhooks/:id` | Owners: remove; deliveries not yet sent are dropped |
+| `POST` | `/webhooks/:id/test` | Owners: send a `ping` event |
 
 A week of hours is `{ "hours": [{ "weekday": 1, "start": "09:00", "end": "12:00" }, …] }`:
 ISO weekday (1 is Monday), local `HH:MM`, several ranges per day for a split
@@ -209,3 +213,38 @@ or cancels one of their appointments, and when their time off is decided.
 
 Owner bookings and moves go through the same checks as customers': an owner
 can't book a time availability doesn't offer.
+
+## Webhooks
+
+Every booking, move, cancellation and other status change is POSTed as JSON
+to each of the organization's endpoints:
+
+```json
+{ "id": "<event id>", "type": "appointment.booked", "createdAt": "…",
+  "data": { "appointmentId": "…", "status": "BOOKED", "startsAt": "…", "endsAt": "…",
+            "previousStartsAt": null, "previousEndsAt": null, "previousStatus": null,
+            "service": { "id": "…", "name": "Cut" }, "staff": { "id": "…", "name": "Ana" },
+            "customer": { "name": "Jo", "email": "jo@example.com", "phone": null } } }
+```
+
+Types: `appointment.booked`, `appointment.moved`, `appointment.cancelled`,
+`appointment.status_changed`, and `ping` from the test button. A `2xx` answer
+counts as delivered; anything else, a timeout after 10 seconds, or a redirect
+is retried with backoff for three days. Delivery is at least once, so the same
+event can arrive twice: `Whiteboard-Event-Id` is the same each time.
+
+`Whiteboard-Signature: t=<unix seconds>,v1=<hex>` is an HMAC-SHA256, keyed with
+the endpoint's secret, over `<t>.<raw body>`. Verify it before trusting the
+request, and reject an old `t` to stop replays:
+
+```js
+import { createHmac, timingSafeEqual } from 'node:crypto';
+const [, t, v1] = /^t=(\d+),v1=([0-9a-f]+)$/.exec(req.headers['whiteboard-signature']);
+const expected = createHmac('sha256', secret).update(`${t}.${rawBody}`).digest('hex');
+const ok = timingSafeEqual(Buffer.from(v1, 'hex'), Buffer.from(expected, 'hex'))
+  && Math.abs(Date.now() / 1000 - Number(t)) < 300;
+```
+
+URLs must be `https` and resolve to public addresses: private, loopback,
+link-local and cloud metadata addresses are refused when added and again when
+each delivery connects.
