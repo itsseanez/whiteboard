@@ -477,6 +477,44 @@ export const webhookApi = {
   test: (slug: string, id: string) => send<void>(owner(slug, `/webhooks/${id}/test`), { method: 'POST' }),
 };
 
+export type InboxCategory = 'appointments' | 'time_off' | 'team';
+
+export interface InboxItem {
+  id: string;
+  kind:
+    | 'appointment_booked'
+    | 'appointment_moved'
+    | 'appointment_cancelled'
+    | 'time_off_requested'
+    | 'time_off_approved'
+    | 'time_off_declined'
+    | 'member_joined';
+  category: InboxCategory;
+  link: string;
+  data: Record<string, string | boolean | null>;
+  createdAt: string;
+  read: boolean;
+}
+
+export interface InboxPage {
+  items: InboxItem[];
+  total: number;
+  unread: number;
+  page: number;
+  pageSize: number;
+}
+
+/** The signed-in person's notifications, across every organization they're in. */
+export const inboxApi = {
+  list: (query: { page?: number; pageSize?: number; status?: 'all' | 'unread'; category?: InboxCategory | 'all' } = {}) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) if (value !== undefined) params.set(key, String(value));
+    return send<InboxPage>(`/me/notifications?${params}`);
+  },
+  read: (id: string) => send<void>(`/me/notifications/${id}/read`, { method: 'POST' }),
+  readAll: () => send<{ marked: number }>('/me/notifications/read-all', { method: 'POST' }),
+};
+
 /** POST /me/tenants/:slug/reopen. The owner, within 30 days of closing. */
 export function reopenOrganization(slug: string): Promise<{ slug: string }> {
   return send(`/me/tenants/${encodeURIComponent(slug)}/reopen`, { method: 'POST' });
