@@ -120,9 +120,9 @@ async function send<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(response.status, code);
   }
 
-  // PATCH answers 204 with no body.
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  // 204, and 202 for queued work, come with no body.
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export function getCatalog(slug: string): Promise<Catalog> {

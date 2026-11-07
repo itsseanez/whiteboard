@@ -52,4 +52,17 @@ describe('Webhooks', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add webhook' }));
     expect(await screen.findByText('The URL must be a public address.')).toBeTruthy();
   });
+
+  it('queues a test without calling it a failure', async () => {
+    const calls = fakeFetch({
+      'GET /tenant/wien/webhooks': () => json(200, { webhooks: [hook] }),
+      'POST /tenant/wien/webhooks/h1/test': () => new Response(null, { status: 202 }),
+    });
+    render(<Webhooks slug="wien" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Send a test' }));
+    await screen.findByRole('list', { name: 'Webhooks' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(calls.some((c) => c.path.endsWith('/test'))).toBe(true);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
 });
