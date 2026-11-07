@@ -57,3 +57,17 @@
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: var(--space-3);
 }
+
+.waiting {
+  font-weight: 500;
+}
+
+.status {
+  font-size: var(--step--1);
+  font-weight: 500;
+}
+
+.status[data-status='declined'] {
+  color: var(--muted);
+  font-weight: 400;
+}

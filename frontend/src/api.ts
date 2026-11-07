@@ -395,6 +395,8 @@ export interface TimeOffEntry {
   startsAt: string;
   endsAt: string;
   reason: string | null;
+  /** Staff ask (pending); owners and managers decide. Only approved blocks bookings. */
+  status: 'pending' | 'approved' | 'declined';
 }
 
 /** Wall clock in the organization's zone. Empty times mean whole days. */
@@ -411,8 +413,16 @@ export interface TimeOffInput {
 export const timeOffApi = {
   list: (slug: string) => send<{ timeZone: string; timeOff: TimeOffEntry[] }>(owner(slug, '/time-off')),
   add: (slug: string, input: TimeOffInput) =>
-    send<{ id: string; overlappingAppointments: number }>(owner(slug, '/time-off'), write('POST', input)),
+    send<{ id: string; status: TimeOffEntry['status']; overlappingAppointments: number }>(
+      owner(slug, '/time-off'),
+      write('POST', input),
+    ),
   remove: (slug: string, id: string) => send<void>(owner(slug, `/time-off/${id}`), { method: 'DELETE' }),
+  /** Owners and managers, pending requests only. */
+  decide: (slug: string, id: string, decision: 'approve' | 'decline') =>
+    send<{ status: TimeOffEntry['status']; overlappingAppointments: number }>(owner(slug, `/time-off/${id}/${decision}`), {
+      method: 'POST',
+    }),
 };
 
 /** POST /me/tenants/:slug/reopen. The owner, within 30 days of closing. */

@@ -1,8 +1,8 @@
 // Time off: what's coming up, a form to add more, and a way to remove it.
 //
-// With `staff`, it's the organization's view: pick who, see everyone. Without,
-// it's a staff member's own: the server takes "nobody named" to mean "me", and
-// lists only their rows. Either way the dates and times typed are the
+// With `staff`, it's the organization's view: pick who, see everyone, approve
+// or decline requests. Without, it's a staff member's own: what they add is a
+// request, the server takes "nobody named" to mean "me", and lists only theirs. Either way the dates and times typed are the
 // organization's wall clock, and the server turns them into instants.
 
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
@@ -31,7 +31,15 @@ const MESSAGES: Record<string, string> = {
   own_time_off_only: 'You can only add time off for yourself.',
   staff_not_found: 'That staff member no longer exists. Reload the page.',
   not_found: 'That time off was already removed. Reload the page.',
+  already_decided: 'Someone already decided that request. Reload the page.',
+  managers_only: 'Only owners and managers can approve time off.',
 };
+
+/** 'Added. 2 booked appointments fall in this time…', or just the first word. */
+function withBookings(first: string, n: number): string {
+  if (n === 0) return first;
+  return `${first} ${n} booked appointment${n === 1 ? ' falls' : 's fall'} in this time and ${n === 1 ? 'is' : 'are'} still booked: move or cancel ${n === 1 ? 'it' : 'them'} in the calendar.`;
+}
 
 function messageFor(error: unknown): string {
   if (error instanceof ApiError) {
@@ -88,11 +96,10 @@ export default function TimeOff({ slug, timeZone, staff, onDirty, onChange }: Pr
         ...(form.reason.trim() ? { reason: form.reason.trim() } : {}),
       });
       setForm(EMPTY);
-      const n = added.overlappingAppointments;
       setNotice(
-        n === 0
-          ? 'Added.'
-          : `Added. ${n} booked appointment${n === 1 ? ' falls' : 's fall'} in this time and ${n === 1 ? 'is' : 'are'} still booked: move or cancel ${n === 1 ? 'it' : 'them'} in the calendar.`,
+        added.status === 'pending'
+          ? 'Sent. An owner or manager will approve or decline it; until then, you can still be booked.'
+          : withBookings('Added.', added.overlappingAppointments),
       );
       await load();
       onChange?.();
@@ -119,6 +126,26 @@ export default function TimeOff({ slug, timeZone, staff, onDirty, onChange }: Pr
     }
   }
 
+  async function decide(id: string, decision: 'approve' | 'decline') {
+    setBusy(true);
+    setProblem(null);
+    setNotice(null);
+    try {
+      const result = await timeOffApi.decide(slug, id, decision);
+      setNotice(decision === 'approve' ? withBookings('Approved.', result.overlappingAppointments) : 'Declined.');
+      await load();
+      onChange?.();
+    } catch (error) {
+      setProblem(messageFor(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const waiting = entries?.filter((t) => t.status === 'pending').length ?? 0;
+  // Staff may withdraw only what isn't approved; owners and managers remove anything.
+  const removable = (t: TimeOffEntry) => staff !== undefined || t.status !== 'approved';
+
   const privacy = staff
     ? 'Only owners, managers and that staff member see the reason.'
     : 'Only you and the managers see the reason.';
@@ -130,39 +157,66 @@ export default function TimeOff({ slug, timeZone, staff, onDirty, onChange }: Pr
       ) : entries.length === 0 ? (
         <p className={styles.empty}>No time off coming up.</p>
       ) : (
-        <ul className={styles.list} aria-label="Upcoming time off">
-          {entries.map((t) => (
-            <li key={t.id} className={styles.entry}>
-              <span className={styles.what}>
-                <span>{timeOffLabel(t.startsAt, t.endsAt, timeZone)}</span>
-                <span className={styles.who}>
-                  {staff ? t.staffName : null}
-                  {staff && t.reason ? ' · ' : null}
-                  {t.reason}
+        <>
+          {staff && waiting > 0 ? (
+            <p className={styles.waiting}>
+              {waiting} request{waiting === 1 ? '' : 's'} waiting for a decision.
+            </p>
+          ) : null}
+          <ul className={styles.list} aria-label="Upcoming time off">
+            {entries.map((t) => (
+              <li key={t.id} className={styles.entry}>
+                <span className={styles.what}>
+                  <span>{timeOffLabel(t.startsAt, t.endsAt, timeZone)}</span>
+                  <span className={styles.who}>
+                    {[staff ? t.staffName : null, t.reason].filter(Boolean).join(' · ')}
+                  </span>
+                  {t.status !== 'approved' ? (
+                    <span className={styles.status} data-status={t.status}>
+                      {t.status === 'pending' ? 'Waiting for approval' : 'Declined'}
+                    </span>
+                  ) : null}
                 </span>
-              </span>
-              {confirming === t.id ? (
-                <span className={styles.confirm}>
-                  <Button variant="secondary" disabled={busy} onClick={() => void remove(t.id)}>
-                    Yes, remove
-                  </Button>
-                  <Button variant="secondary" disabled={busy} onClick={() => setConfirming(null)}>
-                    Keep
-                  </Button>
-                </span>
-              ) : (
-                <IconButton label={`Remove time off: ${timeOffLabel(t.startsAt, t.endsAt, timeZone)}`} disabled={busy} onClick={() => setConfirming(t.id)}>
-                  <TrashIcon />
-                </IconButton>
-              )}
-            </li>
-          ))}
-        </ul>
+                {staff && t.status === 'pending' && confirming !== t.id ? (
+                  <span className={styles.confirm}>
+                    <Button variant="secondary" disabled={busy} onClick={() => void decide(t.id, 'approve')}>
+                      Approve
+                    </Button>
+                    <Button variant="secondary" disabled={busy} onClick={() => void decide(t.id, 'decline')}>
+                      Decline
+                    </Button>
+                  </span>
+                ) : null}
+                {!removable(t) ? null : confirming === t.id ? (
+                  <span className={styles.confirm}>
+                    <Button variant="secondary" disabled={busy} onClick={() => void remove(t.id)}>
+                      Yes, remove
+                    </Button>
+                    <Button variant="secondary" disabled={busy} onClick={() => setConfirming(null)}>
+                      Keep
+                    </Button>
+                  </span>
+                ) : (
+                  <IconButton
+                    label={`${!staff && t.status === 'pending' ? 'Withdraw request' : 'Remove time off'}: ${timeOffLabel(t.startsAt, t.endsAt, timeZone)}`}
+                    disabled={busy}
+                    onClick={() => setConfirming(t.id)}
+                  >
+                    <TrashIcon />
+                  </IconButton>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <form className={styles.form} onSubmit={(event) => void add(event)}>
-        <h3 className={styles.formTitle}>Add time off</h3>
-        <p className={styles.note}>Leave the times empty for whole days. Dates and times are in {timeZone}.</p>
+        <h3 className={styles.formTitle}>{staff ? 'Add time off' : 'Ask for time off'}</h3>
+        <p className={styles.note}>
+          Leave the times empty for whole days. Dates and times are in {timeZone}.
+          {staff ? ' Time off added here is approved at once.' : ' An owner or manager approves it.'}
+        </p>
         {staff ? (
           <Select
             label="Who"
@@ -183,7 +237,7 @@ export default function TimeOff({ slug, timeZone, staff, onDirty, onChange }: Pr
         <Field label="Reason (optional)" value={form.reason} onChange={(reason) => set({ reason })} maxLength={200} hint={privacy} disabled={busy} />
         <div>
           <Button type="submit" disabled={busy || !form.startDate || (staff !== undefined && !staffId)}>
-            Add time off
+            {staff ? 'Add time off' : 'Send request'}
           </Button>
         </div>
         {problem ? <Problem role="alert">{problem}</Problem> : null}
