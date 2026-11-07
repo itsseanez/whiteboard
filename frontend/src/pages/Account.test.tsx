@@ -60,7 +60,7 @@ describe('Account', () => {
     renderAccount();
 
     expect(await screen.findByText('Name of studio-wien')).toBeTruthy();
-    const pages = screen.getAllByRole('link', { name: 'Booking page' }).map((l) => l.getAttribute('href'));
+    const pages = screen.getAllByRole('link', { name: 'View' }).map((l) => l.getAttribute('href'));
     expect(pages).toEqual(['/studio-wien', '/marinas-cuts-color']);
   });
 
@@ -111,12 +111,13 @@ describe('Account', () => {
     });
     renderAccount();
     expect((await screen.findByRole('tab', { name: 'Organizations' })).getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('link', { name: 'Set up' }).getAttribute('href')).toBe('/manage/acme?tab=hours');
+    expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe('/manage/acme');
+    expect(screen.getAllByRole('link').filter((l) => l.closest('li')).map((l) => l.textContent)).toEqual(['Edit', 'View']);
     expect(screen.queryByRole('link', { name: 'Your week' })).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Your week' }));
     expect(screen.getByRole('link', { name: 'Your week' }).getAttribute('href')).toBe('/manage/studio-wien/me');
-    expect(screen.queryByRole('link', { name: 'Set up' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Edit' })).toBeNull();
   });
 
   it('moves between tabs with the arrow keys', async () => {

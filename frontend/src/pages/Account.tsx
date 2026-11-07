@@ -106,9 +106,8 @@ export default function Account() {
                   <span className={styles.meta}> · {o.role === 'owner' ? 'Owner' : 'Manager'}</span>
                 </span>
                 <span className={styles.links}>
-                  <Link to={`/manage/${o.slug}?tab=hours`}>Set up</Link>
-                  <Link to={`/manage/${o.slug}?tab=calendar`}>Calendar</Link>
-                  <Link to={`/${o.slug}`}>Booking page</Link>
+                  <Link to={`/manage/${o.slug}`}>Edit</Link>
+                  <Link to={`/${o.slug}`}>View</Link>
                 </span>
               </li>
             ))}
