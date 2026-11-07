@@ -385,6 +385,33 @@ export const myWeekApi = {
     send<{ hours: HoursRange[] }>(owner(slug, '/me/hours'), write('PUT', { hours })),
 };
 
+export interface TimeOffEntry {
+  id: string;
+  staffId: string;
+  staffName: string;
+  startsAt: string;
+  endsAt: string;
+  reason: string | null;
+}
+
+/** Wall clock in the organization's zone. Empty times mean whole days. */
+export interface TimeOffInput {
+  staffId?: string;
+  startDate: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
+  reason?: string;
+}
+
+/** Every role. Staff get, and may only change, their own. */
+export const timeOffApi = {
+  list: (slug: string) => send<{ timeZone: string; timeOff: TimeOffEntry[] }>(owner(slug, '/time-off')),
+  add: (slug: string, input: TimeOffInput) =>
+    send<{ id: string; overlappingAppointments: number }>(owner(slug, '/time-off'), write('POST', input)),
+  remove: (slug: string, id: string) => send<void>(owner(slug, `/time-off/${id}`), { method: 'DELETE' }),
+};
+
 /** POST /me/tenants/:slug/reopen. The owner, within 30 days of closing. */
 export function reopenOrganization(slug: string): Promise<{ slug: string }> {
   return send(`/me/tenants/${encodeURIComponent(slug)}/reopen`, { method: 'POST' });

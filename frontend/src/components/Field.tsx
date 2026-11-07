@@ -5,7 +5,7 @@ interface Props {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  type?: 'text' | 'email' | 'password' | 'tel';
+  type?: 'text' | 'email' | 'password' | 'tel' | 'date' | 'time';
   autoComplete?: HTMLInputAutoCompleteAttribute;
   required?: boolean;
   disabled?: boolean;
