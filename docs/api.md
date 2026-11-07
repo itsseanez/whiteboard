@@ -144,6 +144,7 @@ Everything below needs `owner` or `admin` (`403 managers_only` otherwise).
 |---|---|---|
 | `GET` | `/people` | Members with their role and linked staff row, and pending invitations |
 | `POST` | `/invitations` | Invite `{ email, role: "staff", staffId }` or `{ email, role: "manager" }` |
+| `PATCH` | `/members/:memberId` | Owner only: set `{ role }` to `owner`, `manager` or `staff`, anyone's including your own; `409 last_owner` if it would leave no owner |
 | `DELETE` | `/members/:memberId` | Owner only: end a member's access and free their staff row |
 | `DELETE` | `/` (that is, `/tenant/:slug`) | Owner only: close the organization, `{ confirm: "<slug>" }` |
 
