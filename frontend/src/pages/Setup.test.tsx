@@ -38,7 +38,7 @@ function ready(extra: Record<string, () => Response> = {}) {
   });
 }
 
-function renderSetup(tab?: 'hours' | 'team' | 'services') {
+function renderSetup(tab?: 'hours' | 'staff' | 'accounts' | 'services') {
   render(
     <MemoryRouter initialEntries={[tab ? `/manage/acme?tab=${tab}` : '/manage/acme']}>
       <Routes>
@@ -75,7 +75,7 @@ describe('Setup', () => {
     renderSetup();
     expect(await screen.findByRole('button', { name: 'Save opening hours' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Save Ana' })).toBeNull();
-    fireEvent.click(screen.getByRole('tab', { name: 'Staff and people' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Staff' }));
     expect(screen.getByRole('button', { name: 'Save Ana' })).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Services and resources' }));
     expect(screen.getByText('Wash station', { selector: 'li span' })).toBeTruthy();
@@ -84,18 +84,18 @@ describe('Setup', () => {
 
   it('keeps unsaved edits across tabs and marks the tab holding them', async () => {
     ready();
-    renderSetup('team');
+    renderSetup('staff');
     fireEvent.click(await screen.findByRole('button', { name: 'Remove Monday 09:00–12:00' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Opening hours' }));
-    expect(screen.getByRole('tab', { name: /^Staff and people\s*\(unsaved changes\)$/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole('tab', { name: /Staff and people/ }));
+    expect(screen.getByRole('tab', { name: /^Staff\s*\(unsaved changes\)$/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: /^Staff/ }));
     expect(screen.queryByRole('button', { name: 'Remove Monday 09:00–12:00' })).toBeNull();
     expect(screen.getByText('Unsaved changes')).toBeTruthy();
   });
 
   it('adds a staff member and reloads', async () => {
     const calls = ready({ [`POST ${base}/staff`]: () => json(201, { id: 's2', name: 'Ben', hours: [] }) });
-    renderSetup('team');
+    renderSetup('staff');
     fireEvent.change(await screen.findByLabelText('New staff member'), { target: { value: ' Ben ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add staff member' }));
     await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path === `${base}/staff`)).toBe(true));
@@ -131,7 +131,7 @@ describe('Setup', () => {
     const calls = ready({
       [`DELETE ${base}/staff/s1`]: () => json(409, { error: 'has_future_appointments', count: 2 }),
     });
-    renderSetup('team');
+    renderSetup('staff');
     await screen.findByRole('button', { name: 'Save Ana' });
     fireEvent.click(screen.getByRole('button', { name: 'Remove Ana' }));
     expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
@@ -159,7 +159,7 @@ describe('Setup', () => {
 
   it("removes one range from a staff member's week with the trash button", async () => {
     const calls = ready({ [`PUT ${base}/staff/s1/hours`]: () => json(200, { hours: [] }) });
-    renderSetup('team');
+    renderSetup('staff');
     fireEvent.click(await screen.findByRole('button', { name: 'Remove Monday 09:00–12:00' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save Ana' }));
     await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true));
@@ -168,7 +168,7 @@ describe('Setup', () => {
 
   it('marks an edited card as unsaved until it is saved', async () => {
     ready({ [`PUT ${base}/staff/s1/hours`]: () => json(200, { hours: [] }) });
-    renderSetup('team');
+    renderSetup('staff');
     await screen.findByRole('button', { name: 'Save Ana' });
     expect(screen.queryByText('Unsaved changes')).toBeNull();
 
@@ -218,7 +218,7 @@ describe('Setup', () => {
   describe('sign-ins', () => {
     it("invites a staff member from their card", async () => {
       const calls = ready({ [`POST ${base}/invitations`]: () => json(201, { invitationId: 'i1' }) });
-      renderSetup('team');
+      renderSetup('staff');
       fireEvent.change(await screen.findByLabelText("Ana's email, to sign in"), { target: { value: 'ana@acme.example' } });
       fireEvent.click(screen.getByRole('button', { name: 'Invite Ana' }));
       await waitFor(() => expect(calls.some((c) => c.path === `${base}/invitations`)).toBe(true));
@@ -237,19 +237,19 @@ describe('Setup', () => {
             invitations: [],
           }),
       });
-      renderSetup('team');
+      renderSetup('staff');
       expect(await screen.findByText('Signs in as ana@acme.example to see their own week.')).toBeTruthy();
       expect(screen.queryByRole('button', { name: 'Invite Ana' })).toBeNull();
     });
 
     it('lets an owner invite a manager, and a manager not', async () => {
       ready();
-      renderSetup('team');
+      renderSetup('accounts');
       expect(await screen.findByRole('button', { name: 'Invite manager' })).toBeTruthy();
       cleanup();
       ready({ [`GET ${base}`]: context('admin') });
-      renderSetup('team');
-      await screen.findByRole('heading', { name: 'People' });
+      renderSetup('accounts');
+      await screen.findByRole('tab', { name: 'Accounts' });
       expect(screen.queryByRole('button', { name: 'Invite manager' })).toBeNull();
     });
   });

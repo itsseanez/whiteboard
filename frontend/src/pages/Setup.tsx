@@ -1,6 +1,6 @@
 // Setup at /manage/:slug, for owners and managers, in three tabs of like
-// sections, in the order a new organization fills them: opening hours; staff
-// and who can sign in; resources and the services that use staff and resources. The open tab is in ?tab=. Removing archives; each card saves on
+// sections, in the order a new organization fills them: opening hours; staff;
+// the accounts that can sign in; resources and the services that use both. The open tab is in ?tab=. Removing archives; each card saves on
 // its own, marks itself while it holds unsaved edits, and so does its tab.
 
 import { createContext, useCallback, useContext, useEffect, useState, type FormEvent, type ReactNode } from 'react';
@@ -123,7 +123,8 @@ function Unsaved({ show }: { show: boolean }) {
 function tabOf(key: string): string {
   if (key === 'business-hours') return 'hours';
   if (key.startsWith('service:') || key === 'add:New resource') return 'services';
-  return 'team';
+  if (key === 'invite:manager') return 'accounts';
+  return 'staff';
 }
 
 export default function Setup() {
@@ -238,9 +239,9 @@ export default function Setup() {
             ),
           },
           {
-            id: 'team',
-            label: 'Staff and people',
-            marked: unsavedIn('team'),
+            id: 'staff',
+            label: 'Staff',
+            marked: unsavedIn('staff'),
             markLabel: 'unsaved changes',
             panel: (
               <>
@@ -251,9 +252,15 @@ export default function Setup() {
                   ))}
                   <AddByName label="New staff member" action="Add staff member" onAdd={(name) => ownerApi.addStaff(slug, name)} done={reload} />
                 </section>
-                <People slug={slug} data={data} changed={reload} />
               </>
             ),
+          },
+          {
+            id: 'accounts',
+            label: 'Accounts',
+            marked: unsavedIn('accounts'),
+            markLabel: 'unsaved changes',
+            panel: <Accounts slug={slug} data={data} changed={reload} />,
           },
           {
             id: 'services',
@@ -499,7 +506,7 @@ function StaffLogin({
 const ROLE_LABEL: Record<MemberRole, string> = { owner: 'Owner', admin: 'Manager', member: 'Staff' };
 
 /** Who can sign in. Managers see it; only owners invite managers or remove anyone. */
-function People({ slug, data, changed }: { slug: string; data: Data; changed: () => void }) {
+function Accounts({ slug, data, changed }: { slug: string; data: Data; changed: () => void }) {
   const isOwner = data.role === 'owner';
   const [email, setEmail] = useState('');
   const save = useSave();
@@ -518,10 +525,10 @@ function People({ slug, data, changed }: { slug: string; data: Data; changed: ()
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.heading}>People</h2>
+      <h2 className={styles.heading}>Accounts</h2>
       <p className={styles.note}>
         Who can sign in. Managers run setup and the calendar and invite staff; only owners invite managers or
-        remove anyone. Invite staff from their card above.
+        remove anyone. Invite staff from their card on the Staff tab.
       </p>
       <ul className={styles.list}>
         {data.members.map((m) => (
