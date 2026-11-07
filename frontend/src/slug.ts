@@ -8,6 +8,7 @@ const RESERVED = new Set([
   'account', // page
   'manage', // /manage/:slug, the owner setup page
   'invite', // /invite/:id, accepting an invitation
+  'links', // POST /links/closed, a closed organization's old manage links
   'api', // /api/auth/* — Better Auth
   'me', // /me/* would shadow an organization's /me/services
   'tenant', // /tenant/:slug would shadow an organization's /tenant/services

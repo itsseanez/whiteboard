@@ -1,3 +1,4 @@
+import { postClosedLink } from './controllers/closed-link.js';
 import express, { type Express, type Request, type Response } from 'express';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -55,6 +56,8 @@ export function createApp(): Express {
 
   app.use('/tenant/:slug', apiRouter);
   app.use('/me', meRouter);
+  // Before /:slug, which would otherwise read "links" as an organization.
+  app.post('/links/closed', postClosedLink);
   app.use('/:slug', publicRouter);
 
   if (!hasClient) {
