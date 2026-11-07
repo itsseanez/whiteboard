@@ -25,7 +25,7 @@ const TABLES = ['business_hours', 'staff_working_hours', 'time_off'] as const;
 const GRANTED: Record<(typeof TABLES)[number], { update: boolean; delete: boolean }> = {
   business_hours: { update: false, delete: true },
   staff_working_hours: { update: false, delete: true },
-  time_off: { update: false, delete: false },
+  time_off: { update: false, delete: true },
 };
 type Table = (typeof TABLES)[number];
 
@@ -74,7 +74,14 @@ async function errorCode(work: Promise<unknown>): Promise<string | undefined> {
   }
 }
 
+// Tenant A's seeded owner. time_off reads depend on who is asking, so these
+// run as a caller who may see every row in tenant A, and none in B.
+let ownerA = '';
+
 beforeAll(async () => {
+  ownerA = (
+    await ownerPool.query<{ id: string }>(`SELECT id FROM "user" WHERE email = 'marina@marinascuts.example'`)
+  ).rows[0]!.id;
   for (const table of TABLES) {
     fixtures[table].a = await ownerInsert(table, TENANT_A, STAFF_A);
     fixtures[table].b = await ownerInsert(table, TENANT_B, STAFF_B);
@@ -92,7 +99,7 @@ afterAll(async () => {
 
 describe.each(TABLES)('%s isolation (as whiteboard_app)', (table) => {
   it("reads only the current tenant's rows", async () => {
-    const rows = await withContext(appPool, { tenantId: TENANT_A }, async (client) => {
+    const rows = await withContext(appPool, { tenantId: TENANT_A, userId: ownerA }, async (client) => {
       const result = await client.query<{ id: string; tenant_id: string }>(
         `SELECT id, tenant_id FROM ${table}`,
       );
@@ -106,7 +113,7 @@ describe.each(TABLES)('%s isolation (as whiteboard_app)', (table) => {
   });
 
   it("cannot update another tenant's row", async () => {
-    const update = withContext(appPool, { tenantId: TENANT_A }, async (client) => {
+    const update = withContext(appPool, { tenantId: TENANT_A, userId: ownerA }, async (client) => {
       const result = await client.query(
         `UPDATE ${table} SET updated_at = now() WHERE id = $1`,
         [fixtures[table].b],
@@ -122,7 +129,7 @@ describe.each(TABLES)('%s isolation (as whiteboard_app)', (table) => {
   });
 
   it("cannot delete another tenant's row", async () => {
-    const remove = withContext(appPool, { tenantId: TENANT_A }, async (client) => {
+    const remove = withContext(appPool, { tenantId: TENANT_A, userId: ownerA }, async (client) => {
       const result = await client.query(`DELETE FROM ${table} WHERE id = $1`, [fixtures[table].b]);
       return result.rowCount;
     });
@@ -137,7 +144,7 @@ describe.each(TABLES)('%s isolation (as whiteboard_app)', (table) => {
     // Tenant B's own staff member, so the composite foreign key is satisfied
     // and only the RLS WITH CHECK clause can reject it.
     const code = await errorCode(
-      withContext(appPool, { tenantId: TENANT_A }, (client) =>
+      withContext(appPool, { tenantId: TENANT_A, userId: ownerA }, (client) =>
         client.query(insertSql(table), insertParams(table, TENANT_B, STAFF_B)),
       ),
     );
