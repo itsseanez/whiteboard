@@ -16,7 +16,7 @@ export interface CalendarAppointment {
   resourceName: string | null;
   startsAt: string;
   endsAt: string;
-  customer: { name: string; email: string; phone: string | null };
+  customer: { id: string; name: string; email: string; phone: string | null };
 }
 
 export interface CalendarData {
@@ -68,6 +68,7 @@ export function getCalendar(scope: Scope, timeZone: string, from: string, throug
       resourceName: string | null;
       startsAt: Date;
       endsAt: Date;
+      customerId: string;
       customerName: string;
       customerEmail: string;
       customerPhone: string | null;
@@ -75,7 +76,7 @@ export function getCalendar(scope: Scope, timeZone: string, from: string, throug
       `SELECT a.id, a.staff_id AS "staffId", a.service_id AS "serviceId", s.name AS "serviceName",
               a.resource_id AS "resourceId", r.name AS "resourceName",
               a.starts_at AS "startsAt", a.ends_at AS "endsAt",
-              c.name AS "customerName", c.email AS "customerEmail", c.phone AS "customerPhone"
+              c.id AS "customerId", c.name AS "customerName", c.email AS "customerEmail", c.phone AS "customerPhone"
        FROM appointment a
        JOIN service s ON s.id = a.service_id
        JOIN customer c ON c.id = a.customer_id
@@ -108,7 +109,7 @@ export function getCalendar(scope: Scope, timeZone: string, from: string, throug
         resourceName: a.resourceName,
         startsAt: iso(a.startsAt),
         endsAt: iso(a.endsAt),
-        customer: { name: a.customerName, email: a.customerEmail, phone: a.customerPhone },
+        customer: { id: a.customerId, name: a.customerName, email: a.customerEmail, phone: a.customerPhone },
       })),
     };
   });

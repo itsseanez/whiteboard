@@ -85,7 +85,7 @@ describe('owner calendar', () => {
     expect(cal.status).toBe(200);
     expect(cal.body.staff.map((s: { name: string }) => s.name)).toEqual(['Ana']);
     expect(cal.body.appointments).toEqual([
-      expect.objectContaining({ id, staffId: ana, serviceName: 'Cut', customer: { name: 'Walk In', email: `walkin-${run}@test.example`, phone: '555-0100' } }),
+      expect.objectContaining({ id, staffId: ana, serviceName: 'Cut', customer: expect.objectContaining({ name: 'Walk In', email: `walkin-${run}@test.example`, phone: '555-0100' }) }),
     ]);
 
     const explain = await get('/availability/explain', { serviceId: cut, from: date });
