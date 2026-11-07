@@ -9,6 +9,7 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { parseWeeklyHours } from '../lib/weekly-hours.js';
 import * as owner from '../services/owner.js';
 import { scope } from '../lib/scope.js';
+import { closeOrganization } from '../services/close-organization.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NAME_MAX = 120;
@@ -179,3 +180,14 @@ export const deleteResource = handle(async (req, res) => {
   await owner.archiveResource(scope(req), id);
   res.status(204).end();
 });
+
+// DELETE /tenant/:slug { confirm: "<slug>" } — owner only (requireOwner).
+// Closes the organization; the typed slug guards against a stray request.
+export async function deleteOrganization(req: Request, res: Response) {
+  const tenant = req.tenant!;
+  const confirm = (req.body as { confirm?: unknown } | undefined)?.confirm;
+  if (confirm !== tenant.slug) {
+    return res.status(400).json({ error: 'confirm must be the organization’s address (its slug)' });
+  }
+  res.json(await closeOrganization(scope(req), tenant));
+}

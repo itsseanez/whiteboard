@@ -10,7 +10,9 @@ import { appUrl, getMailer, MailNotConfiguredError, type Mail } from '../lib/mai
 export type AppointmentEmail =
   | { kind: 'booked'; manageToken: string }
   | { kind: 'moved' }
-  | { kind: 'cancelled' };
+  | { kind: 'cancelled' }
+  /** Cancelled because the organization closed: no link to book again. */
+  | { kind: 'closed' };
 
 interface Organization {
   id: string;
@@ -75,6 +77,14 @@ export function compose(org: Organization, d: Details, email: AppointmentEmail):
         text:
           `Your ${d.serviceName} appointment with ${d.staffName} on ${at} has been cancelled.\n\n` +
           `To book again: ${appUrl(`/${org.slug}`)}\n\n${sign}`,
+      };
+    case 'closed':
+      return {
+        to: d.email,
+        subject: `Your appointment at ${org.name} is cancelled`,
+        text:
+          `${org.name} has closed its booking page, so your ${d.serviceName} appointment with ${d.staffName} ` +
+          `on ${at} has been cancelled.\n\nFor anything else, contact ${org.name} directly.\n\n${sign}`,
       };
   }
 }

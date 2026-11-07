@@ -13,6 +13,7 @@ const router = Router({ mergeParams: true });
 router.use(requireAuth);
 router.use(resolveTenantFromSession); // every route below this line has req.tenant and req.membership set
 router.get('/', getContext);
+router.delete('/', requireOwner, owner.deleteOrganization);
 
 // A staff member's own page. 404 not_staff for a member with no staff row.
 router.get('/me/week', myWeek.getMyWeek);
