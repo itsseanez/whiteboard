@@ -7,6 +7,8 @@ import { Link } from 'react-router-dom';
 import shell from '@/styles/shell.module.css';
 import styles from './Privacy.module.css';
 
+const CONTACT = 'privacy@whiteboardhq.app';
+
 export default function Privacy(): ReactNode {
   return (
     <main className={`${shell.page} ${shell.narrow}`}>
@@ -60,7 +62,8 @@ export default function Privacy(): ReactNode {
       </section>
 
       <p className={styles.contact}>
-        Questions about an appointment, or about your details, go to the organization you booked with.
+        Questions about an appointment: the organization you booked with. About Whiteboard itself:{' '}
+        <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.
       </p>
       <p className={styles.updated}>
         Last updated 7 November 2026. <Link to="/">Whiteboard</Link>
