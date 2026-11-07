@@ -16,6 +16,8 @@ interface Props {
   /** Controlled when given, e.g. to keep the open tab in the URL. */
   selected?: string | undefined;
   onSelect?: (id: string) => void;
+  /** Vertical puts the tabs in a column beside the panel that stays in view as it scrolls. */
+  orientation?: 'horizontal' | 'vertical';
 }
 
 /**
@@ -23,7 +25,7 @@ interface Props {
  * order. Every panel stays mounted and hidden ones use `hidden`, so switching
  * tabs never throws away what's typed in a form.
  */
-export default function Tabs({ label, tabs, selected, onSelect }: Props): ReactNode {
+export default function Tabs({ label, tabs, selected, onSelect, orientation = 'horizontal' }: Props): ReactNode {
   const [own, setOwn] = useState(tabs[0]?.id);
   const open = selected ?? own;
   const select = (id: string) => (onSelect ? onSelect(id) : setOwn(id));
@@ -32,7 +34,7 @@ export default function Tabs({ label, tabs, selected, onSelect }: Props): ReactN
   const current = tabs.find((t) => t.id === open) ?? tabs[0];
 
   function onKey(event: KeyboardEvent, index: number) {
-    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 1, ArrowUp: -1 }[event.key];
     const to = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : step ? (index + step + tabs.length) % tabs.length : null;
     if (to === null) return;
     event.preventDefault();
@@ -41,8 +43,8 @@ export default function Tabs({ label, tabs, selected, onSelect }: Props): ReactN
   }
 
   return (
-    <div>
-      <div className={styles.list} role="tablist" aria-label={label}>
+    <div className={orientation === 'vertical' ? styles.vertical : undefined}>
+      <div className={styles.list} role="tablist" aria-label={label} aria-orientation={orientation}>
         {tabs.map((tab, i) => (
           <button
             key={tab.id}
@@ -68,19 +70,21 @@ export default function Tabs({ label, tabs, selected, onSelect }: Props): ReactN
           </button>
         ))}
       </div>
-      {tabs.map((tab) => (
-        <div
-          key={tab.id}
-          role="tabpanel"
-          id={`${base}-panel-${tab.id}`}
-          aria-labelledby={`${base}-tab-${tab.id}`}
-          className={styles.panel}
-          tabIndex={0}
-          hidden={tab.id !== current?.id}
-        >
-          {tab.panel}
-        </div>
-      ))}
+      <div className={styles.panels}>
+        {tabs.map((tab) => (
+          <div
+            key={tab.id}
+            role="tabpanel"
+            id={`${base}-panel-${tab.id}`}
+            aria-labelledby={`${base}-tab-${tab.id}`}
+            className={styles.panel}
+            tabIndex={0}
+            hidden={tab.id !== current?.id}
+          >
+            {tab.panel}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

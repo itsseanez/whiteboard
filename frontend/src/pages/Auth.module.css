@@ -123,3 +123,26 @@
 [role='tabpanel'] > .list li:first-child {
   padding-top: var(--space-1);
 }
+
+.panelTitle {
+  font-size: var(--step-2);
+  margin-bottom: var(--space-3);
+}
+
+.picker {
+  display: inline-grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.picker select {
+  font: inherit;
+  font-size: var(--step-0);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-press);
+  padding: var(--space-1) var(--space-3);
+}

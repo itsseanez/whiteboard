@@ -58,3 +58,72 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Vertical: a column of tabs beside the panel, kept in view while it scrolls.
+ * Narrow screens go back to a row above it. */
+.vertical {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.vertical .list {
+  position: sticky;
+  top: var(--space-4);
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: 0;
+  border-bottom: 0;
+  border-left: 1px solid var(--rule);
+}
+
+.vertical .tab {
+  padding: var(--space-2) var(--space-3);
+  margin: 0 0 0 -1px;
+  border-bottom: 0;
+  border-left: 2px solid transparent;
+  text-align: left;
+}
+
+.vertical .tab[aria-selected='true'] {
+  border-left-color: var(--ink);
+}
+
+.vertical .panel {
+  padding-top: 0;
+}
+
+.panels {
+  min-width: 0;
+}
+
+@media (max-width: 48rem) {
+  .vertical {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .vertical .list {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    border-left: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .vertical .tab {
+    padding: var(--space-2) 0;
+    margin: 0 0 -1px;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+  }
+
+  .vertical .tab[aria-selected='true'] {
+    border-bottom-color: var(--ink);
+  }
+
+  .vertical .panel {
+    padding-top: var(--space-4);
+  }
+}

@@ -1,4 +1,4 @@
-// Owner calendar at /manage/:slug/calendar. A day view with a column per staff
+// Owner calendar at /manage/:slug/calendar, and in the account page's tabs. A day view with a column per staff
 // member, and a week view listing each day's appointments. Picking a service
 // marks which times are bookable; clicking one that isn't says why. Owners can
 // book, move and cancel from here.
@@ -51,6 +51,18 @@ function messageFor(error: unknown): string {
 
 export default function Calendar() {
   const { slug = '' } = useParams();
+  return (
+    <main className={shell.page}>
+      <Link className={shell.wordmark} to="/account">
+        Whiteboard
+      </Link>
+      <CalendarView slug={slug} />
+    </main>
+  );
+}
+
+/** The calendar itself, without the page frame; the account page shows it in a tab. */
+export function CalendarView({ slug }: { slug: string }) {
   const [timeZone, setTimeZone] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
@@ -96,14 +108,8 @@ export default function Calendar() {
     void reload();
   }, [reload]);
 
-  const frame = (body: ReactNode) => (
-    <main className={shell.page}>
-      <Link className={shell.wordmark} to="/account">
-        Whiteboard
-      </Link>
-      {body}
-    </main>
-  );
+  const frame = (body: ReactNode) => <>{body}</>;
+
 
   if (problem === 'signed-out') return frame(<p className={shell.lede}><Link to="/signin">Sign in</Link> to see the calendar.</p>);
   if (problem === 'not-found') return frame(<p className={shell.lede}>You don't have an organization at this address.</p>);
