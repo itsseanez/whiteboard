@@ -25,6 +25,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   ApiError,
   cancelBooking,
+  closedOrganizationFor,
   getAvailability,
   getCatalog,
   rescheduleBooking,
@@ -91,6 +92,21 @@ export default function Manage() {
   const [sending, setSending] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  // undefined while checking. Checked before anything else, because once a
+  // closed organization's address is released, this slug may belong to someone new.
+  const [closed, setClosed] = useState<{ name: string } | null | undefined>(token ? undefined : null);
+
+  useEffect(() => {
+    if (!token) return;
+    let live = true;
+    closedOrganizationFor(token).then(
+      (found) => live && setClosed(found),
+      () => live && setClosed(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, [token]);
 
   useEffect(() => {
     let live = true;
@@ -193,6 +209,22 @@ export default function Manage() {
         <p className={shell.lede}>
           This page needs the link from your confirmation. Open that link rather than typing
           this address.
+        </p>
+      </main>
+    );
+  }
+
+  if (closed === undefined) {
+    return <main className={`${shell.page} ${shell.narrow}`} aria-busy="true" />;
+  }
+
+  if (closed) {
+    return (
+      <main className={`${shell.page} ${shell.narrow}`}>
+        <h1 className={styles.headline}>This organization is closed permanently</h1>
+        <p className={shell.lede}>
+          {closed.name} has closed its booking page on Whiteboard, and any upcoming appointment from this link was
+          cancelled when it closed. For anything else, contact {closed.name} directly.
         </p>
       </main>
     );
