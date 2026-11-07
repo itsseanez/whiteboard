@@ -123,3 +123,9 @@
 [role='tabpanel'] > .list li:first-child {
   padding-top: var(--space-1);
 }
+
+.subheading {
+  font-size: var(--step-0);
+  font-weight: 500;
+  margin-top: var(--space-5);
+}

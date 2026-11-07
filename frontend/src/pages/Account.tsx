@@ -4,7 +4,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { ApiError, getMyOrganizations, type Membership } from '../api';
+import { ApiError, getMyOrganizations, reopenOrganization, type Membership } from '../api';
 import { authClient } from '../auth';
 import Button from '../components/Button';
 import shell from '../shell.module.css';
@@ -24,6 +24,23 @@ export default function Account() {
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [problem, setProblem] = useState<string | null>(null);
 
+  const [reload, setReload] = useState(0);
+  const [reopening, setReopening] = useState<string | null>(null);
+  const [reopenProblem, setReopenProblem] = useState<string | null>(null);
+
+  async function reopen(slug: string) {
+    setReopening(slug);
+    setReopenProblem(null);
+    try {
+      await reopenOrganization(slug);
+      setReload((n) => n + 1);
+    } catch {
+      setReopenProblem("Couldn't reopen it. It may be past the 30 days. Try again in a moment.");
+    } finally {
+      setReopening(null);
+    }
+  }
+
   useEffect(() => {
     let live = true;
     getMyOrganizations()
@@ -38,7 +55,7 @@ export default function Account() {
     return () => {
       live = false;
     };
-  }, []);
+  }, [reload]);
 
   async function signOut() {
     const failed = 'Could not sign out, so you are still signed in. Try again in a moment.';
@@ -80,21 +97,25 @@ export default function Account() {
   }
 
   const user = session.data?.user;
-  const managed = state.organizations.filter((o) => o.role === 'owner' || o.role === 'admin');
-  const staffed = state.organizations.filter((o) => o.role === 'member');
+  const open = state.organizations.filter((o) => !o.closedAt);
+  const closed = state.organizations.filter((o) => o.closedAt);
+  const managed = open.filter((o) => o.role === 'owner' || o.role === 'admin');
+  const staffed = open.filter((o) => o.role === 'member');
+  const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
 
   const tabs: Tab[] = [];
-  if (managed.length > 0 || staffed.length === 0) {
+  if (managed.length > 0 || closed.length > 0 || staffed.length === 0) {
     tabs.push({
       id: 'organizations',
       label: 'Organizations',
-      panel:
-        managed.length === 0 ? (
+      panel: (
+        <>
+          {managed.length === 0 && closed.length === 0 ? (
           <p className={styles.note}>
             This account is not linked to an organization. If you just signed up, setting up the organization did
             not finish. <Link to="/signup">Finish setting up your organization</Link>.
           </p>
-        ) : (
+        ) : managed.length > 0 ? (
           <ul className={styles.list}>
             {managed.map((o) => (
               <li key={o.tenantId}>
@@ -109,7 +130,34 @@ export default function Account() {
               </li>
             ))}
           </ul>
-        ),
+          ) : null}
+          {closed.length > 0 ? (
+            <>
+              <h2 className={styles.subheading}>Closed</h2>
+              {reopenProblem ? <Problem role="alert">{reopenProblem}</Problem> : null}
+              <ul className={styles.list}>
+                {closed.map((o) => (
+                  <li key={o.tenantId}>
+                    <span className={styles.name}>
+                      {o.name}
+                      <span className={styles.meta}>
+                        {' '}
+                        · closed {day(o.closedAt!)}. Reopen by {day(o.reopenUntil!)}, after which its address is
+                        released.
+                      </span>
+                    </span>
+                    <span className={styles.links}>
+                      <Button variant="secondary" disabled={reopening !== null} onClick={() => void reopen(o.slug)}>
+                        {reopening === o.slug ? 'Reopening…' : `Reopen ${o.name}`}
+                      </Button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </>
+      ),
     });
   }
   if (staffed.length > 0) {

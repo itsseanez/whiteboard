@@ -71,6 +71,10 @@ export interface Membership {
   slug: string;
   timezone: string;
   role: string;
+  /** Set when the organization is closed; only its owner still sees it, for 30 days. */
+  closedAt?: string | null;
+  /** Until when the owner can reopen it; after that its address is released. */
+  reopenUntil?: string | null;
 }
 
 /**
@@ -369,3 +373,21 @@ export const myWeekApi = {
   saveHours: (slug: string, hours: HoursRange[]) =>
     send<{ hours: HoursRange[] }>(owner(slug, '/me/hours'), write('PUT', { hours })),
 };
+
+/** POST /me/tenants/:slug/reopen. The owner, within 30 days of closing. */
+export function reopenOrganization(slug: string): Promise<{ slug: string }> {
+  return send(`/me/tenants/${encodeURIComponent(slug)}/reopen`, { method: 'POST' });
+}
+
+/** Whether a manage link belongs to a closed organization: its name, or null. */
+export async function closedOrganizationFor(token: string): Promise<{ name: string } | null> {
+  try {
+    return await send<{ name: string; closedAt: string }>('/links/closed', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}

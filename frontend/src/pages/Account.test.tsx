@@ -140,4 +140,24 @@ describe('Account', () => {
     await screen.findByRole('tab', { name: 'Organizations' });
     expect(screen.queryByRole('tab', { name: 'Your week' })).toBeNull();
   });
+
+  it('lists a closed organization for its owner and reopens it', async () => {
+    let closedAt: string | null = '2026-11-01T12:00:00Z';
+    const calls = fakeFetch({
+      'GET /me/organizations': () =>
+        json(200, [{ ...organization('acme', 'UTC'), closedAt, reopenUntil: closedAt ? '2026-12-01T12:00:00Z' : null }]),
+      'POST /me/tenants/acme/reopen': () => {
+        closedAt = null;
+        return json(200, { slug: 'acme' });
+      },
+      'GET /api/auth/get-session': replies.noSession,
+    });
+    renderAccount();
+    expect(await screen.findByRole('heading', { name: 'Closed' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Edit' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen Name of acme' }));
+    expect(await screen.findByRole('link', { name: 'Edit' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Closed' })).toBeNull();
+    expect(calls.some((c) => c.path === '/me/tenants/acme/reopen')).toBe(true);
+  });
 });
