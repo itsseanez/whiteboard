@@ -66,14 +66,25 @@ export const auth = betterAuth({
         deleteUser: {
             enabled: true,
             beforeDelete: async (user) => {
-                // An open organization with no owner couldn't be run or closed.
+                // An open organization with no owner couldn't be run or closed. Another
+                // owner can carry on; the member_keeps_an_owner trigger is the guarantee.
                 const owned = (await getTenantsByUserId(user.id)).filter(
                     (o: { role: string; closedAt: unknown }) => o.role === "owner" && !o.closedAt,
                 );
-                if (owned.length > 0) {
+                const { rows: shared } = await authPool.query<{ organizationId: string }>(
+                    `SELECT m."organizationId" FROM member m
+                     WHERE m."userId" = $1 AND m.role = 'owner'
+                       AND EXISTS (SELECT 1 FROM member other
+                                   WHERE other."organizationId" = m."organizationId"
+                                     AND other.role = 'owner' AND other."userId" <> $1)`,
+                    [user.id],
+                );
+                const coOwned = new Set(shared.map((r) => r.organizationId));
+                const alone = owned.filter((o: { organizationId: string }) => !coOwned.has(o.organizationId));
+                if (alone.length > 0) {
                     throw new APIError("BAD_REQUEST", {
                         code: "OWNS_ORGANIZATIONS",
-                        message: `Close the organizations you own first: ${owned.map((o: { name: string }) => o.name).join(", ")}.`,
+                        message: `Close these organizations or make someone else an owner first: ${alone.map((o: { name: string }) => o.name).join(", ")}.`,
                     });
                 }
             },

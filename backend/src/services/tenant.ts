@@ -72,6 +72,7 @@ export async function getTenantsByUserId(userId: string) {
         tenant.slug,
         tenant.timezone,
         member.role,
+        member."organizationId",
         tenant.archived_at AS "closedAt",
         tenant.archived_at + closed_slug_hold() AS "reopenUntil"
       FROM member

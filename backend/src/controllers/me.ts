@@ -9,7 +9,8 @@ export async function listOrganizations(req: Request, res: Response, next: NextF
   try {
     const userId = req.session!.session.userId;
     const tenants = await getTenantsByUserId(userId);
-    res.json(tenants);
+    // organizationId is for the account-deletion check, not the page.
+    res.json(tenants.map(({ organizationId: _organizationId, ...tenant }) => tenant));
   } catch (err) {
     next(err);
   }
