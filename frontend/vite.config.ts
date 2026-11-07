@@ -4,6 +4,10 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
 
+  // The same '@/' as tsconfig.json's paths, for the build and for Vitest.
+  // A leading '/' is the project root to Vite.
+  resolve: { alias: { '@': '/src' } },
+
   // In production these pages are served by Express from the same origin, so
   // every API call is a same-origin relative path and there is no CORS story
   // to get wrong. In development the pages come from Vite on 5173 and the API
