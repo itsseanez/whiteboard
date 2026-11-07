@@ -14,6 +14,10 @@ There are three audiences, and each has its own database role
 | `/me/...` | Any signed-in user | Session cookie |
 | `/tenant/:slug/...` | An organization's owners, managers and staff | Session cookie, membership |
 
+`GET /api/health` answers `200 {"ok":true}` when the app and database are up
+(`503` when the database isn't), with the client address the app sees and how
+much email is waiting.
+
 Sign-up, sign-in, sessions, password reset (`/request-password-reset`, `/reset-password`), email confirmation (`/send-verification-email`, `/verify-email`) and changing your email or password are Better Auth's own routes under `/api/auth/*`. Changing your email also needs `password` in the body.
 
 The public routes are limited per client address, each group with its own
@@ -71,10 +75,13 @@ reschedule routes take (`{ "token": … }`, plus `startsAt` and an optional
 `staffId` to reschedule). A time that was never offered is `409
 slot_not_available`; one somebody else just took is `409 slot_taken`.
 
-`POST /:slug/appointments/availability` takes `{ "token", "from", "through"? }`
+`POST /:slug/appointments/availability` takes `{ "token", "from", "through"?, "staffId"? }`
 and answers in the same shape as `GET /availability`, for the appointment's own
 service and stylist with the appointment itself left out. Those come from the
 token, not the request, so every time it offers is one reschedule accepts. It
+also returns `staffId`, the stylist it's with, and `staff`, everyone who can do
+its service; pass another `staffId` to see their times, then send it with
+reschedule to move to them. It
 fails like reschedule: `404` for a token that matches nothing here, `409` once
 the appointment is cancelled, finished or begun.
 
@@ -165,11 +172,12 @@ Everything below needs `owner` or `admin` (`403 managers_only` otherwise).
 | `GET` `POST` | `/services` | List, add |
 | `PUT` `DELETE` | `/services/:id` | Replace; remove (archive) |
 | `GET` | `/calendar?from[&through]` | Staff, hours, time off and booked appointments with customer details, up to 7 days |
-| `GET` | `/availability/explain?serviceId&from[&through][&staffId]` | Availability with the reason every missing time is missing |
+| `GET` | `/availability/explain?serviceId&from[&through][&staffId][&exclude]` | Availability with the reason every missing time is missing |
 | `POST` | `/appointments` | Book on a customer's behalf, same body as the public route |
 | `POST` | `/appointments/:id/cancel` | Cancel |
 | `POST` | `/appointments/:id/reschedule` | Move `{ startsAt, staffId? }` |
 | `GET` | `/appointments/:id/history` | Every booking, move and status change, with who did it (`customer`, a member by name, or `unknown` before history was kept) |
+| `POST` | `/customers/:id/erase` | Owners: replace a customer's name, email and phone; `409 has_future_appointments` while they have an upcoming booking |
 | `GET` | `/webhooks` | Owners: endpoints and their latest deliveries |
 | `POST` | `/webhooks` | Owners: add `{ url }`; answers `{ id, url, secret }`, the secret shown once |
 | `DELETE` | `/webhooks/:id` | Owners: remove; deliveries not yet sent are dropped |
