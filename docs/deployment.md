@@ -50,8 +50,9 @@ force the database off the box — tasks are ephemeral — and replace three
 lines of Caddy config with a load balancer costing more per month than the
 instance.
 
-Losing managed backups costs little here: migrations are the schema, so the
-whole database rebuilds from `migrate up` plus seed.
+Running Postgres on the box means no managed backups, so the instance makes
+its own: see [Backups](#backups). Migrations rebuild the schema, but since
+self-serve sign-up went live they can't rebuild anyone's account or bookings.
 
 ## Caddy for TLS
 
@@ -287,6 +288,69 @@ docker compose -f compose.prod.yml logs migrate   # failed deploys
 df -h && docker system df                         # disk pressure
 free -h                                           # swap in use
 ```
+
+## Backups
+
+`ops/backup.sh` runs nightly from cron on the instance: `pg_dumpall` of the
+whole cluster (every database and role, so a restore needs nothing else),
+gzipped, checked for completeness, then uploaded to S3. It writes to a file
+before uploading, because a dump piped straight to S3 would upload a
+truncated file as a success if `pg_dumpall` died halfway. S3 keeps 30 days.
+
+The instance role can put and read backups but not delete them, so a
+compromised instance can't erase the history it would want gone.
+
+### Setting it up (once)
+
+```bash
+# On your machine, with admin credentials. Bucket names are global; this one
+# uses the account id.
+BUCKET=whiteboard-backups-174683182383
+aws s3api create-bucket --bucket $BUCKET --region us-east-1
+aws s3api put-public-access-block --bucket $BUCKET --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+aws s3api put-bucket-lifecycle-configuration --bucket $BUCKET --lifecycle-configuration \
+  '{"Rules":[{"ID":"expire-30-days","Status":"Enabled","Filter":{"Prefix":"whiteboard/"},"Expiration":{"Days":30}}]}'
+
+# The instance role (the one with the Parameter Store and SES permissions).
+aws iam put-role-policy --role-name <instance-role> --policy-name whiteboard-backups --policy-document '{
+  "Version": "2012-10-17",
+  "Statement": [
+    { "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject"], "Resource": "arn:aws:s3:::'$BUCKET'/whiteboard/*" },
+    { "Effect": "Allow", "Action": "s3:ListBucket", "Resource": "arn:aws:s3:::'$BUCKET'",
+      "Condition": { "StringLike": { "s3:prefix": "whiteboard/*" } } }
+  ]
+}'
+```
+
+```bash
+# On the instance (aws ssm start-session …; sudo su - ubuntu).
+mkdir -p /opt/whiteboard/ops && cd /opt/whiteboard/ops
+for f in backup.sh restore-drill.sh restore.sh; do
+  curl -fsSLO https://raw.githubusercontent.com/itsseanez/whiteboard/main/ops/$f
+done
+chmod +x *.sh
+BACKUP_BUCKET=whiteboard-backups-174683182383 ./backup.sh          # once by hand
+BACKUP_BUCKET=whiteboard-backups-174683182383 ./restore-drill.sh   # and prove it restores
+
+# Nightly at 03:17 UTC. Optional: BACKUP_PING_URL=<a dead-man's-switch URL,
+# e.g. healthchecks.io>, pinged only after a good upload, so silence alerts.
+sudo tee /etc/cron.d/whiteboard-backup > /dev/null <<'CRON'
+17 3 * * * ubuntu BACKUP_BUCKET=whiteboard-backups-174683182383 /opt/whiteboard/ops/backup.sh >> /home/ubuntu/backup.log 2>&1
+CRON
+```
+
+### Checking and restoring
+
+- `tail /home/ubuntu/backup.log`: one line per night.
+- `./restore-drill.sh`: restores the newest backup into a throwaway
+  container and prints row counts. Monthly, and after any change to
+  `backup.sh`. It pulls `postgres:18` the first time.
+- Disaster, onto a new instance or a lost volume: bring up only Postgres
+  (`docker compose -f compose.prod.yml up -d postgres`), run
+  `FORCE=yes ./restore.sh <object name>` to replace the empty database it
+  created, then deploy as usual. Migrations already applied in the backup are
+  skipped. `restore.sh` refuses a database that already holds data.
 
 ## Never run
 
