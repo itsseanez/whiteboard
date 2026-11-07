@@ -41,6 +41,10 @@ export async function provisionTenant(
 ): Promise<ProvisionOutcome> {
   const { name, slug, timezone } = input;
 
+  // A slug whose organization closed more than 30 days ago is free again: this
+  // renames the closed one out of the way, and does nothing otherwise.
+  await signupPool.query('SELECT release_closed_slug($1)', [slug]);
+
   // Pre-check: an existing tenant is either ours from an earlier attempt, or taken.
   if (await getTenantBySlug(slug)) {
     return (await isCallersTenant(slug, userId)) ? { kind: 'existing', slug } : { kind: 'slug_taken' };
