@@ -128,11 +128,16 @@ Both answer `404 not_staff` for a member with no staff row here.
 | `GET` | `/time-off` | Time off that hasn't ended, with `timeZone` |
 | `POST` | `/time-off` | Add `{ staffId?, startDate, startTime?, endDate?, endTime?, reason? }` |
 | `DELETE` | `/time-off/:id` | Remove one |
+| `POST` | `/time-off/:id/approve` | Owners and managers: approve a pending request |
+| `POST` | `/time-off/:id/decline` | Owners and managers: decline a pending request |
 
 Dates and times are wall clock in the organization's zone; an empty time means
 the whole day, and `endDate` defaults to `startDate`. Owners and managers see
-and change anyone's; staff only their own, and a left-out `staffId` means the
-caller. RLS decides that, so another staff member's entry is `404` to remove
+and change anyone's, and what they add is approved at once; what staff add is a
+`pending` request for themselves (a left-out `staffId` means the caller), which
+they can withdraw until it's approved. Only `approved` time off blocks bookings.
+Deciding a request twice is `409 already_decided`; staff deciding is
+`403 managers_only`. RLS decides that, so another staff member's entry is `404` to remove
 and `403 own_time_off_only` to add. `201` includes `overlappingAppointments`:
 booked appointments inside the time off, which stay booked.
 
