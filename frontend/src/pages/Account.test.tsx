@@ -179,4 +179,19 @@ describe('Account', () => {
     expect((await screen.findByRole('tab', { name: 'Your week' })).getAttribute('aria-selected')).toBe('true');
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Your week', 'Organizations', 'Account']);
   });
+
+  it('refuses to delete the account of someone who still owns an organization, and says which', async () => {
+    fakeFetch({
+      'GET /me/organizations': () => json(200, [organization('acme', 'UTC')]),
+      'GET /api/auth/get-session': replies.noSession,
+      'POST /api/auth/delete-user': () =>
+        json(400, { code: 'OWNS_ORGANIZATIONS', message: 'Close the organizations you own first: Acme.' }),
+    });
+    renderAccount();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete account…' }));
+    fireEvent.change(screen.getByLabelText('Your password, to confirm'), { target: { value: 'secret-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
+    expect((await screen.findByRole('alert')).textContent).toBe('Close the organizations you own first: Acme.');
+  });
 });

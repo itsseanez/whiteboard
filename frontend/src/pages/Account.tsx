@@ -1,12 +1,13 @@
 // Where sign-in lands, as tabs of like things: organizations you own or
 // manage, organizations you work at as staff, and the account itself.
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError, getMyOrganizations, reopenOrganization, type Membership } from '../api';
-import { authClient } from '../auth';
+import { authClient, UNREACHABLE } from '../auth';
 import Button from '../components/Button';
+import Field from '../components/Field';
 import shell from '../shell.module.css';
 import styles from './Auth.module.css';
 import Problem from '../components/Problem';
@@ -202,6 +203,7 @@ export default function Account() {
             Sign out
           </Button>
         </div>
+        <DeleteAccount />
       </>
     ),
   });
@@ -214,3 +216,73 @@ export default function Account() {
   );
 }
 
+/** Deletes the signed-in account, with its password. Refused while it owns an open organization. */
+function DeleteAccount(): ReactNode {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  async function remove(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setProblem(null);
+    try {
+      const { error } = await authClient.deleteUser({ password });
+      if (error) {
+        setProblem(
+          error.code === 'OWNS_ORGANIZATIONS'
+            ? (error.message ?? 'Close the organizations you own first.')
+            : error.code === 'INVALID_PASSWORD'
+              ? 'That password is not right.'
+              : "Couldn't delete your account. Try again in a moment.",
+        );
+        return;
+      }
+      navigate('/');
+    } catch {
+      setProblem(UNREACHABLE);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className={styles.danger}>
+      <h2 className={styles.subheading}>Delete account</h2>
+      <p className={styles.note}>
+        Deletes your sign-in and takes you out of every organization you belong to. Organizations you own must be
+        closed first. This can't be undone.
+      </p>
+      {open ? (
+        <form className={styles.form} onSubmit={remove}>
+          {problem ? <Problem role="alert">{problem}</Problem> : null}
+          <Field
+            label="Your password, to confirm"
+            type="password"
+            value={password}
+            onChange={setPassword}
+            autoComplete="current-password"
+            disabled={busy}
+            required
+          />
+          <div className={styles.actions}>
+            <Button type="submit" disabled={busy || !password}>
+              {busy ? 'Deleting…' : 'Delete my account'}
+            </Button>
+            <Button variant="secondary" disabled={busy} onClick={() => setOpen(false)}>
+              Keep it
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className={styles.actions}>
+          <Button variant="secondary" onClick={() => setOpen(true)}>
+            Delete account…
+          </Button>
+        </div>
+      )}
+    </section>
+  );
+}

@@ -135,3 +135,8 @@
   font-size: var(--step--1);
 }
 
+.danger {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
