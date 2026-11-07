@@ -107,7 +107,7 @@ export default function Calendar() {
 
   if (problem === 'signed-out') return frame(<p className={shell.lede}><Link to="/signin">Sign in</Link> to see the calendar.</p>);
   if (problem === 'not-found') return frame(<p className={shell.lede}>You don't have an organization at this address.</p>);
-  if (problem === 'forbidden') return frame(<p className={shell.lede}>Only owners can see this calendar.</p>);
+  if (problem === 'forbidden') return frame(<p className={shell.lede}>Only owners and managers can see this calendar. <Link to={`/manage/${slug}/me`}>See your week</Link>.</p>);
   if (problem === 'failed') return frame(<p className={shell.lede}>Something went wrong. Try again in a moment.</p>);
   if (!timeZone || !date || !data) return frame(<p className={shell.lede}>Loading…</p>);
 

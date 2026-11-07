@@ -22,8 +22,14 @@ const color = {
   resourceIds: ['r1'],
 };
 
+const context = (role: string) => () =>
+  json(200, { tenant: { name: 'Acme', slug: 'acme', timezone: 'UTC' }, membership: { role } });
+const nobody = () => json(200, { members: [], invitations: [] });
+
 function ready(extra: Record<string, () => Response> = {}) {
   return fakeFetch({
+    [`GET ${base}`]: context('owner'),
+    [`GET ${base}/people`]: nobody,
     [`GET ${base}/business-hours`]: () => json(200, { hours: [] }),
     [`GET ${base}/resources`]: () => json(200, [wash]),
     [`GET ${base}/staff`]: () => json(200, [ana]),
@@ -43,10 +49,19 @@ function renderSetup() {
 }
 
 describe('Setup', () => {
-  it('says so when the account is not an owner', async () => {
-    fakeFetch({ [`GET ${base}/business-hours`]: () => json(403, { error: 'owner_only' }) });
+  it('sends a staff member to their own week', async () => {
+    const refused = () => json(403, { error: 'managers_only' });
+    fakeFetch({
+      [`GET ${base}`]: context('member'),
+      [`GET ${base}/people`]: refused,
+      [`GET ${base}/business-hours`]: refused,
+      [`GET ${base}/resources`]: refused,
+      [`GET ${base}/staff`]: refused,
+      [`GET ${base}/services`]: refused,
+    });
     renderSetup();
-    expect(await screen.findByText(/Only owners can set up/)).toBeTruthy();
+    expect(await screen.findByText(/Only owners and managers can set up/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'See your week' }).getAttribute('href')).toBe('/manage/acme/me');
   });
 
   it("doesn't reveal whether someone else's organization exists", async () => {
@@ -182,6 +197,45 @@ describe('Setup', () => {
       name: 'Cut',
       staffIds: ['s1'],
       resourceIds: [],
+    });
+  });
+
+  describe('sign-ins', () => {
+    it("invites a staff member from their card", async () => {
+      const calls = ready({ [`POST ${base}/invitations`]: () => json(201, { invitationId: 'i1' }) });
+      renderSetup();
+      fireEvent.change(await screen.findByLabelText("Ana's email, to sign in"), { target: { value: 'ana@acme.example' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Invite Ana' }));
+      await waitFor(() => expect(calls.some((c) => c.path === `${base}/invitations`)).toBe(true));
+      expect(calls.find((c) => c.path === `${base}/invitations`)?.body).toEqual({
+        email: 'ana@acme.example',
+        role: 'staff',
+        staffId: 's1',
+      });
+    });
+
+    it("says who a staff member signs in as", async () => {
+      ready({
+        [`GET ${base}/people`]: () =>
+          json(200, {
+            members: [{ memberId: 'm1', userId: 'u1', name: 'Ana', email: 'ana@acme.example', role: 'member', staffId: 's1' }],
+            invitations: [],
+          }),
+      });
+      renderSetup();
+      expect(await screen.findByText('Signs in as ana@acme.example to see their own week.')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Invite Ana' })).toBeNull();
+    });
+
+    it('lets an owner invite a manager, and a manager not', async () => {
+      ready();
+      renderSetup();
+      expect(await screen.findByRole('button', { name: 'Invite manager' })).toBeTruthy();
+      cleanup();
+      ready({ [`GET ${base}`]: context('admin') });
+      renderSetup();
+      await screen.findByRole('heading', { name: 'People' });
+      expect(screen.queryByRole('button', { name: 'Invite manager' })).toBeNull();
     });
   });
 });

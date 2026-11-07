@@ -1,5 +1,6 @@
-// Where sign-in lands: a placeholder for owner pages that do not exist yet. It
-// lists the organizations this account belongs to and says plainly what is missing.
+// Where sign-in lands: the organizations this account belongs to, with the
+// pages each role can open. Owners and managers set up and run the calendar;
+// staff see their own week.
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -87,8 +88,7 @@ export default function Account() {
     <>
       <h1 className={shell.title}>Your account</h1>
       <p className={shell.lede}>
-        {email ? `Signed in as ${email}. ` : ''}Set up hours, staff, resources and services, and see
-        the calendar, for each organization you own.
+        {email ? `Signed in as ${email}. ` : ''}Your organizations, and what you can open in each.
       </p>
 
       {state.organizations.length === 0 ? (
@@ -104,14 +104,20 @@ export default function Account() {
                 <Link to={`/${organization.slug}`}>{`${window.location.host}/${organization.slug}`}</Link>
                 <span className={styles.meta}>
                   Times in {organization.timezone}
-                  {organization.role === 'owner' ? (
+                  {organization.role === 'owner' || organization.role === 'admin' ? (
                     <>
+                      {organization.role === 'admin' ? ' · Manager' : ''}
                       {' · '}
                       <Link to={`/manage/${organization.slug}`}>Set up</Link>
                       {' · '}
                       <Link to={`/manage/${organization.slug}/calendar`}>Calendar</Link>
                     </>
-                  ) : null}
+                  ) : (
+                    <>
+                      {' · Staff · '}
+                      <Link to={`/manage/${organization.slug}/me`}>Your week</Link>
+                    </>
+                  )}
                 </span>
               </li>
             ))}

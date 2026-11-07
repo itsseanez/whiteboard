@@ -20,11 +20,11 @@ function renderAccount() {
 }
 
 // Shape of GET /me/organizations, from backend/src/services/tenant.ts.
-const organization = (slug: string, timezone: string) => ({
+const organization = (slug: string, timezone: string, role = 'owner') => ({
   tenantId: `id-${slug}`,
   slug,
   timezone,
-  role: 'owner',
+  role,
 });
 
 describe('Account', () => {
@@ -102,5 +102,17 @@ describe('Account', () => {
 
     expect((await screen.findByRole('alert')).textContent).toMatch(/still signed in/i);
     expect(screen.queryByText('landing page')).toBeNull();
+  });
+
+  it('opens setup for a manager and their own week for staff', async () => {
+    fakeFetch({
+      'GET /me/organizations': () =>
+        json(200, [organization('acme', 'UTC', 'admin'), organization('studio-wien', 'Europe/Vienna', 'member')]),
+      'GET /api/auth/get-session': replies.noSession,
+    });
+    renderAccount();
+    expect((await screen.findByRole('link', { name: 'Set up' })).getAttribute('href')).toBe('/manage/acme');
+    expect(screen.getByRole('link', { name: 'Your week' }).getAttribute('href')).toBe('/manage/studio-wien/me');
+    expect(screen.getAllByRole('link', { name: 'Set up' })).toHaveLength(1);
   });
 });

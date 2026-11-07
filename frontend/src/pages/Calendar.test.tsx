@@ -146,9 +146,9 @@ describe('Calendar', () => {
     expect(screen.getAllByText('Nothing booked').length).toBe(6);
   });
 
-  it('tells a non-owner they cannot see it', async () => {
-    setup({ [`GET ${base}/calendar`]: () => json(403, { error: 'owner_only' }) });
+  it('tells a staff member they cannot see it', async () => {
+    setup({ [`GET ${base}/calendar`]: () => json(403, { error: 'managers_only' }) });
     renderCalendar();
-    expect(await screen.findByText('Only owners can see this calendar.')).toBeTruthy();
+    expect(await screen.findByText(/Only owners and managers can see this calendar/)).toBeTruthy();
   });
 });
