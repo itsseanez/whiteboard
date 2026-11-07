@@ -14,6 +14,7 @@ function renderAt(path = '/signin') {
       <Routes>
         <Route path="/signin" element={<SignIn />} />
         <Route path="/account" element={<p>account page</p>} />
+        <Route path="/invite/:id" element={<p>invite page</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -90,5 +91,17 @@ describe('SignIn', () => {
     release(replies.wrongPassword());
     await screen.findByRole('alert');
     expect(calls.filter((c) => c.path === '/api/auth/sign-in/email')).toHaveLength(1);
+  });
+
+  it('returns to the page that sent them, but only on this site', async () => {
+    fakeFetch({ 'POST /api/auth/sign-in/email': replies.signedIn, 'GET /api/auth/get-session': replies.noSession });
+    renderAt(`/signin?next=${encodeURIComponent('/invite/inv1')}`);
+    fillAndSubmit();
+    expect(await screen.findByText('invite page')).toBeTruthy();
+    cleanup();
+    fakeFetch({ 'POST /api/auth/sign-in/email': replies.signedIn, 'GET /api/auth/get-session': replies.noSession });
+    renderAt(`/signin?next=${encodeURIComponent('//evil.example')}`);
+    fillAndSubmit();
+    expect(await screen.findByText('account page')).toBeTruthy();
   });
 });

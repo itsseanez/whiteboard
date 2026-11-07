@@ -7,6 +7,7 @@ const RESERVED = new Set([
   'signup', // page
   'account', // page
   'manage', // /manage/:slug, the owner setup page
+  'invite', // /invite/:id, accepting an invitation
   'api', // /api/auth/* — Better Auth
   'me', // /me/* would shadow an organization's /me/services
   'tenant', // /tenant/:slug would shadow an organization's /tenant/services

@@ -5,7 +5,7 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { authClient, authMessage, UNREACHABLE, type AuthError } from '../auth';
+import { authClient, PASSWORD_MIN, SHORT_PASSWORD, signUpMessage, UNREACHABLE } from '../auth';
 import { provisionOrganization } from '../provision';
 import { slugify, slugProblem, SLUG_MAX } from '../slug';
 import Button from '../components/Button';
@@ -15,8 +15,6 @@ import shell from '../shell.module.css';
 import styles from './Auth.module.css';
 import Problem from '../components/Problem';
 
-const PASSWORD_MIN = 8; // Better Auth's default minPasswordLength
-const SHORT_PASSWORD = `Use at least ${PASSWORD_MIN} characters for the password.`;
 
 function browserZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -28,21 +26,6 @@ function zoneOptions(current: string) {
   return all.map((zone) => ({ value: zone, label: zone.replaceAll('_', ' ') }));
 }
 
-function signUpMessage(error: AuthError): string {
-  switch (error.code) {
-    case 'USER_ALREADY_EXISTS':
-    case 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL':
-      return 'An account with this email already exists. Sign in instead.';
-    case 'INVALID_EMAIL':
-      return 'That email address does not look right.';
-    case 'PASSWORD_TOO_SHORT':
-      return SHORT_PASSWORD;
-    case 'PASSWORD_TOO_LONG':
-      return 'That password is too long.';
-    default:
-      return authMessage(error);
-  }
-}
 
 export default function SignUp() {
   const navigate = useNavigate();

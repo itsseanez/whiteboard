@@ -30,3 +30,22 @@ export function authMessage(error: AuthError): string {
 }
 
 export const UNREACHABLE = 'Could not reach Whiteboard. Check your connection and try again.';
+
+export const PASSWORD_MIN = 8; // Better Auth's default minPasswordLength
+export const SHORT_PASSWORD = `Use at least ${PASSWORD_MIN} characters for the password.`;
+
+export function signUpMessage(error: AuthError): string {
+  switch (error.code) {
+    case 'USER_ALREADY_EXISTS':
+    case 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL':
+      return 'An account with this email already exists. Sign in instead.';
+    case 'INVALID_EMAIL':
+      return 'That email address does not look right.';
+    case 'PASSWORD_TOO_SHORT':
+      return SHORT_PASSWORD;
+    case 'PASSWORD_TOO_LONG':
+      return 'That password is too long.';
+    default:
+      return authMessage(error);
+  }
+}

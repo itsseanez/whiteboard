@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authClient, authMessage, UNREACHABLE } from '../auth';
 import Button from '../components/Button';
@@ -8,8 +8,14 @@ import shell from '../shell.module.css';
 import styles from './Auth.module.css';
 import Problem from '../components/Problem';
 
+/** Only a path on this site, so the link can't send someone elsewhere after signing in. */
+function safeNext(next: string | null): string {
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/account';
+}
+
 export default function SignIn() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
@@ -30,7 +36,7 @@ export default function SignIn() {
         setProblem(authMessage(error));
         return;
       }
-      navigate('/account');
+      navigate(safeNext(params.get('next')));
     } catch {
       setProblem(UNREACHABLE);
     } finally {
@@ -45,7 +51,7 @@ export default function SignIn() {
         Whiteboard
       </Link>
       <h1 className={shell.title}>Sign in</h1>
-      <p className={shell.lede}>For organization owners. Customers book without an account.</p>
+      <p className={shell.lede}>For owners, managers and staff. Customers book without an account.</p>
 
       <form className={styles.form} onSubmit={submit}>
         {problem ? (

@@ -175,7 +175,7 @@ export function createTenant(body: { name: string; slug: string; timezone: strin
   return send<{ slug: string }>('/me/tenants', { method: 'POST', body: JSON.stringify(body) });
 }
 
-// --- owner setup, under /tenant/:slug (owners only) --------------------------
+// --- setup, under /tenant/:slug (owners and managers) ------------------------
 
 /** Weekday is ISO, 1 = Monday. Times are HH:MM local; an end of 00:00 is midnight. */
 export interface HoursRange {
@@ -317,3 +317,49 @@ export const calendarApi = {
 export function getTenantContext(slug: string): Promise<{ tenant: { name: string; slug: string; timezone: string }; membership: { role: string } }> {
   return send(owner(slug, ''));
 }
+
+// --- people: who signs in, and invitations -----------------------------------
+
+/** Better Auth's role names. "admin" is shown as manager. */
+export type MemberRole = 'owner' | 'admin' | 'member';
+
+export interface Person {
+  memberId: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: MemberRole;
+  /** The staff row this login is linked to, if any. */
+  staffId: string | null;
+}
+
+export interface PendingInvitation {
+  id: string;
+  email: string;
+  role: MemberRole;
+  staffId: string | null;
+  expiresAt: string;
+}
+
+export const peopleApi = {
+  list: (slug: string) => send<{ members: Person[]; invitations: PendingInvitation[] }>(owner(slug, '/people')),
+  invite: (slug: string, body: { email: string; role: 'staff' | 'manager'; staffId?: string }) =>
+    send<{ invitationId: string }>(owner(slug, '/invitations'), write('POST', body)),
+  remove: (slug: string, memberId: string) =>
+    send<void>(owner(slug, `/members/${encodeURIComponent(memberId)}`), { method: 'DELETE' }),
+};
+
+/** POST /me/invitations/:id/accept. Safe to repeat. */
+export function acceptInvitation(id: string): Promise<{ slug: string; role: MemberRole }> {
+  return send(`/me/invitations/${encodeURIComponent(id)}/accept`, { method: 'POST' });
+}
+
+// --- a staff member's own page -----------------------------------------------
+
+export const myWeekApi = {
+  /** The same shape as the calendar, holding only the caller's own row. */
+  week: (slug: string, from: string, through: string) =>
+    send<CalendarData>(owner(slug, `/me/week?${new URLSearchParams({ from, through })}`)),
+  saveHours: (slug: string, hours: HoursRange[]) =>
+    send<{ hours: HoursRange[] }>(owner(slug, '/me/hours'), write('PUT', { hours })),
+};

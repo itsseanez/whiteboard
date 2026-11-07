@@ -11,6 +11,8 @@ import SignUp from './pages/SignUp';
 import Account from './pages/Account';
 import Setup from './pages/Setup';
 import Calendar from './pages/Calendar';
+import Invite from './pages/Invite';
+import MyWeek from './pages/MyWeek';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root is missing from index.html');
@@ -30,6 +32,8 @@ createRoot(root).render(
         <Route path="/account" element={<Account />} />
         <Route path="/manage/:slug" element={<Setup />} />
         <Route path="/manage/:slug/calendar" element={<Calendar />} />
+        <Route path="/manage/:slug/me" element={<MyWeek />} />
+        <Route path="/invite/:id" element={<Invite />} />
         <Route path="/:slug" element={<Booking />} />
         <Route path="/:slug/manage" element={<Manage />} />
       </Routes>

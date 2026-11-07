@@ -1,0 +1,102 @@
+/* The staff page: one column, a week of days, then the hours editor. */
+main.page {
+  max-width: calc(48rem + 2 * var(--space-4));
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.days {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-4) 0 0;
+}
+
+.day {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.dayName {
+  font-size: var(--step-0);
+  font-weight: 500;
+}
+
+.today {
+  font-size: var(--step--1);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.empty {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.appointment {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: var(--space-1) var(--space-3);
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.detail {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.contact {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+
+.heading {
+  font-size: var(--step-2);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.saved,
+.unsaved {
+  font-size: var(--step--1);
+}
+
+.saved {
+  color: var(--ink-soft);
+}
+
+.unsaved {
+  font-weight: 500;
+}
+
+@media (max-width: 30rem) {
+  .appointment {
+    grid-template-columns: 1fr;
+  }
+}
