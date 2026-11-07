@@ -82,3 +82,44 @@
   font-size: var(--step--1);
   color: var(--ink-soft);
 }
+
+.name {
+  font-weight: 500;
+}
+
+.name .meta {
+  font-weight: 400;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: var(--step--1);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-4);
+}
+
+.details dt {
+  color: var(--muted);
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* In a tab panel the tabs' own rule is the top edge. */
+[role='tabpanel'] > .list {
+  margin-top: 0;
+  border-top: 0;
+}
+
+[role='tabpanel'] > .list li:first-child {
+  padding-top: var(--space-1);
+}

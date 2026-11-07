@@ -1,0 +1,41 @@
+/* Underlined tabs on the page's rule, the same 120ms ease as every control.
+ * The open tab changes colour, not weight, so the row doesn't shift. */
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.tab {
+  padding: var(--space-2) 0;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.panel {
+  padding-top: var(--space-4);
+}
+
+.panel:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}

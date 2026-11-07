@@ -1,6 +1,5 @@
-// Where sign-in lands: the organizations this account belongs to, with the
-// pages each role can open. Owners and managers set up and run the calendar;
-// staff see their own week.
+// Where sign-in lands, as tabs of like things: organizations you own or
+// manage, organizations you work at as staff, and the account itself.
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -11,6 +10,7 @@ import Button from '../components/Button';
 import shell from '../shell.module.css';
 import styles from './Auth.module.css';
 import Problem from '../components/Problem';
+import Tabs, { type Tab } from '../components/Tabs';
 
 type State =
   | { kind: 'loading' }
@@ -82,63 +82,83 @@ export default function Account() {
     );
   }
 
-  const email = session.data?.user.email;
+  const user = session.data?.user;
+  const managed = state.organizations.filter((o) => o.role === 'owner' || o.role === 'admin');
+  const staffed = state.organizations.filter((o) => o.role === 'member');
 
-  return frame(
-    <>
-      <h1 className={shell.title}>Your account</h1>
-      <p className={shell.lede}>
-        {email ? `Signed in as ${email}. ` : ''}Your organizations, and what you can open in each.
-      </p>
-
-      {state.organizations.length === 0 ? (
-        <p className={styles.note}>
-          This account is not linked to an organization. If you just signed up, setting up the organization did
-          not finish. <Link to="/signup">Finish setting up your organization</Link>.
-        </p>
-      ) : (
-        <>
+  const tabs: Tab[] = [];
+  if (managed.length > 0 || staffed.length === 0) {
+    tabs.push({
+      id: 'organizations',
+      label: 'Organizations',
+      panel:
+        managed.length === 0 ? (
+          <p className={styles.note}>
+            This account is not linked to an organization. If you just signed up, setting up the organization did
+            not finish. <Link to="/signup">Finish setting up your organization</Link>.
+          </p>
+        ) : (
           <ul className={styles.list}>
-            {state.organizations.map((organization) => (
-              <li key={organization.tenantId}>
-                <Link to={`/${organization.slug}`}>{`${window.location.host}/${organization.slug}`}</Link>
-                <span className={styles.meta}>
-                  Times in {organization.timezone}
-                  {organization.role === 'owner' || organization.role === 'admin' ? (
-                    <>
-                      {organization.role === 'admin' ? ' · Manager' : ''}
-                      {' · '}
-                      <Link to={`/manage/${organization.slug}`}>Set up</Link>
-                      {' · '}
-                      <Link to={`/manage/${organization.slug}/calendar`}>Calendar</Link>
-                    </>
-                  ) : (
-                    <>
-                      {' · Staff · '}
-                      <Link to={`/manage/${organization.slug}/me`}>Your week</Link>
-                    </>
-                  )}
+            {managed.map((o) => (
+              <li key={o.tenantId}>
+                <span className={styles.name}>
+                  {o.name}
+                  <span className={styles.meta}> · {o.role === 'owner' ? 'Owner' : 'Manager'}</span>
+                </span>
+                <span className={styles.links}>
+                  <Link to={`/manage/${o.slug}`}>Set up</Link>
+                  <Link to={`/manage/${o.slug}/calendar`}>Calendar</Link>
+                  <Link to={`/${o.slug}`}>Booking page</Link>
                 </span>
               </li>
             ))}
           </ul>
-          <p className={styles.note}>
-            A new organization's page has nothing to book until it has staff, services and hours.
-          </p>
-        </>
-      )}
+        ),
+    });
+  }
+  if (staffed.length > 0) {
+    tabs.push({
+      id: 'week',
+      label: 'Your week',
+      panel: (
+        <ul className={styles.list}>
+          {staffed.map((o) => (
+            <li key={o.tenantId}>
+              <span className={styles.name}>{o.name}</span>
+              <span className={styles.links}>
+                <Link to={`/manage/${o.slug}/me`}>Your week</Link>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+  tabs.push({
+    id: 'account',
+    label: 'Account',
+    panel: (
+      <>
+        <dl className={styles.details}>
+          <dt>Name</dt>
+          <dd>{user?.name ?? '—'}</dd>
+          <dt>Email</dt>
+          <dd>{user?.email ?? '—'}</dd>
+        </dl>
+        {problem ? <Problem role="alert">{problem}</Problem> : null}
+        <div className={styles.actions}>
+          <Button variant="secondary" onClick={signOut}>
+            Sign out
+          </Button>
+        </div>
+      </>
+    ),
+  });
 
-      {problem ? (
-        <Problem role="alert">
-          {problem}
-        </Problem>
-      ) : null}
-
-      <div className={styles.actions}>
-        <Button variant="secondary" onClick={signOut}>
-          Sign out
-        </Button>
-      </div>
+  return frame(
+    <>
+      <h1 className={shell.title}>Your account</h1>
+      <Tabs label="Your account" tabs={tabs} />
     </>,
   );
 }

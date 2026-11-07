@@ -65,6 +65,7 @@ export interface Cancelled {
 /** One organization the signed-in user belongs to, from GET /me/organizations. */
 export interface Membership {
   tenantId: string;
+  name: string;
   slug: string;
   timezone: string;
   role: string;

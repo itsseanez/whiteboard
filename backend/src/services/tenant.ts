@@ -67,6 +67,7 @@ export async function getTenantsByUserId(userId: string) {
       `
       SELECT
         tenant.id AS "tenantId",
+        tenant.name,
         tenant.slug,
         tenant.timezone,
         member.role
