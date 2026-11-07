@@ -10,6 +10,7 @@ import * as people from '../../controllers/people.js';
 import * as myWeek from '../../controllers/my-week.js';
 import * as timeOff from '../../controllers/time-off.js';
 import * as history from '../../controllers/history.js';
+import * as webhooks from '../../controllers/webhooks.js';
 
 const router = Router({ mergeParams: true });
 router.use(requireAuth);
@@ -55,6 +56,10 @@ router.post('/appointments', calendar.postOwnerBooking);
 router.post('/appointments/:id/cancel', calendar.postOwnerCancel);
 router.post('/appointments/:id/reschedule', calendar.postOwnerReschedule);
 router.get('/appointments/:id/history', history.getHistory);
+router.get('/webhooks', requireOwner, webhooks.getWebhooks);
+router.post('/webhooks', requireOwner, webhooks.postWebhook);
+router.delete('/webhooks/:id', requireOwner, webhooks.deleteWebhook);
+router.post('/webhooks/:id/test', requireOwner, webhooks.testWebhook);
 
 router.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });

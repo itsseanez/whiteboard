@@ -272,7 +272,7 @@ describe('requests', () => {
     while ((await runDueJobs()) > 0) {
       // drain
     }
-    const mail = [...outbox].reverse().find((m) => m.to === benEmail);
+    const mail = [...outbox].reverse().find((m) => m.to === benEmail && m.subject.startsWith('Time off'));
     expect(mail?.subject).toBe('Time off declined at Time Off Test');
     expect(mail?.text).toMatch(/was declined. You can still be booked then/);
     await api.delete(`/time-off/${asked.id}`, benLogin.cookie);

@@ -7,15 +7,17 @@
 
 import { appPool } from '../db.js';
 import { MailNotConfiguredError, getMailer, type Mail } from '../lib/mailer.js';
+import { BlockedAddressError, deliver } from './webhook.js';
 import { reminder, staffNotice, timeOffNotice, type Reminder, type StaffNotice, type TimeOffNotice } from './templates.js';
 
-type Kind = 'mail' | 'staff_notice' | 'reminder' | 'time_off_notice';
+type Kind = 'mail' | 'staff_notice' | 'reminder' | 'time_off_notice' | 'webhook';
 
 interface JobRow {
   id: string;
   kind: Kind;
   payload: unknown;
   attempts: number;
+  ref: string | null;
 }
 
 const LEASE = '5 minutes';
@@ -25,6 +27,8 @@ export const backoffSeconds = (attempts: number) => Math.min(30 * 2 ** Math.max(
 
 function compose(job: JobRow): Mail {
   switch (job.kind) {
+    case 'webhook':
+      throw new Error('a webhook is not an email');
     case 'mail':
       return job.payload as Mail;
     case 'staff_notice':
@@ -36,15 +40,29 @@ function compose(job: JobRow): Mail {
   }
 }
 
-async function finish(id: string, outcome: 'sent' | 'failed', error?: string) {
+async function finish(id: string, outcome: 'sent' | 'failed' | 'cancelled', error?: string) {
   await appPool.query(
     `UPDATE job SET finished_at = now(), outcome = $2, payload = '{}', locked_until = NULL, last_error = $3 WHERE id = $1`,
     [id, outcome, error ?? null],
   );
 }
 
+/** A webhook goes to its endpoint as it stands now; a removed one stops. */
+async function sendWebhook(job: JobRow): Promise<'sent' | 'cancelled'> {
+  const { rows } = await appPool.query<{ url: string; secret: string }>('SELECT * FROM webhook_target($1)', [job.ref]);
+  const target = rows[0];
+  if (!target) return 'cancelled';
+  const event = job.payload as { id: string };
+  await deliver(target, event.id, JSON.stringify(job.payload));
+  return 'sent';
+}
+
 async function run(job: JobRow): Promise<void> {
   try {
+    if (job.kind === 'webhook') {
+      await finish(job.id, await sendWebhook(job));
+      return;
+    }
     await getMailer().send(compose(job));
     await finish(job.id, 'sent');
   } catch (error) {
@@ -57,7 +75,7 @@ async function run(job: JobRow): Promise<void> {
       );
       return;
     }
-    if (job.attempts >= MAX_ATTEMPTS) return finish(job.id, 'failed', message);
+    if (job.attempts >= MAX_ATTEMPTS || error instanceof BlockedAddressError) return finish(job.id, 'failed', message);
     console.error(`Job ${job.id} (${job.kind}) failed, attempt ${job.attempts}:`, message);
     await appPool.query(
       `UPDATE job SET locked_until = NULL, run_at = now() + make_interval(secs => $2), last_error = $3 WHERE id = $1`,
@@ -81,7 +99,7 @@ async function claim(limit: number, id?: string): Promise<JobRow[]> {
        FOR UPDATE SKIP LOCKED)
      UPDATE job SET locked_until = now() + interval '${LEASE}', attempts = job.attempts + 1
      FROM due WHERE job.id = due.id
-     RETURNING job.id, job.kind, job.payload, job.attempts`,
+     RETURNING job.id, job.kind, job.payload, job.attempts, job.ref`,
     [limit, id ?? null],
   );
   return rows;

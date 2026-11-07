@@ -21,6 +21,7 @@ afterAll(async () => {
     await ownerPool.query('DELETE FROM member WHERE "organizationId" = $1', [rows[0].org]);
     await ownerPool.query('DELETE FROM organization WHERE id = $1', [rows[0].org]);
   }
+  await ownerPool.query(`DELETE FROM job WHERE payload->>'to' LIKE $1`, [`%nomail-${run}%`]);
   await ownerPool.query('DELETE FROM "user" WHERE email = $1', [email]);
   await ownerPool.end();
 });
