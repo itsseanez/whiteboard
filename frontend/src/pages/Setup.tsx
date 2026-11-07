@@ -30,9 +30,11 @@ import styles from './Setup.module.css';
 import Problem from '../components/Problem';
 import Tabs from '../components/Tabs';
 import { CalendarView } from './Calendar';
+import TimeOff from '../components/TimeOff';
 
 interface Data {
   name: string;
+  timeZone: string;
   role: string;
   members: Person[];
   invitations: PendingInvitation[];
@@ -127,6 +129,7 @@ function tabOf(key: string): string {
   if (key === 'business-hours') return 'hours';
   if (key.startsWith('service:') || key === 'add:New resource') return 'services';
   if (key === 'invite:manager') return 'accounts';
+  if (key === 'time-off') return 'time-off';
   return 'staff';
 }
 
@@ -170,7 +173,7 @@ export default function Setup() {
       ]);
       setState({
         kind: 'ready',
-        data: { name: context.tenant.name, role: context.membership.role, ...people, businessHours: bh.hours, resources, staff, services },
+        data: { name: context.tenant.name, timeZone: context.tenant.timezone, role: context.membership.role, ...people, businessHours: bh.hours, resources, staff, services },
       });
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) setState({ kind: 'signed-out' });
@@ -212,6 +215,7 @@ export default function Setup() {
 
   const { data } = state;
   const reload = () => void load();
+  const reportTimeOff = (isDirty: boolean) => report('time-off', isDirty);
   const unsavedIn = (id: string) => [...dirty].some((key) => tabOf(key) === id);
 
   return frame(
@@ -257,6 +261,20 @@ export default function Setup() {
                     <StaffCard key={s.id} slug={slug} member={s} login={loginOf(data, s.id)} removed={reload} />
                   ))}
                   <AddByName label="New staff member" action="Add staff member" onAdd={(name) => ownerApi.addStaff(slug, name)} done={reload} />
+                </section>
+              </div>
+            ),
+          },
+          {
+            id: 'time-off',
+            label: 'Time off',
+            marked: unsavedIn('time-off'),
+            markLabel: 'unsaved changes',
+            panel: (
+              <div className={styles.column}>
+                <section className={styles.section}>
+                  <h2 className={styles.heading}>Time off</h2>
+                  <TimeOff slug={slug} timeZone={data.timeZone} staff={data.staff} onDirty={reportTimeOff} />
                 </section>
               </div>
             ),

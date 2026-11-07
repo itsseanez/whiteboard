@@ -9,6 +9,7 @@ import { ApiError, getTenantContext, myWeekApi, type CalendarData, type HoursRan
 import { addDays, weekStart } from '../calendar-grid';
 import Button from '../components/Button';
 import Problem from '../components/Problem';
+import TimeOff from '../components/TimeOff';
 import WeekHours from '../components/WeekHours';
 import { dateToIso, dayAndMonth, organizationDate, timeOfDay, timeOfDayAligned, weekdayLong } from '../format';
 import shell from '../shell.module.css';
@@ -28,6 +29,9 @@ export default function MyWeek() {
   const [from, setFrom] = useState<string | null>(null);
   const [data, setData] = useState<CalendarData | null>(null);
   const [trouble, setTrouble] = useState<Trouble | null>(null);
+  // Bumped when time off changes, so the week shows it.
+  const [version, setVersion] = useState(0);
+  const reloadWeek = useCallback(() => setVersion((v) => v + 1), []);
 
   const fail = useCallback((error: unknown) => {
     if (error instanceof ApiError && error.status === 401) setTrouble('signed-out');
@@ -55,7 +59,7 @@ export default function MyWeek() {
     return () => {
       live = false;
     };
-  }, [slug, from, fail]);
+  }, [slug, from, fail, version]);
 
   const frame = (body: ReactNode) => (
     <main className={`${shell.page} ${styles.page}`}>
@@ -145,6 +149,11 @@ export default function MyWeek() {
       </ol>
 
       {me ? <MyHours slug={slug} initial={me.hours} /> : null}
+
+      <section className={styles.section}>
+        <h2 className={styles.heading}>Your time off</h2>
+        <TimeOff slug={slug} timeZone={timeZone} onChange={reloadWeek} />
+      </section>
     </>,
   );
 }
