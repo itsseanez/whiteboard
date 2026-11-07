@@ -60,6 +60,7 @@ export function createApp(options: AppOptions = {}): Express {
     // Before /:slug, which would match them by accident. Also reserved slugs —
     // see frontend/src/slug.ts.
     app.get('/signin', page);
+    app.get('/privacy', page);
     app.get('/signin/forgot', page);
     app.get('/signin/reset', page);
     app.get('/signup', page);

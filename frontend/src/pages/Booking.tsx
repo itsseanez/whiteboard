@@ -21,7 +21,7 @@
 // through the browser's Date is a chance to lose one for no benefit.
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import {
   ApiError,
@@ -478,7 +478,8 @@ export default function Booking() {
               autoComplete="email"
             />
             <Field
-              label="Phone, if you want a reminder"
+              label="Phone (optional)"
+              hint="Only so the organization can reach you about this appointment."
               type="tel"
               value={phone}
               onChange={setPhone}
@@ -490,6 +491,10 @@ export default function Booking() {
           <Button type="submit" disabled={sending}>
             {sending ? 'Booking…' : 'Book this time'}
           </Button>
+          <p className={styles.privacy}>
+            Your details go to {catalog?.tenant.name ?? 'this organization'} to manage this appointment.{' '}
+            <Link to="/privacy">Privacy</Link>
+          </p>
         </form>
       ) : null}
     </main>

@@ -13,6 +13,7 @@ const RESERVED = new Set([
   'me', // /me/* would shadow an organization's /me/services
   'tenant', // /tenant/:slug would shadow an organization's /tenant/services
   'assets', // the built client's static files
+  'privacy', // page
 ]);
 
 const SHAPE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

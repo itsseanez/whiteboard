@@ -199,7 +199,7 @@ export default function SignUp() {
       </form>
 
       <p className={styles.switch}>
-        Already have an account? <Link to="/signin">Sign in</Link>
+        Already have an account? <Link to="/signin">Sign in</Link> · <Link to="/privacy">Privacy</Link>
       </p>
     </main>
   );

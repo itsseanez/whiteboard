@@ -1,0 +1,25 @@
+.section {
+  margin-top: var(--space-5);
+}
+
+.section h2 {
+  font-size: var(--step-1);
+  font-weight: 500;
+}
+
+.section ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding-left: 1.2em;
+}
+
+.contact {
+  margin-top: var(--space-5);
+}
+
+.updated {
+  margin-top: var(--space-3);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
