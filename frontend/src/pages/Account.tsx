@@ -267,8 +267,8 @@ function DeleteAccount(): ReactNode {
     <section className={styles.danger}>
       <h2 className={styles.subheading}>Delete account</h2>
       <p className={styles.note}>
-        Deletes your sign-in and takes you out of every organization you belong to. Organizations you own must be
-        closed first. This can't be undone.
+        Deletes your sign-in and takes you out of every organization you belong to. If you're an organization's
+        only owner, close it or make someone else an owner first. This can't be undone.
       </p>
       {open ? (
         <form className={styles.form} onSubmit={remove}>
