@@ -71,10 +71,15 @@ export async function getTenantsByUserId(userId: string) {
         tenant.name,
         tenant.slug,
         tenant.timezone,
-        member.role
+        member.role,
+        tenant.archived_at AS "closedAt",
+        tenant.archived_at + closed_slug_hold() AS "reopenUntil"
       FROM member
       JOIN tenant ON member."organizationId" = tenant.better_auth_org_id
-      WHERE member."userId" = $1 AND tenant.archived_at IS NULL
+      -- Open organizations, plus an owner's closed ones they can still reopen.
+      WHERE member."userId" = $1
+        AND (tenant.archived_at IS NULL
+             OR (member.role = 'owner' AND tenant.archived_at > now() - closed_slug_hold()))
       `,
       [userId]
     );

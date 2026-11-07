@@ -36,3 +36,27 @@ export async function closeOrganization(
   }
   return { cancelled: cancelled.length, emailed };
 }
+
+/**
+ * Owner only, within 30 days of closing. Cancelled bookings stay cancelled.
+ * The closed tenant isn't visible to the usual lookups, so it's found through
+ * the caller's own membership first.
+ */
+export async function reopenOrganization(userId: string, slug: string): Promise<boolean> {
+  const tenantId = await withContext(appPool, { userId }, async (client) => {
+    const { rows } = await client.query<{ id: string }>(
+      `SELECT id FROM tenant WHERE slug = $1 AND archived_at > now() - closed_slug_hold()`,
+      [slug],
+    );
+    return rows[0]?.id;
+  });
+  if (!tenantId) return false;
+  // RLS lets only the owner change archived_at; the WHERE holds the 30 days.
+  const { rowCount } = await withContext(appPool, { tenantId, userId }, (client) =>
+    client.query(
+      'UPDATE tenant SET archived_at = NULL WHERE id = $1 AND archived_at > now() - closed_slug_hold()',
+      [tenantId],
+    ),
+  );
+  return rowCount === 1;
+}

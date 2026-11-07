@@ -3,6 +3,7 @@ import { fromNodeHeaders } from 'better-auth/node';
 import { getTenantsByUserId } from '../services/tenant.js';
 import { parseTenantInput } from '../lib/tenant-input.js';
 import { provisionTenant } from '../services/provision.js';
+import { reopenOrganization } from '../services/close-organization.js';
 
 export async function listOrganizations(req: Request, res: Response, next: NextFunction) {
   try {
@@ -35,6 +36,19 @@ export async function createTenant(req: Request, res: Response, next: NextFuncti
       case 'failed':
         return res.status(500).json({ error: 'provision_failed', detail: outcome.detail });
     }
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /me/tenants/:slug/reopen — the owner, within 30 days of closing.
+export async function reopenTenant(req: Request, res: Response, next: NextFunction) {
+  try {
+    const slug = req.params.slug;
+    if (typeof slug !== 'string') return res.status(404).json({ error: 'not_found' });
+    const reopened = await reopenOrganization(req.session!.session.userId, slug);
+    if (!reopened) return res.status(404).json({ error: 'not_reopenable' });
+    res.json({ slug });
   } catch (err) {
     next(err);
   }
