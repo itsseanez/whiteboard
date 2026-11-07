@@ -27,36 +27,12 @@ function oneString(value: unknown): string | undefined {
   return undefined;
 }
 
-type Parsed =
-  // Both omitted fields are supplied by the handler, not parsed from the
-  // request: `now` is the single clock read, and excludeAppointmentId is always
-  // null here because a browsing customer has no appointment of their own in
-  // play. Neither is a client-settable input.
-  | { ok: true; value: Omit<AvailabilityQuery, 'now' | 'excludeAppointmentId'> }
+type DateRange =
+  | { ok: true; fromDate: string; throughDate: string }
   | { ok: false; status: 400; error: string };
 
-export function parseRequest(req: Request): Parsed {
-  // req.tenant is set by resolveTenantFromSlug. It is checked rather than
-  // trusted because reaching this controller without the middleware would be a
-  // routing mistake, and `undefined` as a time zone throws deep inside Temporal
-  // where the message tells you nothing.
-  const tenant = req.tenant;
-  if (!tenant?.id || !tenant.timezone) {
-    return { ok: false, status: 400, error: 'Tenant not resolved' };
-  }
-
-  const serviceId = oneString(req.query.serviceId);
-  if (!serviceId || !UUID.test(serviceId)) {
-    return { ok: false, status: 400, error: 'serviceId must be a uuid' };
-  }
-
-  const staffId = oneString(req.query.staffId);
-  if (staffId !== undefined && !UUID.test(staffId)) {
-    return { ok: false, status: 400, error: 'staffId must be a uuid' };
-  }
-
-  const from = oneString(req.query.from);
-  const through = oneString(req.query.through) ?? from;
+/** `through` defaults to `from`. Shared with the manage page's token-scoped read. */
+export function parseDateRange(from: string | undefined, through: string | undefined = from): DateRange {
   if (!from || !through) {
     return { ok: false, status: 400, error: 'from is required (YYYY-MM-DD)' };
   }
@@ -87,6 +63,40 @@ export function parseRequest(req: Request): Parsed {
     };
   }
 
+  return { ok: true, fromDate: fromDate.toString(), throughDate: throughDate.toString() };
+}
+
+type Parsed =
+  // Both omitted fields are supplied by the handler, not parsed from the
+  // request: `now` is the single clock read, and excludeAppointmentId is always
+  // null here because a browsing customer has no appointment of their own in
+  // play. Neither is a client-settable input.
+  | { ok: true; value: Omit<AvailabilityQuery, 'now' | 'excludeAppointmentId'> }
+  | { ok: false; status: 400; error: string };
+
+export function parseRequest(req: Request): Parsed {
+  // req.tenant is set by resolveTenantFromSlug. It is checked rather than
+  // trusted because reaching this controller without the middleware would be a
+  // routing mistake, and `undefined` as a time zone throws deep inside Temporal
+  // where the message tells you nothing.
+  const tenant = req.tenant;
+  if (!tenant?.id || !tenant.timezone) {
+    return { ok: false, status: 400, error: 'Tenant not resolved' };
+  }
+
+  const serviceId = oneString(req.query.serviceId);
+  if (!serviceId || !UUID.test(serviceId)) {
+    return { ok: false, status: 400, error: 'serviceId must be a uuid' };
+  }
+
+  const staffId = oneString(req.query.staffId);
+  if (staffId !== undefined && !UUID.test(staffId)) {
+    return { ok: false, status: 400, error: 'staffId must be a uuid' };
+  }
+
+  const range = parseDateRange(oneString(req.query.from), oneString(req.query.through));
+  if (!range.ok) return range;
+
   return {
     ok: true,
     value: {
@@ -94,8 +104,8 @@ export function parseRequest(req: Request): Parsed {
       timeZone: tenant.timezone,
       serviceId,
       preferredStaffId: staffId ?? null,
-      fromDate: fromDate.toString(),
-      throughDate: throughDate.toString(),
+      fromDate: range.fromDate,
+      throughDate: range.throughDate,
     },
   };
 }
@@ -121,7 +131,7 @@ export function parseRequest(req: Request): Parsed {
  * which station gets assigned is the booking endpoint's business. `staffIds`
  * stays, because a customer may well pick their stylist.
  */
-function toPublicResponse(result: AvailabilityResult, timeZone: string) {
+export function toPublicResponse(result: AvailabilityResult, timeZone: string) {
   return {
     timeZone,
     noQualifiedStaff: result.noQualifiedStaff,
