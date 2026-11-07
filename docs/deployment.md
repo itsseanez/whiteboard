@@ -190,10 +190,14 @@ The production `.env` never enters git.
 
 ## Email: Amazon SES
 
-Invitations are sent through SES with the instance profile's credentials, so
-there is no API key to store. In production without `MAIL_TRANSPORT=ses` and
-`MAIL_FROM`, the app logs that email isn't configured at startup and
-inviting answers `503 email_unavailable`; everything else keeps working.
+Email is sent through SES with the instance profile's credentials, so there
+is no API key to store. Every email goes through the `job` outbox first. In
+production without `MAIL_TRANSPORT=ses` and `MAIL_FROM`, the app logs that
+email isn't configured at startup, and emails wait in the outbox without
+spending retries until it is; they're dropped once they stop being useful.
+While SES is in its sandbox, sends to unverified addresses fail and are
+retried the same way. To see what's waiting:
+`docker compose -f compose.prod.yml exec postgres psql -U whiteboard -c "SELECT kind, count(*), max(last_error) FROM job WHERE finished_at IS NULL GROUP BY kind"`.
 Development prints each email to the console, and tests keep them in memory.
 
 Setup, once:

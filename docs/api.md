@@ -60,7 +60,8 @@ POST /studio-wien/appointments
 ```
 
 `201` returns `appointmentId`, `staffId`, `startsAt`, `endsAt` and `manageToken`,
-plus `emailed`: whether the confirmation email, which carries the same manage
+plus `emailed`: whether the confirmation email was queued (it goes out from the
+outbox, and waits there while email is down), which carries the same manage
 link, went out. A booking never fails because the email did.
 
 The customer is also emailed when an appointment is cancelled or moved, from
@@ -188,15 +189,23 @@ An invitation emails a link that works for 7 days; inviting the same address
 again sends it again. A manager invite needs an owner (`403 owner_only`). A
 staff invite is refused with `409 staff_has_login` when the row already has a
 login, and `409 already_member` when the address already belongs here.
-`503 email_unavailable` means email isn't configured, and nothing was saved;
-`502 email_failed` means the invitation was saved but the email didn't send,
-so inviting again resends it.
+The email is queued, not sent in the request (see "Email" below), so an
+invitation succeeds whether or not email is working right now.
 
 Closing archives the organization rather than deleting it: every future
 booking is cancelled and its customer emailed, past appointments are kept,
 and the organization disappears from its booking page, its members' accounts
 and every `/tenant/:slug` route. The slug stays taken. It answers
-`{ cancelled, emailed }`.
+`{ cancelled, emailed }`, where `emailed` counts notices queued.
+
+### Email
+
+No route sends email itself. Each email is a row in the `job` outbox, sent by an
+in-process worker that retries failures until the email stops being useful
+(an hour for a password reset, until the appointment for a confirmation) and
+then drops it. Customers are reminded the day before an appointment booked at
+least a day ahead. Staff with a login are told when someone else books, moves
+or cancels one of their appointments, and when their time off is decided.
 
 Owner bookings and moves go through the same checks as customers': an owner
 can't book a time availability doesn't offer.
