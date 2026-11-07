@@ -8,6 +8,7 @@ import * as owner from '../../controllers/owner.js';
 import * as calendar from '../../controllers/owner-calendar.js';
 import * as people from '../../controllers/people.js';
 import * as myWeek from '../../controllers/my-week.js';
+import * as timeOff from '../../controllers/time-off.js';
 
 const router = Router({ mergeParams: true });
 router.use(requireAuth);
@@ -18,6 +19,10 @@ router.delete('/', requireOwner, owner.deleteOrganization);
 // A staff member's own page. 404 not_staff for a member with no staff row.
 router.get('/me/week', myWeek.getMyWeek);
 router.put('/me/hours', myWeek.putMyHours);
+// Every role; RLS limits staff to their own.
+router.get('/time-off', timeOff.getTimeOff);
+router.post('/time-off', timeOff.postTimeOff);
+router.delete('/time-off/:id', timeOff.deleteTimeOff);
 
 // Setup, calendar and people: owners and managers. Deleting staff, a service
 // or a resource archives it, and is refused while future bookings depend on it.
