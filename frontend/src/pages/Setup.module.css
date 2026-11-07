@@ -136,5 +136,5 @@
 .role {
   display: grid;
   gap: var(--space-2);
-  min-width: 12rem;
+  width: min(20rem, 100%);
 }
