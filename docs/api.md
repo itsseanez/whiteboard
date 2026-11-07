@@ -71,6 +71,7 @@ slot_not_available`; one somebody else just took is `409 slot_taken`.
 | `POST` | `/me/tenants` | Create an organization `{ name, slug, timezone }`; the caller becomes its owner |
 | `POST` | `/me/invitations/:id/accept` | Join the organization that invited the caller |
 | `POST` | `/me/tenants/:slug/reopen` | The owner reopens an organization they closed, within 30 days |
+| `POST` | `/api/auth/delete-user` | Better Auth's: delete the caller's account, `{ password }` required. `400 OWNS_ORGANIZATIONS` while they own an open organization |
 
 `GET /me/organizations` also lists an owner's closed organizations for the 30
 days they can be reopened, with `closedAt` and `reopenUntil` set.
