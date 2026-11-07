@@ -121,6 +121,21 @@ the caller doesn't belong to is `404`, the same as one that doesn't exist.
 
 Both answer `404 not_staff` for a member with no staff row here.
 
+### Time off: every role
+
+| Method | Path | Does |
+|---|---|---|
+| `GET` | `/time-off` | Time off that hasn't ended, with `timeZone` |
+| `POST` | `/time-off` | Add `{ staffId?, startDate, startTime?, endDate?, endTime?, reason? }` |
+| `DELETE` | `/time-off/:id` | Remove one |
+
+Dates and times are wall clock in the organization's zone; an empty time means
+the whole day, and `endDate` defaults to `startDate`. Owners and managers see
+and change anyone's; staff only their own, and a left-out `staffId` means the
+caller. RLS decides that, so another staff member's entry is `404` to remove
+and `403 own_time_off_only` to add. `201` includes `overlappingAppointments`:
+booked appointments inside the time off, which stay booked.
+
 ### Owners and managers
 
 Everything below needs `owner` or `admin` (`403 managers_only` otherwise).
