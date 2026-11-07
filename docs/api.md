@@ -93,10 +93,20 @@ the appointment is cancelled, finished or begun.
 | `POST` | `/me/tenants` | Create an organization `{ name, slug, timezone }`; the caller becomes its owner |
 | `POST` | `/me/invitations/:id/accept` | Join the organization that invited the caller |
 | `POST` | `/me/tenants/:slug/reopen` | The owner reopens an organization they closed, within 30 days |
-| `POST` | `/api/auth/delete-user` | Better Auth's: delete the caller's account, `{ password }` required. `400 OWNS_ORGANIZATIONS` while they own an open organization |
+| `POST` | `/api/auth/delete-user` | Better Auth's: delete the caller's account, `{ password }` required. `400 OWNS_ORGANIZATIONS` while they're the last owner of an open organization |
+| `GET` | `/me/notifications?page&pageSize&status&category` | The caller's inbox, newest first: `{ items, total, unread, page, pageSize }`. `status` is `all` or `unread`; `category` is `appointments`, `time_off` or `team`; `pageSize` up to 50 |
+| `POST` | `/me/notifications/:id/read` | Mark one read |
+| `POST` | `/me/notifications/read-all` | Mark all read; answers `{ marked }` |
 
 `GET /me/organizations` also lists an owner's closed organizations for the 30
 days they can be reopened, with `closedAt` and `reopenUntil` set.
+
+Notifications are written by the database as things happen. A stylist is told
+when someone else books, moves or cancels one of their appointments, and when
+their time off is decided; owners and managers are told when a customer books,
+moves or cancels, when someone asks for time off, and when someone joins. Each
+has a `kind`, a `link` to where it's about, and `data` the page words; an item
+can only be read or marked by the person it's for.
 
 `POST /links/closed { token }` (no session) answers `{ name, closedAt }` when a
 manage token belongs to a closed organization, and `404` otherwise. It isn't
