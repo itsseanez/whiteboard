@@ -9,7 +9,7 @@ import { fromNodeHeaders } from 'better-auth/node';
 import { scope } from '../lib/scope.js';
 import { OWNER } from '../middleware/roles.js';
 import type { TenantWithOrg } from '../services/tenant.js';
-import { PeopleError, acceptInvitation, invite, listPeople, removeMember, type InviteInput } from '../services/people.js';
+import { PeopleError, acceptInvitation, changeRole, invite, listPeople, removeMember, type InviteInput } from '../services/people.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -58,6 +58,17 @@ export const deleteMember = handle(async (req, res) => {
   const memberId = req.params.memberId;
   if (typeof memberId !== 'string' || memberId.length === 0) return res.status(404).json({ error: 'not_found' });
   await removeMember(scope(req), orgId(req), memberId, headers(req));
+  res.status(204).end();
+});
+
+export const patchMember = handle(async (req, res) => {
+  const memberId = req.params.memberId;
+  if (typeof memberId !== 'string' || memberId.length === 0) return res.status(404).json({ error: 'not_found' });
+  const role = (req.body as { role?: unknown } | undefined)?.role;
+  if (role !== 'owner' && role !== 'manager' && role !== 'staff') {
+    return res.status(400).json({ error: 'role must be owner, manager or staff' });
+  }
+  await changeRole(orgId(req), memberId, role, headers(req));
   res.status(204).end();
 });
 

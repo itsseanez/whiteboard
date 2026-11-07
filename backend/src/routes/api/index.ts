@@ -29,6 +29,7 @@ router.delete('/time-off/:id', timeOff.deleteTimeOff);
 router.use(requireManager);
 router.get('/people', people.getPeople);
 router.post('/invitations', people.postInvitation);
+router.patch('/members/:memberId', requireOwner, people.patchMember);
 router.delete('/members/:memberId', requireOwner, people.deleteMember);
 router.get('/staff', owner.getStaff);
 router.post('/staff', owner.postStaff);

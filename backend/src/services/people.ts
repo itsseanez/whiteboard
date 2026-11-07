@@ -179,6 +179,41 @@ export async function removeMember(
   );
 }
 
+// --- changing roles --------------------------------------------------------------
+
+export type AppRole = 'owner' | 'manager' | 'staff';
+const AUTH_ROLE: Record<AppRole, string> = { owner: 'owner', manager: 'admin', staff: 'member' };
+
+/** The member_keeps_an_owner trigger refused, however Better Auth wrapped it. */
+function lostLastOwner(err: unknown): boolean {
+  for (let e: unknown = err; e; e = (e as { cause?: unknown }).cause) {
+    const { constraint, message } = e as { constraint?: string; message?: string };
+    if (constraint === 'organization_keeps_an_owner' || /needs an owner|without an owner/i.test(message ?? '')) return true;
+  }
+  return false;
+}
+
+/**
+ * Owner only. Any role to any member, the caller included. Better Auth checks
+ * who may set what; the database refuses leaving an open organization ownerless.
+ */
+export async function changeRole(
+  organizationId: string,
+  memberId: string,
+  role: AppRole,
+  headers: Headers,
+): Promise<void> {
+  try {
+    await auth.api.updateMemberRole({ body: { memberId, role: AUTH_ROLE[role], organizationId }, headers });
+  } catch (err) {
+    if (lostLastOwner(err)) throw new PeopleError(409, 'last_owner');
+    const message = err instanceof Error ? err.message : '';
+    if (/member not found/i.test(message)) throw new PeopleError(404, 'not_found');
+    if (/not allowed/i.test(message)) throw new PeopleError(403, 'owner_only');
+    throw err;
+  }
+}
+
 // --- accepting -------------------------------------------------------------------
 
 interface InvitationRow {
