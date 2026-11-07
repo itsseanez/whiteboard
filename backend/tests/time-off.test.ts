@@ -6,6 +6,7 @@ import { createApp } from '../src/app.js';
 import { outbox } from '../src/lib/mailer.js';
 import { appPool } from '../src/db.js';
 import { withContext } from '../src/withContext.js';
+import { runDueJobs } from '../src/jobs/queue.js';
 
 // Time off from the app: owners and managers for anyone, staff for themselves.
 // The row checks also go straight at the database as whiteboard_app, because
@@ -262,6 +263,19 @@ describe('requests', () => {
     const list = await api.get('/time-off', benLogin.cookie);
     expect(list.body.timeOff).toContainEqual(expect.objectContaining({ id: asked.id, status: 'declined' }));
     expect((await api.delete(`/time-off/${asked.id}`, benLogin.cookie)).status).toBe(204);
+  });
+
+  it('tell the staff member how it was decided', async () => {
+    const benEmail = (await ownerPool.query('SELECT email FROM "user" WHERE id = $1', [benLogin.userId])).rows[0].email;
+    const asked = await ask();
+    await api.post(`/time-off/${asked.id}/decline`, {}, owner);
+    while ((await runDueJobs()) > 0) {
+      // drain
+    }
+    const mail = [...outbox].reverse().find((m) => m.to === benEmail);
+    expect(mail?.subject).toBe('Time off declined at Time Off Test');
+    expect(mail?.text).toMatch(/was declined. You can still be booked then/);
+    await api.delete(`/time-off/${asked.id}`, benLogin.cookie);
   });
 
   it('can be withdrawn by the asker while pending', async () => {

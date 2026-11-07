@@ -7,9 +7,9 @@
 
 import { appPool } from '../db.js';
 import { MailNotConfiguredError, getMailer, type Mail } from '../lib/mailer.js';
-import { reminder, staffNotice, type Reminder, type StaffNotice } from './templates.js';
+import { reminder, staffNotice, timeOffNotice, type Reminder, type StaffNotice, type TimeOffNotice } from './templates.js';
 
-type Kind = 'mail' | 'staff_notice' | 'reminder';
+type Kind = 'mail' | 'staff_notice' | 'reminder' | 'time_off_notice';
 
 interface JobRow {
   id: string;
@@ -31,6 +31,8 @@ function compose(job: JobRow): Mail {
       return staffNotice(job.payload as StaffNotice);
     case 'reminder':
       return reminder(job.payload as Reminder);
+    case 'time_off_notice':
+      return timeOffNotice(job.payload as TimeOffNotice);
   }
 }
 

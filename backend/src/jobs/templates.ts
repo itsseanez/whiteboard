@@ -59,3 +59,25 @@ export function reminder(d: Reminder): Mail {
       `${d.organization}, booked through Whiteboard.`,
   };
 }
+
+export interface TimeOffNotice {
+  to: string;
+  decision: 'approved' | 'declined';
+  organization: string;
+  slug: string;
+  timeZone: string;
+  startsAt: string;
+  endsAt: string;
+}
+
+export function timeOffNotice(d: TimeOffNotice): Mail {
+  const span = `${when(d.startsAt, d.timeZone)} to ${when(d.endsAt, d.timeZone)}`;
+  return {
+    to: d.to,
+    subject: `Time off ${d.decision} at ${d.organization}`,
+    text:
+      d.decision === 'approved'
+        ? `Your time off from ${span} is approved. You won't be booked then.\n\nYour week: ${appUrl(`/manage/${d.slug}/me`)}`
+        : `Your time off request from ${span} was declined. You can still be booked then; talk to your manager if that's a problem.\n\nYour week: ${appUrl(`/manage/${d.slug}/me`)}`,
+  };
+}
