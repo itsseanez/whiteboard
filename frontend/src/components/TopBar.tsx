@@ -1,11 +1,12 @@
 // The bar on every page: the Whiteboard wordmark on the left, always linking
-// home, and on the right a profile menu once someone is signed in. Mounted once
+// home, and on the right the inbox and a profile menu once someone is signed in. Mounted once
 // in main.tsx, above the routes, so it never moves between pages.
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { authClient, useSettledSession } from '../auth';
+import InboxMenu from './InboxMenu';
 import PersonIcon from './PersonIcon';
 import styles from './TopBar.module.css';
 
@@ -23,7 +24,10 @@ export default function TopBar(): ReactNode {
         {/* Nothing until the session is known, so "Sign in" never flashes for a signed-in owner. */}
         <nav className={styles.links} aria-label="Account">
           {session.isPending ? null : user ? (
-            <ProfileMenu email={user.email} />
+            <span className={styles.icons}>
+              <InboxMenu />
+              <ProfileMenu email={user.email} />
+            </span>
           ) : pathname === '/' ? (
             <>
               <Link to="/signin">Sign in</Link>

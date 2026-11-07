@@ -11,6 +11,7 @@ import Privacy from './pages/Privacy';
 import { ForgotPassword, ResetPassword } from './pages/PasswordReset';
 import SignUp from './pages/SignUp';
 import Account from './pages/Account';
+import Inbox from './pages/Inbox';
 import Setup from './pages/Setup';
 import Calendar from './pages/Calendar';
 import TopBar from './components/TopBar';
@@ -37,6 +38,7 @@ createRoot(root).render(
         <Route path="/signin/reset" element={<ResetPassword />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/account" element={<Account />} />
+        <Route path="/account/inbox" element={<Inbox />} />
         <Route path="/manage/:slug" element={<Setup />} />
         <Route path="/manage/:slug/calendar" element={<Calendar />} />
         <Route path="/manage/:slug/me" element={<MyWeek />} />
