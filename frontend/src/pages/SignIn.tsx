@@ -80,6 +80,9 @@ export default function SignIn() {
       </form>
 
       <p className={styles.switch}>
+        <Link to="/signin/forgot">Forgot your password?</Link>
+      </p>
+      <p className={styles.switch}>
         No account? <Link to="/signup">Create an organization</Link>
       </p>
     </main>

@@ -7,6 +7,7 @@ import Landing from './pages/Landing';
 import Booking from './pages/Booking';
 import Manage from './pages/Manage';
 import SignIn from './pages/SignIn';
+import { ForgotPassword, ResetPassword } from './pages/PasswordReset';
 import SignUp from './pages/SignUp';
 import Account from './pages/Account';
 import Setup from './pages/Setup';
@@ -30,6 +31,8 @@ createRoot(root).render(
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/signin/forgot" element={<ForgotPassword />} />
+        <Route path="/signin/reset" element={<ResetPassword />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/account" element={<Account />} />
         <Route path="/manage/:slug" element={<Setup />} />
