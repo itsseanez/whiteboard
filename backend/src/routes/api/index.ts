@@ -2,19 +2,28 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.js';
 import { resolveTenantFromSession } from '../../middleware/tenant.js';
-import { requireOwner } from '../../middleware/owner.js';
+import { requireManager, requireOwner } from '../../middleware/roles.js';
 import { getContext } from '../../controllers/tenants.js';
 import * as owner from '../../controllers/owner.js';
 import * as calendar from '../../controllers/owner-calendar.js';
+import * as people from '../../controllers/people.js';
+import * as myWeek from '../../controllers/my-week.js';
 
 const router = Router({ mergeParams: true });
 router.use(requireAuth);
 router.use(resolveTenantFromSession); // every route below this line has req.tenant and req.membership set
 router.get('/', getContext);
 
-// Owner setup and calendar. Deleting staff, a service or a resource archives
-// it, and is refused while future bookings depend on it.
-router.use(requireOwner);
+// A staff member's own page. 404 not_staff for a member with no staff row.
+router.get('/me/week', myWeek.getMyWeek);
+router.put('/me/hours', myWeek.putMyHours);
+
+// Setup, calendar and people: owners and managers. Deleting staff, a service
+// or a resource archives it, and is refused while future bookings depend on it.
+router.use(requireManager);
+router.get('/people', people.getPeople);
+router.post('/invitations', people.postInvitation);
+router.delete('/members/:memberId', requireOwner, people.deleteMember);
 router.get('/staff', owner.getStaff);
 router.post('/staff', owner.postStaff);
 router.patch('/staff/:id', owner.patchStaff);

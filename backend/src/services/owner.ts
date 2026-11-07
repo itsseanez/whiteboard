@@ -26,8 +26,14 @@ export class HasFutureAppointmentsError extends Error {
 
 const FOREIGN_KEY_VIOLATION = '23503';
 
-function inTenant<T>(tenantId: string, fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  return withContext(appPool, { tenantId }, fn);
+/** The tenant and the signed-in caller; RLS decides from both what the caller may touch. */
+export interface Scope {
+  tenantId: string;
+  userId: string;
+}
+
+function inTenant<T>(scope: Scope, fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  return withContext(appPool, scope, fn);
 }
 
 // --- staff ---------------------------------------------------------------
@@ -53,8 +59,8 @@ async function hoursByStaff(client: PoolClient): Promise<Map<string, HoursRange[
   return map;
 }
 
-export function listStaff(tenantId: string): Promise<StaffMember[]> {
-  return inTenant(tenantId, async (client) => {
+export function listStaff(scope: Scope): Promise<StaffMember[]> {
+  return inTenant(scope, async (client) => {
     const { rows } = await client.query<{ id: string; name: string }>(
       'SELECT id, name FROM staff WHERE archived_at IS NULL ORDER BY created_at, name',
     );
@@ -63,26 +69,26 @@ export function listStaff(tenantId: string): Promise<StaffMember[]> {
   });
 }
 
-export function createStaff(tenantId: string, name: string): Promise<StaffMember> {
-  return inTenant(tenantId, async (client) => {
+export function createStaff(scope: Scope, name: string): Promise<StaffMember> {
+  return inTenant(scope, async (client) => {
     const { rows } = await client.query<{ id: string; name: string }>(
       'INSERT INTO staff (tenant_id, name) VALUES ($1, $2) RETURNING id, name',
-      [tenantId, name],
+      [scope.tenantId, name],
     );
     return { ...rows[0]!, hours: [] };
   });
 }
 
-export function renameStaff(tenantId: string, staffId: string, name: string): Promise<void> {
-  return inTenant(tenantId, async (client) => {
+export function renameStaff(scope: Scope, staffId: string, name: string): Promise<void> {
+  return inTenant(scope, async (client) => {
     const { rowCount } = await client.query('UPDATE staff SET name = $2 WHERE id = $1 AND archived_at IS NULL', [staffId, name]);
     if (rowCount === 0) throw new NotFoundError();
   });
 }
 
 /** Replaces the whole week in one transaction, so there is never a half-edited week. */
-export function replaceStaffHours(tenantId: string, staffId: string, hours: HoursRange[]): Promise<void> {
-  return inTenant(tenantId, async (client) => {
+export function replaceStaffHours(scope: Scope, staffId: string, hours: HoursRange[]): Promise<void> {
+  return inTenant(scope, async (client) => {
     const { rowCount } = await client.query('SELECT 1 FROM staff WHERE id = $1 AND archived_at IS NULL FOR UPDATE', [staffId]);
     if (rowCount === 0) throw new NotFoundError();
     await client.query('DELETE FROM staff_working_hours WHERE staff_id = $1', [staffId]);
@@ -90,7 +96,7 @@ export function replaceStaffHours(tenantId: string, staffId: string, hours: Hour
       await client.query(
         `INSERT INTO staff_working_hours (staff_id, tenant_id, weekday, start_time, end_time)
          VALUES ($1, $2, $3, $4, $5)`,
-        [staffId, tenantId, h.weekday, h.start, h.end],
+        [staffId, scope.tenantId, h.weekday, h.start, h.end],
       );
     }
   });
@@ -98,8 +104,8 @@ export function replaceStaffHours(tenantId: string, staffId: string, hours: Hour
 
 // --- business hours ------------------------------------------------------
 
-export function getBusinessHours(tenantId: string): Promise<HoursRange[]> {
-  return inTenant(tenantId, async (client) => {
+export function getBusinessHours(scope: Scope): Promise<HoursRange[]> {
+  return inTenant(scope, async (client) => {
     const { rows } = await client.query<{ weekday: number; start: string; end: string }>(
       `SELECT weekday, opens_at AS start, closes_at AS "end"
        FROM business_hours ORDER BY weekday, opens_at`,
@@ -108,15 +114,15 @@ export function getBusinessHours(tenantId: string): Promise<HoursRange[]> {
   });
 }
 
-export function replaceBusinessHours(tenantId: string, hours: HoursRange[]): Promise<void> {
-  return inTenant(tenantId, async (client) => {
+export function replaceBusinessHours(scope: Scope, hours: HoursRange[]): Promise<void> {
+  return inTenant(scope, async (client) => {
     // Serialises two saves for one tenant; the later one replaces the earlier, never merges.
-    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`business_hours:${tenantId}`]);
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`business_hours:${scope.tenantId}`]);
     await client.query('DELETE FROM business_hours');
     for (const h of hours) {
       await client.query(
         `INSERT INTO business_hours (tenant_id, weekday, opens_at, closes_at) VALUES ($1, $2, $3, $4)`,
-        [tenantId, h.weekday, h.start, h.end],
+        [scope.tenantId, h.weekday, h.start, h.end],
       );
     }
   });
@@ -129,8 +135,8 @@ export interface Resource {
   name: string;
 }
 
-export function listResources(tenantId: string): Promise<Resource[]> {
-  return inTenant(tenantId, async (client) => {
+export function listResources(scope: Scope): Promise<Resource[]> {
+  return inTenant(scope, async (client) => {
     const { rows } = await client.query<Resource>(
       'SELECT id, name FROM resource WHERE archived_at IS NULL ORDER BY created_at, name',
     );
@@ -138,18 +144,18 @@ export function listResources(tenantId: string): Promise<Resource[]> {
   });
 }
 
-export function createResource(tenantId: string, name: string): Promise<Resource> {
-  return inTenant(tenantId, async (client) => {
+export function createResource(scope: Scope, name: string): Promise<Resource> {
+  return inTenant(scope, async (client) => {
     const { rows } = await client.query<Resource>(
       'INSERT INTO resource (tenant_id, name) VALUES ($1, $2) RETURNING id, name',
-      [tenantId, name],
+      [scope.tenantId, name],
     );
     return rows[0]!;
   });
 }
 
-export function renameResource(tenantId: string, resourceId: string, name: string): Promise<void> {
-  return inTenant(tenantId, async (client) => {
+export function renameResource(scope: Scope, resourceId: string, name: string): Promise<void> {
+  return inTenant(scope, async (client) => {
     const { rowCount } = await client.query('UPDATE resource SET name = $2 WHERE id = $1 AND archived_at IS NULL', [resourceId, name]);
     if (rowCount === 0) throw new NotFoundError();
   });
@@ -171,8 +177,8 @@ export interface OwnerService extends ServiceInput {
   id: string;
 }
 
-export function listServices(tenantId: string): Promise<OwnerService[]> {
-  return inTenant(tenantId, async (client) => {
+export function listServices(scope: Scope): Promise<OwnerService[]> {
+  return inTenant(scope, async (client) => {
     const { rows } = await client.query<Omit<OwnerService, 'staffIds' | 'resourceIds'>>(
       `SELECT id, name,
               duration_minutes       AS "durationMinutes",
@@ -228,21 +234,21 @@ async function replaceLinks(client: PoolClient, tenantId: string, serviceId: str
   }
 }
 
-export function createService(tenantId: string, input: ServiceInput): Promise<OwnerService> {
-  return inTenant(tenantId, async (client) => {
+export function createService(scope: Scope, input: ServiceInput): Promise<OwnerService> {
+  return inTenant(scope, async (client) => {
     const { rows } = await client.query<{ id: string }>(
       `INSERT INTO service (tenant_id, name, duration_minutes, buffer_before_minutes, buffer_after_minutes, minimum_notice_minutes)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [tenantId, input.name, input.durationMinutes, input.bufferBeforeMinutes, input.bufferAfterMinutes, input.minimumNoticeMinutes],
+      [scope.tenantId, input.name, input.durationMinutes, input.bufferBeforeMinutes, input.bufferAfterMinutes, input.minimumNoticeMinutes],
     );
     const id = rows[0]!.id;
-    await replaceLinks(client, tenantId, id, input);
+    await replaceLinks(client, scope.tenantId, id, input);
     return { id, ...input };
   });
 }
 
-export function updateService(tenantId: string, serviceId: string, input: ServiceInput): Promise<OwnerService> {
-  return inTenant(tenantId, async (client) => {
+export function updateService(scope: Scope, serviceId: string, input: ServiceInput): Promise<OwnerService> {
+  return inTenant(scope, async (client) => {
     const { rowCount } = await client.query(
       `UPDATE service SET name = $2, duration_minutes = $3, buffer_before_minutes = $4,
               buffer_after_minutes = $5, minimum_notice_minutes = $6
@@ -250,7 +256,7 @@ export function updateService(tenantId: string, serviceId: string, input: Servic
       [serviceId, input.name, input.durationMinutes, input.bufferBeforeMinutes, input.bufferAfterMinutes, input.minimumNoticeMinutes],
     );
     if (rowCount === 0) throw new NotFoundError();
-    await replaceLinks(client, tenantId, serviceId, input);
+    await replaceLinks(client, scope.tenantId, serviceId, input);
     return { id: serviceId, ...input };
   });
 }
@@ -262,9 +268,9 @@ export function updateService(tenantId: string, serviceId: string, input: Servic
 // booking commits first and is counted here, or it waits and then finds the row
 // archived (booking.ts checks after its insert).
 
-async function archive(tenantId: string, table: 'staff' | 'service' | 'resource', id: string): Promise<void> {
+async function archive(scope: Scope, table: 'staff' | 'service' | 'resource', id: string): Promise<void> {
   const column = { staff: 'staff_id', service: 'service_id', resource: 'resource_id' }[table];
-  return inTenant(tenantId, async (client) => {
+  return inTenant(scope, async (client) => {
     const { rowCount } = await client.query(`SELECT 1 FROM ${table} WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, [id]);
     if (rowCount === 0) throw new NotFoundError();
     const { rows } = await client.query<{ n: number }>(
@@ -293,6 +299,6 @@ async function archive(tenantId: string, table: 'staff' | 'service' | 'resource'
   });
 }
 
-export const archiveStaff = (tenantId: string, staffId: string) => archive(tenantId, 'staff', staffId);
-export const archiveService = (tenantId: string, serviceId: string) => archive(tenantId, 'service', serviceId);
-export const archiveResource = (tenantId: string, resourceId: string) => archive(tenantId, 'resource', resourceId);
+export const archiveStaff = (scope: Scope, staffId: string) => archive(scope, 'staff', staffId);
+export const archiveService = (scope: Scope, serviceId: string) => archive(scope, 'service', serviceId);
+export const archiveResource = (scope: Scope, resourceId: string) => archive(scope, 'resource', resourceId);

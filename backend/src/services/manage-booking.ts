@@ -92,6 +92,8 @@ export type AppointmentRef = { token: string } | { appointmentId: string };
 
 export interface CancelRequest {
   tenantId: string;
+  /** The signed-in caller on the owner path; unset on the public path. */
+  userId?: string | undefined;
   ref: AppointmentRef;
   now: Date;
 }
@@ -104,6 +106,8 @@ export interface CancelResult {
 
 export interface RescheduleRequest {
   tenantId: string;
+  /** The signed-in caller on the owner path; unset on the public path. */
+  userId?: string | undefined;
   timeZone: string;
   ref: AppointmentRef;
   startsAt: Temporal.Instant;
@@ -159,7 +163,7 @@ async function fetchByRef(client: PoolClient, ref: AppointmentRef): Promise<Appo
 // ---------------------------------------------------------------------------
 
 export async function cancelBooking(pool: Pool, request: CancelRequest): Promise<CancelResult> {
-  return withContext(pool, { tenantId: request.tenantId }, async (client) => {
+  return withContext(pool, { tenantId: request.tenantId, userId: request.userId }, async (client) => {
     const appointment = await fetchByRef(client, request.ref);
     if (!appointment) throw new AppointmentNotFoundError();
 
@@ -205,7 +209,7 @@ export async function rescheduleBooking(
   // Step 0, in its own short transaction: find out what is being moved. It has
   // to precede the availability check, because the check needs this
   // appointment's service and the id to disregard.
-  const appointment = await withContext(pool, { tenantId: request.tenantId }, (client) =>
+  const appointment = await withContext(pool, { tenantId: request.tenantId, userId: request.userId }, (client) =>
     fetchByRef(client, request.ref),
   );
   if (!appointment) throw new AppointmentNotFoundError();
@@ -226,6 +230,7 @@ export async function rescheduleBooking(
 
   const slotRequest: SlotRequest = {
     tenantId: request.tenantId,
+    userId: request.userId,
     timeZone: request.timeZone,
     serviceId: appointment.serviceId,
     staffId,
@@ -241,7 +246,7 @@ export async function rescheduleBooking(
   const resourceId = slot.resourceIds[0] ?? null;
 
   // Step 2 — the authority.
-  return withContext(pool, { tenantId: request.tenantId }, async (client) => {
+  return withContext(pool, { tenantId: request.tenantId, userId: request.userId }, async (client) => {
     const { rows: serviceRows } = await client.query<{
       bufferBeforeMinutes: number;
       bufferAfterMinutes: number;

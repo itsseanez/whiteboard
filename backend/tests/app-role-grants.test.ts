@@ -28,14 +28,15 @@ async function code(sql: string): Promise<string | undefined> {
 }
 
 describe('whiteboard_app grants', () => {
-  it.each(['account', 'session', '"user"', 'verification', 'invitation', 'pgmigrations'])(
+  it.each(['account', 'session', '"user"', 'verification', 'pgmigrations'])(
     'cannot read %s',
     async (table) => {
       expect(await code(`SELECT 1 FROM ${table} LIMIT 1`)).toBe(DENIED);
     },
   );
 
-  it.each(['tenant', 'organization', 'member'])('can read %s but not write it', async (table) => {
+  // invitation: an accept decides what to do from the row, like provisioning.
+  it.each(['tenant', 'organization', 'member', 'invitation'])('can read %s but not write it', async (table) => {
     expect(await code(`SELECT 1 FROM ${table} LIMIT 1`)).toBeUndefined();
     expect(await code(`DELETE FROM ${table} WHERE false`)).toBe(DENIED);
   });

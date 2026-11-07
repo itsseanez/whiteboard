@@ -5,6 +5,7 @@
 import { appPool } from '../db.js';
 import { withContext } from '../withContext.js';
 import { toHHMM, type HoursRange } from '../lib/weekly-hours.js';
+import type { Scope } from './owner.js';
 
 export interface CalendarAppointment {
   id: string;
@@ -35,9 +36,9 @@ export function rangeInstants(timeZone: string, from: string, through: string) {
 
 const iso = (d: Date) => d.toISOString();
 
-export function getCalendar(tenantId: string, timeZone: string, from: string, through: string): Promise<CalendarData> {
+export function getCalendar(scope: Scope, timeZone: string, from: string, through: string): Promise<CalendarData> {
   const { start, end } = rangeInstants(timeZone, from, through);
-  return withContext(appPool, { tenantId }, async (client) => {
+  return withContext(appPool, scope, async (client) => {
     // Archived staff appear only on days where they still have (past) appointments.
     const staff = await client.query<{ id: string; name: string; archived: boolean }>(
       `SELECT id, name, archived_at IS NOT NULL AS archived FROM staff

@@ -204,6 +204,8 @@ async function fetchAppointments(
 
 export interface AvailabilityQuery {
   tenantId: string;
+  /** The signed-in caller on the owner path; unset on the public path. */
+  userId?: string | undefined;
   timeZone: string; // IANA id from tenant.timezone
   serviceId: string;
   preferredStaffId: string | null;
@@ -228,7 +230,7 @@ export async function fetchAvailabilityRows(
   pool: Pool,
   query: AvailabilityQuery,
 ): Promise<AvailabilityRows> {
-  return withContext(pool, { tenantId: query.tenantId }, async (client) => {
+  return withContext(pool, { tenantId: query.tenantId, userId: query.userId }, async (client) => {
     // Wave 1 — independent of each other, but a single PoolClient is one
     // connection, so node-postgres serializes these anyway. Promise.all would
     // buy nothing.

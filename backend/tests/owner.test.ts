@@ -68,7 +68,7 @@ afterAll(async () => {
 });
 
 describe('who may use the owner endpoints', () => {
-  it('refuses a member who is not an owner', async () => {
+  it('refuses a staff member', async () => {
     const member = await signUp('member');
     const { rows } = await ownerPool.query('SELECT better_auth_org_id AS org FROM tenant WHERE slug = $1', [slug]);
     await ownerPool.query(
@@ -77,7 +77,7 @@ describe('who may use the owner endpoints', () => {
     );
     const res = await api.get('/staff', member.cookie);
     expect(res.status).toBe(403);
-    expect(res.body.error).toBe('owner_only');
+    expect(res.body.error).toBe('managers_only');
   });
 
   it("hides the tenant from another organization's owner", async () => {

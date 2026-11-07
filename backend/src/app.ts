@@ -47,6 +47,8 @@ export function createApp(): Express {
     app.get('/account', page);
     app.get('/manage/:slug', page);
     app.get('/manage/:slug/calendar', page);
+    app.get('/manage/:slug/me', page);
+    app.get('/invite/:id', page);
     app.get('/:slug', page);
     app.get('/:slug/manage', page);
   }

@@ -35,6 +35,8 @@ export class SlotTakenError extends Error {}
 
 export interface BookingRequest {
   tenantId: string;
+  /** The signed-in caller on the owner path; unset on the public path. */
+  userId?: string | undefined;
   timeZone: string;
   serviceId: string;
   /** Required: a customer books with a named stylist, not "anyone". */
@@ -144,6 +146,8 @@ export async function requireNotArchived(
  */
 export interface SlotRequest {
   tenantId: string;
+  /** The signed-in caller on the owner path; unset on the public path. */
+  userId?: string | undefined;
   timeZone: string;
   serviceId: string;
   staffId: string;
@@ -168,6 +172,7 @@ export async function requireOfferedSlot(
 
   const availability = await getAvailability(pool, {
     tenantId: request.tenantId,
+    userId: request.userId,
     timeZone: request.timeZone,
     serviceId: request.serviceId,
     // Narrowing to the requested stylist means the returned slots are exactly
@@ -203,7 +208,7 @@ export async function createBooking(
   // least-used would be a scheduling optimisation, and that is parked.
   const resourceId = slot.resourceIds[0] ?? null;
 
-  return withContext(pool, { tenantId: request.tenantId }, async (client) => {
+  return withContext(pool, { tenantId: request.tenantId, userId: request.userId }, async (client) => {
     const buffers = await fetchServiceBuffers(client, request.serviceId);
 
     // The service times the customer sees come from the engine; the blocked

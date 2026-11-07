@@ -8,6 +8,7 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { parseWeeklyHours } from '../lib/weekly-hours.js';
 import * as owner from '../services/owner.js';
+import { scope } from '../lib/scope.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NAME_MAX = 120;
@@ -31,10 +32,6 @@ function handle(fn: Handler): RequestHandler {
       next(err);
     }
   };
-}
-
-function tenantId(req: Request): string {
-  return req.tenant!.id;
 }
 
 function parseName(body: unknown): string | null {
@@ -84,12 +81,12 @@ function parseService(body: unknown): ParsedService {
 
 // --- staff ---------------------------------------------------------------
 
-export const getStaff = handle(async (req, res) => res.json(await owner.listStaff(tenantId(req))));
+export const getStaff = handle(async (req, res) => res.json(await owner.listStaff(scope(req))));
 
 export const postStaff = handle(async (req, res) => {
   const name = parseName(req.body);
   if (!name) return res.status(400).json({ error: `name must be 1 to ${NAME_MAX} characters` });
-  res.status(201).json(await owner.createStaff(tenantId(req), name));
+  res.status(201).json(await owner.createStaff(scope(req), name));
 });
 
 export const patchStaff = handle(async (req, res) => {
@@ -97,7 +94,7 @@ export const patchStaff = handle(async (req, res) => {
   if (!id) return res.status(404).json({ error: 'not_found' });
   const name = parseName(req.body);
   if (!name) return res.status(400).json({ error: `name must be 1 to ${NAME_MAX} characters` });
-  await owner.renameStaff(tenantId(req), id, name);
+  await owner.renameStaff(scope(req), id, name);
   res.status(204).end();
 });
 
@@ -106,31 +103,31 @@ export const putStaffHours = handle(async (req, res) => {
   if (!id) return res.status(404).json({ error: 'not_found' });
   const parsed = parseWeeklyHours(req.body);
   if (!parsed.ok) return res.status(400).json({ error: parsed.error });
-  await owner.replaceStaffHours(tenantId(req), id, parsed.value);
+  await owner.replaceStaffHours(scope(req), id, parsed.value);
   res.json({ hours: parsed.value });
 });
 
 // --- business hours ------------------------------------------------------
 
 export const getBusinessHours = handle(async (req, res) =>
-  res.json({ hours: await owner.getBusinessHours(tenantId(req)) }),
+  res.json({ hours: await owner.getBusinessHours(scope(req)) }),
 );
 
 export const putBusinessHours = handle(async (req, res) => {
   const parsed = parseWeeklyHours(req.body);
   if (!parsed.ok) return res.status(400).json({ error: parsed.error });
-  await owner.replaceBusinessHours(tenantId(req), parsed.value);
+  await owner.replaceBusinessHours(scope(req), parsed.value);
   res.json({ hours: parsed.value });
 });
 
 // --- resources -----------------------------------------------------------
 
-export const getResources = handle(async (req, res) => res.json(await owner.listResources(tenantId(req))));
+export const getResources = handle(async (req, res) => res.json(await owner.listResources(scope(req))));
 
 export const postResource = handle(async (req, res) => {
   const name = parseName(req.body);
   if (!name) return res.status(400).json({ error: `name must be 1 to ${NAME_MAX} characters` });
-  res.status(201).json(await owner.createResource(tenantId(req), name));
+  res.status(201).json(await owner.createResource(scope(req), name));
 });
 
 export const patchResource = handle(async (req, res) => {
@@ -138,18 +135,18 @@ export const patchResource = handle(async (req, res) => {
   if (!id) return res.status(404).json({ error: 'not_found' });
   const name = parseName(req.body);
   if (!name) return res.status(400).json({ error: `name must be 1 to ${NAME_MAX} characters` });
-  await owner.renameResource(tenantId(req), id, name);
+  await owner.renameResource(scope(req), id, name);
   res.status(204).end();
 });
 
 // --- services ------------------------------------------------------------
 
-export const getServices = handle(async (req, res) => res.json(await owner.listServices(tenantId(req))));
+export const getServices = handle(async (req, res) => res.json(await owner.listServices(scope(req))));
 
 export const postService = handle(async (req, res) => {
   const parsed = parseService(req.body);
   if (!parsed.ok) return res.status(400).json({ error: parsed.error });
-  res.status(201).json(await owner.createService(tenantId(req), parsed.value));
+  res.status(201).json(await owner.createService(scope(req), parsed.value));
 });
 
 export const putService = handle(async (req, res) => {
@@ -157,7 +154,7 @@ export const putService = handle(async (req, res) => {
   if (!id) return res.status(404).json({ error: 'not_found' });
   const parsed = parseService(req.body);
   if (!parsed.ok) return res.status(400).json({ error: parsed.error });
-  res.json(await owner.updateService(tenantId(req), id, parsed.value));
+  res.json(await owner.updateService(scope(req), id, parsed.value));
 });
 
 // --- deletes (archive) ---------------------------------------------------
@@ -165,20 +162,20 @@ export const putService = handle(async (req, res) => {
 export const deleteStaff = handle(async (req, res) => {
   const id = idParam(req);
   if (!id) return res.status(404).json({ error: 'not_found' });
-  await owner.archiveStaff(tenantId(req), id);
+  await owner.archiveStaff(scope(req), id);
   res.status(204).end();
 });
 
 export const deleteService = handle(async (req, res) => {
   const id = idParam(req);
   if (!id) return res.status(404).json({ error: 'not_found' });
-  await owner.archiveService(tenantId(req), id);
+  await owner.archiveService(scope(req), id);
   res.status(204).end();
 });
 
 export const deleteResource = handle(async (req, res) => {
   const id = idParam(req);
   if (!id) return res.status(404).json({ error: 'not_found' });
-  await owner.archiveResource(tenantId(req), id);
+  await owner.archiveResource(scope(req), id);
   res.status(204).end();
 });

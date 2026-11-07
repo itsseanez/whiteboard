@@ -145,13 +145,11 @@ describe.each(TABLES)('%s isolation (as whiteboard_app)', (table) => {
   });
 
   it('fails closed with no tenant context', async () => {
-    // The policy uses the one-argument current_setting(), which throws if the
-    // setting was never defined on this connection. On a pooled connection that
-    // previously ran a transaction with it set, it reads back as '' and the
-    // ::uuid cast throws instead. Either way the query must not return rows,
-    // so this asserts only that it fails.
-    await expect(
-      withContext(appPool, {}, (client) => client.query(`SELECT id FROM ${table}`)),
-    ).rejects.toThrow();
+    // The app role's policy reads the setting with NULLIF, so no tenant matches
+    // nothing; the public role's older policy throws instead. Either way: no rows.
+    const rows = await withContext(appPool, {}, (client) => client.query(`SELECT id FROM ${table}`))
+      .then((r) => r.rows)
+      .catch(() => []);
+    expect(rows).toEqual([]);
   });
 });

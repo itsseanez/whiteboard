@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/itsseanez/whiteboard#readme",
   "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1164.0",
     "better-auth": "^1.6.29",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
