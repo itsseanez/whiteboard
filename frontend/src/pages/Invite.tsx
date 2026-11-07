@@ -6,7 +6,7 @@ import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { acceptInvitation, ApiError } from '../api';
-import { authClient, PASSWORD_MIN, SHORT_PASSWORD, signUpMessage, UNREACHABLE } from '../auth';
+import { authClient, PASSWORD_MIN, SHORT_PASSWORD, signUpMessage, UNREACHABLE, useSettledSession } from '../auth';
 import Button from '../components/Button';
 import Field from '../components/Field';
 import Problem from '../components/Problem';
@@ -37,7 +37,7 @@ export default function Invite() {
   const [params] = useSearchParams();
   const invitedEmail = params.get('email') ?? '';
   const navigate = useNavigate();
-  const session = authClient.useSession();
+  const session = useSettledSession();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState(invitedEmail);

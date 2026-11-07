@@ -3,6 +3,7 @@
 // wrapped to match, so its own error codes reach the pages intact. It does
 // throw when no response arrives at all — callers catch that.
 
+import { useRef } from 'react';
 import { createAuthClient } from 'better-auth/react';
 import { organizationClient } from 'better-auth/client/plugins';
 
@@ -48,4 +49,17 @@ export function signUpMessage(error: AuthError): string {
     default:
       return authMessage(error);
   }
+}
+
+/**
+ * useSession, but pending only until the first answer. Better Auth sets
+ * isPending back to true on every refetch (on window focus, say) while no one
+ * is signed in, so a page that hides its form while pending would unmount it
+ * mid-typing. This keeps showing the last answer during a refetch instead.
+ */
+export function useSettledSession() {
+  const session = authClient.useSession();
+  const settled = useRef(false);
+  if (!session.isPending) settled.current = true;
+  return { data: session.data, isPending: !settled.current };
 }

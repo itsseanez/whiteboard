@@ -5,12 +5,12 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-import { authClient } from '../auth';
+import { authClient, useSettledSession } from '../auth';
 import PersonIcon from './PersonIcon';
 import styles from './TopBar.module.css';
 
 export default function TopBar(): ReactNode {
-  const session = authClient.useSession();
+  const session = useSettledSession();
   const user = session.data?.user;
   const { pathname } = useLocation();
 
