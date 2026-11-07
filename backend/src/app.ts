@@ -58,7 +58,7 @@ export function createApp(options: AppOptions = {}): Express {
     const page = (_req: Request, res: Response) => res.sendFile(CLIENT_INDEX);
     app.get('/', page);
     // Before /:slug, which would match them by accident. Also reserved slugs —
-    // see frontend/src/slug.ts.
+    // see frontend/src/lib/slug.ts.
     app.get('/signin', page);
     app.get('/privacy', page);
     app.get('/signin/forgot', page);

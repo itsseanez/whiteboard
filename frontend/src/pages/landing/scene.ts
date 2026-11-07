@@ -4,7 +4,7 @@
 // Stages: open days fill in, the first day with times is picked, its times
 // appear a few at a time, then one turns black.
 
-import type { Day } from '../../api';
+import type { Day } from '@/lib/api';
 
 export const SCENE_SLOTS = 8;
 

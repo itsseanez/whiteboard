@@ -1,0 +1,390 @@
+// Cancel or move an existing appointment, authorized by the manage token in
+// the URL's query string.
+//
+// WHAT THIS PAGE CANNOT DO, AND WHY THAT IS RIGHT
+//
+// It cannot show you your appointment. There is no read endpoint for a token —
+// deliberately — so the page opens on two actions rather than on a summary of
+// what you booked. That looks like a gap and is the safer design: a GET that
+// returns an appointment's details for anyone holding the token turns every
+// leaked link, forwarded email and shared screenshot into a disclosure of a
+// name, a time and a stylist. The customer already has those in the
+// confirmation that carried this link.
+//
+// So the token is used only to act, and the page tells you what happened after
+// it happens.
+//
+// The token is read from the query string and sent in the request BODY, which
+// is the same reasoning the endpoints are built on: a body stays out of access
+// logs and Referer headers in a way a path never does. It is in the URL here
+// only because an email link has nowhere else to put it.
+
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+
+import {
+  ApiError,
+  RATE_LIMITED,
+  cancelBooking,
+  closedOrganizationFor,
+  getCatalog,
+  getMoveTimes,
+  rescheduleBooking,
+  type MoveTimes,
+  type Catalog,
+  type Slot,
+} from '@/lib/api';
+import {
+  dateRange,
+  dateToIso,
+  dayAndMonth,
+  dayOfMonth,
+  fullMoment,
+  timeOfDay,
+  timeOfDayAligned,
+  weekdayLong,
+  weekdayShort,
+} from '@/lib/format';
+
+import Button from '@/components/ui/Button';
+import Select from '@/components/ui/Select';
+import shell from '@/styles/shell.module.css';
+import styles from './Manage.module.css';
+import Problem from '@/components/ui/Problem';
+
+const WINDOW_DAYS = 14;
+
+function manageMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    switch (error.code) {
+      case 'appointment_not_found':
+        return 'This link does not match an appointment here. It may have been mistyped, or it may belong to a different organization.';
+      case 'already_started':
+        return 'This appointment has already started, so it can no longer be changed from here. Call the organization.';
+      case 'not_booked':
+        return 'This appointment is already cancelled or finished, so there is nothing to change.';
+      case 'slot_taken':
+        return 'Someone else took that time while you were choosing. Pick another.';
+      case 'slot_not_available':
+        return 'That time is not on offer. Pick another from the list.';
+      case 'rate_limited':
+        return RATE_LIMITED;
+      default:
+        break;
+    }
+  }
+  return 'Something went wrong. Try again in a moment.';
+}
+
+type Outcome =
+  | { kind: 'cancelled'; already: boolean }
+  | { kind: 'moved'; startsAt: string; endsAt: string };
+
+export default function Manage() {
+  const { slug = '' } = useParams();
+  const [params] = useSearchParams();
+  const token = params.get('token') ?? '';
+
+  const [catalog, setCatalog] = useState<Catalog | null>(null);
+
+  const [moving, setMoving] = useState(false);
+  const [availability, setAvailability] = useState<MoveTimes | null>(null);
+  // Another stylist to move to; null keeps the current one.
+  const [stylist, setStylist] = useState<string | null>(null);
+  const [date, setDate] = useState<string | null>(null);
+  const [slot, setSlot] = useState<Slot | null>(null);
+
+  const [sending, setSending] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  // undefined while checking. Checked before anything else, because once a
+  // closed organization's address is released, this slug may belong to someone new.
+  const [closed, setClosed] = useState<{ name: string } | null | undefined>(token ? undefined : null);
+
+  useEffect(() => {
+    if (!token) return;
+    let live = true;
+    closedOrganizationFor(token).then(
+      (found) => live && setClosed(found),
+      () => live && setClosed(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, [token]);
+
+  useEffect(() => {
+    let live = true;
+    getCatalog(slug)
+      .then((loaded) => {
+        if (!live) return;
+        setCatalog(loaded);
+      })
+      .catch(() => {
+        if (live) setProblem('Could not load this organization. Try again in a moment.');
+      });
+    return () => {
+      live = false;
+    };
+  }, [slug]);
+
+  const timeZone = catalog?.tenant.timeZone;
+
+  const dates = useMemo(
+    () => (timeZone ? dateRange(timeZone, WINDOW_DAYS) : []),
+    [timeZone],
+  );
+
+  useEffect(() => {
+    if (!date && dates[0]) setDate(dates[0]);
+  }, [dates, date]);
+
+  // Only fetched once the customer asks to move, so opening the link makes no
+  // availability request at all. The server picks the service and stylist from
+  // the token and leaves this appointment out, so every time shown can be taken.
+  useEffect(() => {
+    // Bound to locals first: noUncheckedIndexedAccess types an index access as
+    // possibly undefined, and a check on `dates[0]` does not narrow a later,
+    // separate `dates[0]`.
+    const from = dates[0];
+    const through = dates[dates.length - 1];
+    if (!moving || !from || !through) return;
+
+    let live = true;
+    setAvailability(null);
+    getMoveTimes(slug, token, from, through, stylist ?? undefined)
+      .then((loaded) => {
+        if (live) setAvailability(loaded);
+      })
+      .catch((error: unknown) => {
+        if (!live) return;
+        setProblem(error instanceof ApiError ? manageMessage(error) : 'Could not load times. Try again in a moment.');
+        setMoving(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [moving, slug, token, dates, stylist]);
+
+  async function cancel() {
+    if (sending) return;
+    setSending(true);
+    setProblem(null);
+    try {
+      const result = await cancelBooking(slug, token);
+      setOutcome({ kind: 'cancelled', already: !result.cancelled });
+    } catch (error: unknown) {
+      setProblem(manageMessage(error));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function move() {
+    if (!slot || sending) return;
+    setSending(true);
+    setProblem(null);
+    try {
+      const other = stylist && stylist !== availability?.staffId ? stylist : undefined;
+      const result = await rescheduleBooking(slug, token, slot.startsAt, other);
+      setOutcome({ kind: 'moved', startsAt: result.startsAt, endsAt: result.endsAt });
+    } catch (error: unknown) {
+      setProblem(manageMessage(error));
+      setSlot(null);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const header = (
+    <Link className={shell.wordmark} to={`/${slug}`}>
+      {catalog?.tenant.name ?? 'Whiteboard'}
+    </Link>
+  );
+
+  if (!token) {
+    return (
+      <main className={`${shell.page} ${shell.narrow}`}>
+        {header}
+        <h1 className={styles.headline}>No link</h1>
+        <p className={shell.lede}>
+          This page needs the link from your confirmation. Open that link rather than typing
+          this address.
+        </p>
+      </main>
+    );
+  }
+
+  if (closed === undefined) {
+    return <main className={`${shell.page} ${shell.narrow}`} aria-busy="true" />;
+  }
+
+  if (closed) {
+    return (
+      <main className={`${shell.page} ${shell.narrow}`}>
+        <h1 className={styles.headline}>This organization is closed permanently</h1>
+        <p className={shell.lede}>
+          {closed.name} has closed its booking page on Whiteboard, and any upcoming appointment from this link was
+          cancelled when it closed. For anything else, contact {closed.name} directly.
+        </p>
+      </main>
+    );
+  }
+
+  if (outcome) {
+    return (
+      <main className={`${shell.page} ${shell.narrow}`}>
+        {header}
+        <div className={styles.done}>
+          {outcome.kind === 'cancelled' ? (
+            <>
+              <h1 className={styles.doneTitle}>{outcome.already ? 'Already cancelled' : 'Cancelled'}</h1>
+              <p className={shell.lede}>
+                {outcome.already
+                  ? 'This appointment was cancelled earlier. Nothing changed just now.'
+                  : 'The time is free again. Book another whenever you like.'}
+              </p>
+              <Link className={styles.link} to={`/${slug}`}>
+                Book another appointment
+              </Link>
+            </>
+          ) : (
+            <>
+              <h1 className={styles.doneTitle}>Moved</h1>
+              <p className={shell.lede}>
+                {timeZone ? fullMoment(outcome.startsAt, timeZone) : outcome.startsAt}
+                {timeZone ? `, until ${timeOfDay(outcome.endsAt, timeZone)}` : ''}
+              </p>
+              <p className={styles.keep}>
+                Your original link still works, so keep it if you need to change this again.
+              </p>
+            </>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  if (!catalog || !timeZone) {
+    return (
+      <main className={`${shell.page} ${shell.narrow}`}>
+        {header}
+        {problem && <Problem className={styles.note}>{problem}</Problem>}
+      </main>
+    );
+  }
+
+  const today = date ? availability?.days.find((d) => d.date === date) : undefined;
+  const slots = today?.status === 'open' ? today.slots : [];
+
+  return (
+    <main className={`${shell.page} ${shell.narrow}`}>
+      {header}
+
+      <h1 className={styles.headline}>
+        Your <span className={styles.quietWord}>appointment</span>
+      </h1>
+
+      <p className={shell.lede}>
+        Move it to another time, or cancel it. Both take effect straight away.
+      </p>
+
+      {problem && <Problem className={styles.note}>{problem}</Problem>}
+
+      {!moving ? (
+        <div className={styles.actions}>
+          <Button onClick={() => setMoving(true)}>Move it</Button>
+          <Button variant="secondary" onClick={cancel} disabled={sending}>
+            {sending ? 'Cancelling…' : 'Cancel it'}
+          </Button>
+        </div>
+      ) : (
+        <>
+          {availability && availability.staff.length > 1 ? (
+            <Select
+              label="With"
+              value={stylist ?? availability.staffId}
+              options={availability.staff.map((s) => ({ value: s.id, label: s.name }))}
+              onChange={(id) => {
+                setStylist(id);
+                setSlot(null);
+              }}
+            />
+          ) : null}
+          <div className={styles.days}>
+            {dates.map((candidate) => {
+              const day = availability?.days.find((d) => d.date === candidate);
+              return (
+                <button
+                  key={candidate}
+                  type="button"
+                  className={styles.day}
+                  aria-pressed={candidate === date}
+                  data-shut={day?.status === 'closed'}
+                  onClick={() => {
+                    setDate(candidate);
+                    setSlot(null);
+                  }}
+                >
+                  <span className={styles.dow}>{weekdayShort(dateToIso(candidate), timeZone)}</span>
+                  <span className={styles.dom}>{dayOfMonth(dateToIso(candidate), timeZone)}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {date && (
+            <p className={shell.lede}>
+              {weekdayLong(dateToIso(date), timeZone)} {dayAndMonth(dateToIso(date), timeZone)}
+            </p>
+          )}
+
+          {availability === null && <p className={styles.empty}>Looking for free times…</p>}
+
+          {availability !== null && slots.length === 0 && (
+            <p className={styles.empty}>
+              {today?.status === 'closed'
+                ? 'Closed on this day. Try another from the strip above.'
+                : 'Nothing free on this day. Try another from the strip above.'}
+            </p>
+          )}
+
+          {slots.length > 0 && (
+            <ul className={styles.times}>
+              {slots.map((candidate) => (
+                <li key={candidate.startsAt}>
+                  <button
+                    type="button"
+                    className={styles.slot}
+                    aria-pressed={candidate.startsAt === slot?.startsAt}
+                    onClick={() => setSlot(candidate)}
+                  >
+                    <span className={styles.at}>{timeOfDayAligned(candidate.startsAt, timeZone)}</span>
+                    <span className={styles.until}>
+                      until {timeOfDay(candidate.endsAt, timeZone)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className={styles.actions}>
+            <Button onClick={move} disabled={!slot || sending}>
+              {sending ? 'Moving…' : 'Move to this time'}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setMoving(false);
+                setSlot(null);
+              }}
+            >
+              Keep it as it is
+            </Button>
+          </div>
+        </>
+      )}
+    </main>
+  );
+}

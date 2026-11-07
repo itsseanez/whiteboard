@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Day } from '../../api';
+import type { Day } from '@/lib/api';
 import { sceneFrame, SCENE_SLOTS } from './scene';
 
 const slot = (startsAt: string) => ({ startsAt, endsAt: startsAt, staffIds: ['s1'] });

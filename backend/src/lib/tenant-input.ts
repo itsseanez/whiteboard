@@ -1,5 +1,5 @@
 // Server-side checks for a new tenant. The sign-up form runs the same slug
-// rules (frontend/src/slug.ts); keep the two lists in sync.
+// rules (frontend/src/lib/slug.ts); keep the two lists in sync.
 const RESERVED = new Set(['signin', 'signup', 'account', 'manage', 'invite', 'links', 'api', 'me', 'tenant', 'assets', 'privacy']);
 const SHAPE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SLUG_MIN = 3;

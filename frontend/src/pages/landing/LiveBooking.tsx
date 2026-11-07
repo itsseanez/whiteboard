@@ -17,17 +17,17 @@ import {
   type Day,
   type Service,
   type Slot,
-} from '../../api';
-import { rangeFor } from '../../calendar';
-import { dayAndMonth, duration, organizationDate, timeOfDay, weekdayLong } from '../../format';
-import Button from '../../components/Button';
-import DayTimes from '../../components/DayTimes';
-import Field from '../../components/Field';
-import MonthGrid from '../../components/MonthGrid';
+} from '@/lib/api';
+import { rangeFor } from '@/lib/dates';
+import { dayAndMonth, duration, organizationDate, timeOfDay, weekdayLong } from '@/lib/format';
+import Button from '@/components/ui/Button';
+import DayTimes from '@/components/schedule/DayTimes';
+import Field from '@/components/ui/Field';
+import MonthGrid from '@/components/schedule/MonthGrid';
 import { sceneFrame } from './scene';
 import { prefersReducedMotion } from './useReveal';
-import styles from '../Landing.module.css';
-import Problem from '../../components/Problem';
+import styles from './Landing.module.css';
+import Problem from '@/components/ui/Problem';
 
 export const ORGANIZATIONS = [
   { slug: 'studio-wien', name: 'Studio Wien', place: 'Vienna' },

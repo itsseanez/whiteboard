@@ -2,21 +2,21 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
-import './styles.css';
-import Landing from './pages/Landing';
-import Booking from './pages/Booking';
-import Manage from './pages/Manage';
-import SignIn from './pages/SignIn';
-import Privacy from './pages/Privacy';
-import { ForgotPassword, ResetPassword } from './pages/PasswordReset';
-import SignUp from './pages/SignUp';
-import Account from './pages/Account';
-import Inbox from './pages/Inbox';
-import Setup from './pages/Setup';
-import Calendar from './pages/Calendar';
-import TopBar from './components/TopBar';
-import Invite from './pages/Invite';
-import MyWeek from './pages/MyWeek';
+import '@/styles/global.css';
+import Landing from '@/pages/landing/Landing';
+import Booking from '@/pages/booking/Booking';
+import Manage from '@/pages/manage-booking/Manage';
+import SignIn from '@/pages/auth/SignIn';
+import Privacy from '@/pages/privacy/Privacy';
+import { ForgotPassword, ResetPassword } from '@/pages/auth/PasswordReset';
+import SignUp from '@/pages/auth/SignUp';
+import Account from '@/pages/account/Account';
+import Inbox from '@/pages/inbox/Inbox';
+import Setup from '@/pages/setup/Setup';
+import Calendar from '@/pages/calendar/Calendar';
+import TopBar from '@/components/layout/TopBar';
+import Invite from '@/pages/auth/Invite';
+import MyWeek from '@/pages/my-week/MyWeek';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root is missing from index.html');
@@ -25,7 +25,7 @@ if (!root) throw new Error('#root is missing from index.html');
 // serves index.html for each. Adding a page here means adding it there too —
 // the alternative was a catch-all on the server, which would have swallowed
 // the API routes that live under the same /:slug prefix. The static paths are
-// also reserved slugs — see slug.ts.
+// also reserved slugs — see lib/slug.ts.
 createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
