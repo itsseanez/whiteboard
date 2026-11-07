@@ -163,11 +163,17 @@ export function cancelBooking(slug: string, token: string): Promise<Cancelled> {
   });
 }
 
-/** Times this appointment can move to; the server reads its service and stylist from the token. */
-export function getMoveTimes(slug: string, token: string, from: string, through: string): Promise<Availability> {
-  return send<Availability>(`/${encodeURIComponent(slug)}/appointments/availability`, {
+export interface MoveTimes extends Availability {
+  /** Who the appointment is with now, and everyone who could do its service. */
+  staffId: string;
+  staff: { id: string; name: string }[];
+}
+
+/** Times this appointment can move to; the server reads its service from the token. */
+export function getMoveTimes(slug: string, token: string, from: string, through: string, staffId?: string): Promise<MoveTimes> {
+  return send<MoveTimes>(`/${encodeURIComponent(slug)}/appointments/availability`, {
     method: 'POST',
-    body: JSON.stringify({ token, from, through }),
+    body: JSON.stringify(staffId ? { token, from, through, staffId } : { token, from, through }),
   });
 }
 

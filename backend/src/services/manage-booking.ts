@@ -314,9 +314,18 @@ export interface MoveAvailabilityRequest {
   tenantId: string;
   timeZone: string;
   token: string;
+  /** Another stylist to move to; null keeps the appointment's own. */
+  staffId: string | null;
   fromDate: string;
   throughDate: string;
   now: Date;
+}
+
+export interface MoveAvailability {
+  result: AvailabilityResult;
+  /** Who the appointment is with now, and who else could do its service. */
+  staffId: string;
+  staff: { id: string; name: string }[];
 }
 
 /**
@@ -331,11 +340,21 @@ export interface MoveAvailabilityRequest {
 export async function moveAvailability(
   pool: Pool,
   request: MoveAvailabilityRequest,
-): Promise<AvailabilityResult> {
-  const appointment = await withContext(pool, { tenantId: request.tenantId }, (client) =>
-    fetchByRef(client, { token: request.token }),
-  );
-  if (!appointment) throw new AppointmentNotFoundError();
+): Promise<MoveAvailability> {
+  const found = await withContext(pool, { tenantId: request.tenantId }, async (client) => {
+    const appointment = await fetchByRef(client, { token: request.token });
+    if (!appointment) return null;
+    const { rows: staff } = await client.query<{ id: string; name: string }>(
+      `SELECT staff.id, staff.name FROM staff_service
+       JOIN staff ON staff.id = staff_service.staff_id
+       WHERE staff_service.service_id = $1 AND staff.archived_at IS NULL
+       ORDER BY staff.name`,
+      [appointment.serviceId],
+    );
+    return { appointment, staff };
+  });
+  if (!found) throw new AppointmentNotFoundError();
+  const { appointment, staff } = found;
   if (appointment.status !== 'BOOKED') throw new AppointmentNotManageableError('not_booked');
   if (appointment.startsAt.getTime() <= request.now.getTime()) {
     throw new AppointmentNotManageableError('already_started');
@@ -344,14 +363,15 @@ export async function moveAvailability(
     throw new SlotNotOfferedError('this appointment has no stylist and cannot be rescheduled here');
   }
 
-  return getAvailability(pool, {
+  const result = await getAvailability(pool, {
     tenantId: request.tenantId,
     timeZone: request.timeZone,
     serviceId: appointment.serviceId,
-    preferredStaffId: appointment.staffId,
+    preferredStaffId: request.staffId ?? appointment.staffId,
     fromDate: request.fromDate,
     throughDate: request.throughDate,
     now: request.now,
     excludeAppointmentId: appointment.id,
   });
+  return { result, staffId: appointment.staffId, staff };
 }

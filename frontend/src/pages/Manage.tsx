@@ -30,7 +30,7 @@ import {
   getCatalog,
   getMoveTimes,
   rescheduleBooking,
-  type Availability,
+  type MoveTimes,
   type Catalog,
   type Slot,
 } from '../api';
@@ -47,6 +47,7 @@ import {
 } from '../format';
 
 import Button from '../components/Button';
+import Select from '../components/Select';
 import shell from '../shell.module.css';
 import styles from './Manage.module.css';
 import Problem from '../components/Problem';
@@ -87,7 +88,9 @@ export default function Manage() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
 
   const [moving, setMoving] = useState(false);
-  const [availability, setAvailability] = useState<Availability | null>(null);
+  const [availability, setAvailability] = useState<MoveTimes | null>(null);
+  // Another stylist to move to; null keeps the current one.
+  const [stylist, setStylist] = useState<string | null>(null);
   const [date, setDate] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
 
@@ -148,7 +151,8 @@ export default function Manage() {
     if (!moving || !from || !through) return;
 
     let live = true;
-    getMoveTimes(slug, token, from, through)
+    setAvailability(null);
+    getMoveTimes(slug, token, from, through, stylist ?? undefined)
       .then((loaded) => {
         if (live) setAvailability(loaded);
       })
@@ -160,7 +164,7 @@ export default function Manage() {
     return () => {
       live = false;
     };
-  }, [moving, slug, token, dates]);
+  }, [moving, slug, token, dates, stylist]);
 
   async function cancel() {
     if (sending) return;
@@ -181,7 +185,8 @@ export default function Manage() {
     setSending(true);
     setProblem(null);
     try {
-      const result = await rescheduleBooking(slug, token, slot.startsAt);
+      const other = stylist && stylist !== availability?.staffId ? stylist : undefined;
+      const result = await rescheduleBooking(slug, token, slot.startsAt, other);
       setOutcome({ kind: 'moved', startsAt: result.startsAt, endsAt: result.endsAt });
     } catch (error: unknown) {
       setProblem(manageMessage(error));
@@ -295,6 +300,17 @@ export default function Manage() {
         </div>
       ) : (
         <>
+          {availability && availability.staff.length > 1 ? (
+            <Select
+              label="With"
+              value={stylist ?? availability.staffId}
+              options={availability.staff.map((s) => ({ value: s.id, label: s.name }))}
+              onChange={(id) => {
+                setStylist(id);
+                setSlot(null);
+              }}
+            />
+          ) : null}
           <div className={styles.days}>
             {dates.map((candidate) => {
               const day = availability?.days.find((d) => d.date === candidate);

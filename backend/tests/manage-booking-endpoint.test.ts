@@ -466,6 +466,22 @@ describe('POST /:slug/appointments/availability', () => {
     for (const slot of offered) expect(slot.staffIds).toEqual([ANNA]);
   });
 
+  it('lists who could do it, and offers another stylist when asked', async () => {
+    const booked = await book(slots[0]!, `movetimes-other@${TEST_DOMAIN}`);
+    const own = await moveTimes(booked.manageToken);
+    expect(own.body.staffId).toBe(ANNA);
+    expect(own.body.staff.map((s: { id: string }) => s.id).sort()).toEqual([ANNA, BEA].sort());
+
+    const withBea = await moveTimes(booked.manageToken, { from: testDate.toString(), staffId: BEA });
+    const offered = openSlots(withBea);
+    expect(offered.length).toBeGreaterThan(0);
+    for (const slot of offered) expect(slot.staffIds).toEqual([BEA]);
+
+    const moved = await reschedule(booked.manageToken, { startsAt: offered[0]!.startsAt, staffId: BEA });
+    expect(moved.status, explain(moved)).toBe(200);
+    expect(moved.body.staffId).toBe(BEA);
+  });
+
   it("asks about the appointment's own service, not the catalog's first", async () => {
     const shortRes = await request(app)
       .get(`/${WIEN_SLUG}/availability`)

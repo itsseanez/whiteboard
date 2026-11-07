@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fakeFetch, json } from '../test/fake-api'; // first: see the file
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -60,6 +60,8 @@ describe('Manage', () => {
           timeZone: 'UTC',
           noQualifiedStaff: false,
           days: [{ date: '2026-11-17', status: 'open', slots: [] }],
+          staffId: 'anna',
+          staff: [{ id: 'anna', name: 'Anna' }],
         }),
     });
     renderManage();
@@ -95,5 +97,31 @@ describe('Manage', () => {
     renderManage();
     fireEvent.click(await screen.findByRole('button', { name: 'Cancel it' }));
     expect(await screen.findByText(/Too many tries from your connection/)).toBeTruthy();
+  });
+
+  it('offers another stylist, and moves to them', async () => {
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const calls = fakeFetch({
+      'POST /links/closed': () => json(404, { error: 'not_closed' }),
+      'GET /studio-wien/services': () => json(200, { tenant: { name: 'Studio Wien', timeZone: 'UTC' }, services: [], staff: [] }),
+      'POST /studio-wien/appointments/availability': () =>
+        json(200, {
+          timeZone: 'UTC',
+          noQualifiedStaff: false,
+          days: [{ date: day, status: 'open', slots: [{ startsAt: `${day}T23:00:00Z`, endsAt: `${day}T23:30:00Z`, staffIds: ['bea'] }] }],
+          staffId: 'anna',
+          staff: [{ id: 'anna', name: 'Anna' }, { id: 'bea', name: 'Bea' }],
+        }),
+      'POST /studio-wien/appointments/reschedule': () =>
+        json(200, { appointmentId: 'a1', staffId: 'bea', startsAt: `${day}T23:00:00Z`, endsAt: `${day}T23:30:00Z` }),
+    });
+    renderManage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Move it' }));
+    fireEvent.change(await screen.findByLabelText('With'), { target: { value: 'bea' } });
+    await waitFor(() => expect(calls.filter((c) => c.path.endsWith('/availability')).at(-1)?.body).toMatchObject({ staffId: 'bea' }));
+    fireEvent.click(await screen.findByRole('button', { name: /until/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move to this time' }));
+    expect(await screen.findByRole('heading', { name: 'Moved' })).toBeTruthy();
+    expect(calls.find((c) => c.path.endsWith('/reschedule'))?.body).toMatchObject({ staffId: 'bea' });
   });
 });

@@ -2,7 +2,7 @@
 //
 // POST /:slug/appointments/cancel      { token }
 // POST /:slug/appointments/reschedule  { token, startsAt, staffId? }
-// POST /:slug/appointments/availability { token, from, through? }
+// POST /:slug/appointments/availability { token, from, through?, staffId? }
 //
 // WHY THE TOKEN IS IN THE BODY AND NOT THE PATH
 //
@@ -207,17 +207,23 @@ export async function postMoveAvailability(req: Request, res: Response): Promise
     return;
   }
 
+  const staff = asString(body.staffId);
+  if (staff !== undefined && staff.length > 0 && !UUID.test(staff)) {
+    return void res.status(400).json({ error: 'staffId must be a uuid' });
+  }
+
   try {
-    const result = await moveAvailability(publicPool, {
+    const found = await moveAvailability(publicPool, {
       tenantId: parsed.tenantId,
       timeZone: parsed.timeZone,
       token: parsed.token,
+      staffId: staff && staff.length > 0 ? staff : null,
       fromDate: range.fromDate,
       throughDate: range.throughDate,
       now: new Date(),
     });
-    // The same public shape as GET /availability: no reasons, no resources.
-    res.status(200).json(toPublicResponse(result, parsed.timeZone));
+    // The public availability shape, plus who could do it and who does now.
+    res.status(200).json({ ...toPublicResponse(found.result, parsed.timeZone), staffId: found.staffId, staff: found.staff });
   } catch (error) {
     if (!sendManageError(res, error)) throw error;
   }
