@@ -160,6 +160,14 @@ export function cancelBooking(slug: string, token: string): Promise<Cancelled> {
   });
 }
 
+/** Times this appointment can move to; the server reads its service and stylist from the token. */
+export function getMoveTimes(slug: string, token: string, from: string, through: string): Promise<Availability> {
+  return send<Availability>(`/${encodeURIComponent(slug)}/appointments/availability`, {
+    method: 'POST',
+    body: JSON.stringify({ token, from, through }),
+  });
+}
+
 export function rescheduleBooking(
   slug: string,
   token: string,

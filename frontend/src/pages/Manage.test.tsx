@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fakeFetch, json } from '../test/fake-api'; // first: see the file
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -44,5 +44,44 @@ describe('Manage', () => {
     });
     renderManage();
     expect(await screen.findByRole('heading', { name: /Your\s+appointment/ })).toBeTruthy();
+  });
+
+  it("asks for times with the token, so the server picks the appointment's own service and stylist", async () => {
+    const calls = fakeFetch({
+      'POST /links/closed': () => json(404, { error: 'not_closed' }),
+      'GET /studio-wien/services': () =>
+        json(200, {
+          tenant: { name: 'Studio Wien', timeZone: 'UTC' },
+          services: [{ id: 'first-service', name: 'Cut', durationMinutes: 45 }],
+          staff: [],
+        }),
+      'POST /studio-wien/appointments/availability': () =>
+        json(200, {
+          timeZone: 'UTC',
+          noQualifiedStaff: false,
+          days: [{ date: '2026-11-17', status: 'open', slots: [] }],
+        }),
+    });
+    renderManage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Move it' }));
+    await screen.findByText(/Nothing free on this day|Closed on this day/);
+
+    const asked = calls.find((c) => c.path === '/studio-wien/appointments/availability');
+    expect(asked?.method).toBe('POST');
+    expect(asked?.body).toMatchObject({ token: 'tok-1' });
+    expect(JSON.stringify(asked?.body)).not.toContain('first-service');
+    expect(calls.some((c) => c.path === '/studio-wien/availability')).toBe(false);
+  });
+
+  it('says so up front when the appointment can no longer be moved', async () => {
+    fakeFetch({
+      'POST /links/closed': () => json(404, { error: 'not_closed' }),
+      'GET /studio-wien/services': () =>
+        json(200, { tenant: { name: 'Studio Wien', timeZone: 'UTC' }, services: [], staff: [] }),
+      'POST /studio-wien/appointments/availability': () => json(409, { error: 'not_booked' }),
+    });
+    renderManage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Move it' }));
+    expect(await screen.findByText(/already cancelled or finished/)).toBeTruthy();
   });
 });

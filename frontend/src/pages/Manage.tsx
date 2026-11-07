@@ -26,8 +26,8 @@ import {
   ApiError,
   cancelBooking,
   closedOrganizationFor,
-  getAvailability,
   getCatalog,
+  getMoveTimes,
   rescheduleBooking,
   type Availability,
   type Catalog,
@@ -82,7 +82,6 @@ export default function Manage() {
   const token = params.get('token') ?? '';
 
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [serviceId, setServiceId] = useState<string | null>(null);
 
   const [moving, setMoving] = useState(false);
   const [availability, setAvailability] = useState<Availability | null>(null);
@@ -114,7 +113,6 @@ export default function Manage() {
       .then((loaded) => {
         if (!live) return;
         setCatalog(loaded);
-        setServiceId(loaded.services[0]?.id ?? null);
       })
       .catch(() => {
         if (live) setProblem('Could not load this organization. Try again in a moment.');
@@ -136,35 +134,30 @@ export default function Manage() {
   }, [dates, date]);
 
   // Only fetched once the customer asks to move, so opening the link makes no
-  // availability request at all.
-  //
-  // NOTE: these times come back WITHOUT this appointment excluded, because the
-  // public availability endpoint has no appointment in play. The reschedule
-  // endpoint does exclude it, so a time overlapping the customer's own
-  // appointment is accepted on submit even though it is not shown here. The
-  // honest fix is a read endpoint scoped to the token; until then this page
-  // offers a subset of what is really possible, which is the safe direction to
-  // be wrong in.
+  // availability request at all. The server picks the service and stylist from
+  // the token and leaves this appointment out, so every time shown can be taken.
   useEffect(() => {
     // Bound to locals first: noUncheckedIndexedAccess types an index access as
     // possibly undefined, and a check on `dates[0]` does not narrow a later,
     // separate `dates[0]`.
     const from = dates[0];
     const through = dates[dates.length - 1];
-    if (!moving || !serviceId || !from || !through) return;
+    if (!moving || !from || !through) return;
 
     let live = true;
-    getAvailability(slug, serviceId, from, through)
+    getMoveTimes(slug, token, from, through)
       .then((loaded) => {
         if (live) setAvailability(loaded);
       })
-      .catch(() => {
-        if (live) setProblem('Could not load times. Try again in a moment.');
+      .catch((error: unknown) => {
+        if (!live) return;
+        setProblem(error instanceof ApiError ? manageMessage(error) : 'Could not load times. Try again in a moment.');
+        setMoving(false);
       });
     return () => {
       live = false;
     };
-  }, [moving, slug, serviceId, dates]);
+  }, [moving, slug, token, dates]);
 
   async function cancel() {
     if (sending) return;
