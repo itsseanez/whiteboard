@@ -17,7 +17,7 @@ Computed availability across staff and room constraints · timezone-correct thro
 
 ---
 
-![The public booking page for a demo organization: pick a service and staff, then a day shows how many times are open](docs/screenshots/booking-page.png)
+![The live demo on the home page: a month of days with how many times are open, and the bookable times for the chosen day at a demo organization](docs/screenshots/booking-page.png)
 
 ## Why this exists
 
@@ -66,7 +66,7 @@ as arguments and returns bookable times plus the reason for every gap, which is
 what lets the owner calendar explain itself. Routes are listed in
 [`docs/api.md`](docs/api.md).
 
-![The owner calendar: one column per staff member, with a service picked so bookable times are marked, and a new appointment being booked for a customer](docs/screenshots/owner-calendar.png)
+![The organization page's Calendar tab: tabs down the side, one column per staff member, a service picked so bookable times are marked, and a new appointment being booked for a customer](docs/screenshots/owner-calendar.png)
 
 ## Tech stack
 
