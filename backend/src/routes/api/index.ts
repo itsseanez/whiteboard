@@ -23,6 +23,8 @@ router.put('/me/hours', myWeek.putMyHours);
 router.get('/time-off', timeOff.getTimeOff);
 router.post('/time-off', timeOff.postTimeOff);
 router.delete('/time-off/:id', timeOff.deleteTimeOff);
+router.post('/time-off/:id/approve', timeOff.approveTimeOff);
+router.post('/time-off/:id/decline', timeOff.declineTimeOff);
 
 // Setup, calendar and people: owners and managers. Deleting staff, a service
 // or a resource archives it, and is refused while future bookings depend on it.

@@ -219,3 +219,68 @@ describe('staff', () => {
     expect(rows.rowCount).toBe(0);
   });
 });
+
+describe('requests', () => {
+  // Monday 13 January 2031, Vienna +01:00. Ben asks for 10:00–12:00.
+  const DAY = '2031-01-13';
+  const blocked = async () => {
+    const res = await api.get(`/availability/explain?serviceId=${service}&from=${DAY}`, owner);
+    const starts: string[] = res.body.days[0].slots.map((s: { startsAt: string }) => s.startsAt);
+    return !starts.includes(`${DAY}T09:30:00Z`);
+  };
+  const ask = async () => {
+    const res = await api.post('/time-off', { startDate: DAY, startTime: '10:00', endTime: '12:00' }, benLogin.cookie);
+    expect(res.status).toBe(201);
+    return res.body as { id: string; status: string };
+  };
+
+  it("start pending and don't block bookings until approved", async () => {
+    const asked = await ask();
+    expect(asked.status).toBe('pending');
+    expect(await blocked()).toBe(false);
+
+    expect((await api.post(`/time-off/${asked.id}/approve`, {}, benLogin.cookie)).status).toBe(403);
+    const approved = await api.post(`/time-off/${asked.id}/approve`, {}, manager.cookie);
+    expect(approved.status).toBe(200);
+    expect(approved.body.status).toBe('approved');
+    expect(await blocked()).toBe(true);
+
+    const again = await api.post(`/time-off/${asked.id}/decline`, {}, owner);
+    expect(again.status).toBe(409);
+    expect(again.body).toEqual({ error: 'already_decided' });
+
+    // Approved: staff can no longer withdraw it.
+    expect((await api.delete(`/time-off/${asked.id}`, benLogin.cookie)).status).toBe(404);
+    expect(await rowExists(asked.id)).toBe(true);
+    expect((await api.delete(`/time-off/${asked.id}`, owner)).status).toBe(204);
+  });
+
+  it("can be declined, which blocks nothing, and then cleared by the asker", async () => {
+    const asked = await ask();
+    expect((await api.post(`/time-off/${asked.id}/decline`, {}, owner)).body.status).toBe('declined');
+    expect(await blocked()).toBe(false);
+    const list = await api.get('/time-off', benLogin.cookie);
+    expect(list.body.timeOff).toContainEqual(expect.objectContaining({ id: asked.id, status: 'declined' }));
+    expect((await api.delete(`/time-off/${asked.id}`, benLogin.cookie)).status).toBe(204);
+  });
+
+  it('can be withdrawn by the asker while pending', async () => {
+    const asked = await ask();
+    expect((await api.delete(`/time-off/${asked.id}`, benLogin.cookie)).status).toBe(204);
+    expect(await rowExists(asked.id)).toBe(false);
+  });
+
+  it("can't be approved by staff straight at the database either", async () => {
+    const asked = await ask();
+    const denied = await withContext(appPool, { tenantId, userId: benLogin.userId }, async (c) => {
+      const updated = await c.query(`UPDATE time_off SET status = 'approved' WHERE id = $1`, [asked.id]);
+      const inserted = await c
+        .query(`INSERT INTO time_off (staff_id, tenant_id, starts_at, ends_at, status) VALUES ($1, $2, now(), now() + interval '1 hour', 'approved')`, [ben, tenantId])
+        .then(() => 'inserted', (e: { code?: string }) => e.code);
+      return { updated: updated.rowCount, inserted };
+    }).catch((e: { code?: string }) => ({ updated: -1, inserted: e.code }));
+    expect(denied.updated).toBe(0);
+    expect(denied.inserted).toBe('42501');
+    await api.delete(`/time-off/${asked.id}`, owner);
+  });
+});
