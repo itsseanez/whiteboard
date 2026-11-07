@@ -6,12 +6,6 @@
   padding: var(--space-5) var(--space-4) 0;
 }
 
-@media (min-width: 48rem) {
-  .bar {
-    padding: var(--space-6) var(--space-5) 0;
-  }
-}
-
 .inner {
   display: flex;
   align-items: center;
