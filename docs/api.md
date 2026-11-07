@@ -168,6 +168,7 @@ Everything below needs `owner` or `admin` (`403 managers_only` otherwise).
 | `POST` | `/appointments` | Book on a customer's behalf, same body as the public route |
 | `POST` | `/appointments/:id/cancel` | Cancel |
 | `POST` | `/appointments/:id/reschedule` | Move `{ startsAt, staffId? }` |
+| `GET` | `/appointments/:id/history` | Every booking, move and status change, with who did it (`customer`, a member by name, or `unknown` before history was kept) |
 
 A week of hours is `{ "hours": [{ "weekday": 1, "start": "09:00", "end": "12:00" }, …] }`:
 ISO weekday (1 is Monday), local `HH:MM`, several ranges per day for a split
