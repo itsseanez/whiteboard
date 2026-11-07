@@ -59,8 +59,7 @@ describe('Account', () => {
     });
     renderAccount();
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Organizations' }));
-    expect(screen.getByText('Name of studio-wien', { selector: 'li span' })).toBeTruthy();
+    expect(await screen.findByText('Name of studio-wien')).toBeTruthy();
     const pages = screen.getAllByRole('link', { name: 'Booking page' }).map((l) => l.getAttribute('href'));
     expect(pages).toEqual(['/studio-wien', '/marinas-cuts-color']);
   });
@@ -111,8 +110,8 @@ describe('Account', () => {
       'GET /api/auth/get-session': replies.noSession,
     });
     renderAccount();
-    fireEvent.click(await screen.findByRole('tab', { name: 'Organizations' }));
-    expect(screen.getByRole('link', { name: 'Set up' }).getAttribute('href')).toBe('/manage/acme');
+    expect((await screen.findByRole('tab', { name: 'Organizations' })).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('link', { name: 'Set up' }).getAttribute('href')).toBe('/manage/acme?tab=hours');
     expect(screen.queryByRole('link', { name: 'Your week' })).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Your week' }));
@@ -139,29 +138,5 @@ describe('Account', () => {
     renderAccount();
     await screen.findByRole('tab', { name: 'Organizations' });
     expect(screen.queryByRole('tab', { name: 'Your week' })).toBeNull();
-  });
-
-  it('opens on the calendar for an owner, with the tabs in a column', async () => {
-    fakeFetch({
-      'GET /me/organizations': () => json(200, [organization('acme', 'UTC')]),
-      'GET /api/auth/get-session': replies.noSession,
-    });
-    renderAccount();
-    const calendar = await screen.findByRole('tab', { name: 'Calendar' });
-    expect(calendar.getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('tablist').getAttribute('aria-orientation')).toBe('vertical');
-    fireEvent.keyDown(calendar, { key: 'ArrowDown' });
-    expect(screen.getByRole('tab', { name: 'Organizations' }).getAttribute('aria-selected')).toBe('true');
-  });
-
-  it('keeps tabs in a row, with no calendar, for staff', async () => {
-    fakeFetch({
-      'GET /me/organizations': () => json(200, [organization('acme', 'UTC', 'member')]),
-      'GET /api/auth/get-session': replies.noSession,
-    });
-    renderAccount();
-    await screen.findByRole('tab', { name: 'Your week' });
-    expect(screen.queryByRole('tab', { name: 'Calendar' })).toBeNull();
-    expect(screen.getByRole('tablist').getAttribute('aria-orientation')).toBe('horizontal');
   });
 });

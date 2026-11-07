@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import Calendar from './Calendar';
+import Calendar, { CalendarView } from './Calendar';
 
 afterEach(cleanup);
 
@@ -77,9 +77,9 @@ function setup(extra: Record<string, () => Response> = {}) {
 
 function renderCalendar() {
   render(
-    <MemoryRouter initialEntries={['/manage/acme/calendar']}>
+    <MemoryRouter initialEntries={['/manage/acme?tab=calendar']}>
       <Routes>
-        <Route path="/manage/:slug/calendar" element={<Calendar />} />
+        <Route path="/manage/:slug" element={<CalendarView slug="acme" />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -150,5 +150,18 @@ describe('Calendar', () => {
     setup({ [`GET ${base}/calendar`]: () => json(403, { error: 'managers_only' }) });
     renderCalendar();
     expect(await screen.findByText(/Only owners and managers can see this calendar/)).toBeTruthy();
+  });
+
+  it('sends the old calendar address to the Calendar tab of setup', async () => {
+    setup();
+    render(
+      <MemoryRouter initialEntries={['/manage/acme/calendar']}>
+        <Routes>
+          <Route path="/manage/:slug/calendar" element={<Calendar />} />
+          <Route path="/manage/:slug" element={<p>setup page</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('setup page')).toBeTruthy();
   });
 });

@@ -1,6 +1,7 @@
-// Setup at /manage/:slug, for owners and managers, in three tabs of like
-// sections, in the order a new organization fills them: opening hours; staff;
-// the accounts that can sign in; resources and the services that use both. The open tab is in ?tab=. Removing archives; each card saves on
+// An organization's own page at /manage/:slug, for owners and managers. A column
+// of tabs that stays in view: the calendar first, then setup in the order a new
+// organization fills it: opening hours; staff; the accounts that can sign in;
+// resources and the services that use both. The open tab is in ?tab=. Removing archives; each card saves on
 // its own, marks itself while it holds unsaved edits, and so does its tab.
 
 import { createContext, useCallback, useContext, useEffect, useState, type FormEvent, type ReactNode } from 'react';
@@ -28,8 +29,10 @@ import shell from '../shell.module.css';
 import styles from './Setup.module.css';
 import Problem from '../components/Problem';
 import Tabs from '../components/Tabs';
+import { CalendarView } from './Calendar';
 
 interface Data {
+  name: string;
   role: string;
   members: Person[];
   invitations: PendingInvitation[];
@@ -130,7 +133,7 @@ function tabOf(key: string): string {
 export default function Setup() {
   const { slug = '' } = useParams();
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') ?? 'hours';
+  const tab = params.get('tab') ?? 'calendar';
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [dirty, setDirty] = useState<ReadonlySet<string>>(new Set());
 
@@ -167,7 +170,7 @@ export default function Setup() {
       ]);
       setState({
         kind: 'ready',
-        data: { role: context.membership.role, ...people, businessHours: bh.hours, resources, staff, services },
+        data: { name: context.tenant.name, role: context.membership.role, ...people, businessHours: bh.hours, resources, staff, services },
       });
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) setState({ kind: 'signed-out' });
@@ -182,7 +185,7 @@ export default function Setup() {
   }, [slug]);
 
   const frame = (body: ReactNode) => (
-    <main className={`${shell.page} ${styles.page}`}>
+    <main className={shell.page}>
       <Link className={shell.wordmark} to="/account">
         Whiteboard
       </Link>
@@ -216,26 +219,32 @@ export default function Setup() {
 
   return frame(
     <DirtyContext.Provider value={report}>
-      <h1 className={shell.title}>Set up</h1>
+      <h1 className={shell.title}>{data.name}</h1>
       <p className={shell.lede}>
-        What customers can book at <Link to={`/${slug}`}>{`${window.location.host}/${slug}`}</Link>. Times are
-        in your organization's own zone. <Link to={`/manage/${slug}/calendar`}>Open the calendar</Link>.
+        Customers book at <Link to={`/${slug}`}>{`${window.location.host}/${slug}`}</Link>. Times are in your
+        organization's own zone.
       </p>
 
       <Tabs
-        label="Set up"
+        label="Organization"
+        orientation="vertical"
         selected={tab}
         onSelect={(id) => setParams({ tab: id }, { replace: true })}
         tabs={[
+          {
+            id: 'calendar',
+            label: 'Calendar',
+            panel: <CalendarView slug={slug} />,
+          },
           {
             id: 'hours',
             label: 'Opening hours',
             marked: unsavedIn('hours'),
             markLabel: 'unsaved changes',
             panel: (
-              <>
+              <div className={styles.column}>
                 <BusinessHours slug={slug} initial={data.businessHours} />
-              </>
+              </div>
             ),
           },
           {
@@ -244,7 +253,7 @@ export default function Setup() {
             marked: unsavedIn('staff'),
             markLabel: 'unsaved changes',
             panel: (
-              <>
+              <div className={styles.column}>
                 <section className={styles.section}>
                   <h2 className={styles.heading}>Staff</h2>
                   {data.staff.map((s) => (
@@ -252,7 +261,7 @@ export default function Setup() {
                   ))}
                   <AddByName label="New staff member" action="Add staff member" onAdd={(name) => ownerApi.addStaff(slug, name)} done={reload} />
                 </section>
-              </>
+              </div>
             ),
           },
           {
@@ -260,7 +269,11 @@ export default function Setup() {
             label: 'Accounts',
             marked: unsavedIn('accounts'),
             markLabel: 'unsaved changes',
-            panel: <Accounts slug={slug} data={data} changed={reload} />,
+            panel: (
+              <div className={styles.column}>
+                <Accounts slug={slug} data={data} changed={reload} />
+              </div>
+            ),
           },
           {
             id: 'services',
@@ -268,7 +281,7 @@ export default function Setup() {
             marked: unsavedIn('services'),
             markLabel: 'unsaved changes',
             panel: (
-              <>
+              <div className={styles.column}>
                 <section className={styles.section}>
                   <h2 className={styles.heading}>Resources</h2>
                   <p className={styles.note}>Rooms, chairs or equipment a service needs. Any one free resource will do.</p>
@@ -297,7 +310,7 @@ export default function Setup() {
                   ))}
                   <ServiceForm slug={slug} staff={data.staff} resources={data.resources} done={reload} />
                 </section>
-              </>
+              </div>
             ),
           },
         ]}

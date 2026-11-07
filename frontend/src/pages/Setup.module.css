@@ -1,7 +1,7 @@
-/* One centred column, as wide as the forms, rather than forms pinned to the
- * left of the wide shell. `main` lifts it above shell.page's max-width. */
-main.page {
-  max-width: calc(48rem + 2 * var(--space-4));
+/* The page is as wide as the shell so the calendar has room; the forms keep
+ * their own column. */
+.column {
+  max-width: 48rem;
 }
 
 .section {
@@ -126,7 +126,7 @@ main.page {
 }
 
 /* The tabs' rule is the top edge of a panel's first section. */
-[role='tabpanel'] > .section:first-child {
+[role='tabpanel'] > .column > .section:first-child {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;

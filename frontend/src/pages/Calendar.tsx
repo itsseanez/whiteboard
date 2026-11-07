@@ -1,10 +1,10 @@
-// Owner calendar at /manage/:slug/calendar, and in the account page's tabs. A day view with a column per staff
+// Owner calendar, shown in setup's Calendar tab (/manage/:slug?tab=calendar). A day view with a column per staff
 // member, and a week view listing each day's appointments. Picking a service
 // marks which times are bookable; clicking one that isn't says why. Owners can
 // book, move and cancel from here.
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 
 import {
   ApiError,
@@ -49,23 +49,16 @@ function messageFor(error: unknown): string {
   return "Can't reach Whiteboard. Check your connection and try again.";
 }
 
+/** The old address; the calendar is now a tab of setup. */
 export default function Calendar() {
   const { slug = '' } = useParams();
-  return (
-    <main className={shell.page}>
-      <Link className={shell.wordmark} to="/account">
-        Whiteboard
-      </Link>
-      <CalendarView slug={slug} />
-    </main>
-  );
+  return <Navigate to={`/manage/${slug}?tab=calendar`} replace />;
 }
 
-/** The calendar itself, without the page frame; the account page shows it in a tab. */
+/** The calendar itself, shown in setup's Calendar tab. */
 export function CalendarView({ slug }: { slug: string }) {
   const [timeZone, setTimeZone] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [problem, setProblem] = useState<string | null>(null);
+    const [problem, setProblem] = useState<string | null>(null);
   const [view, setView] = useState<View>('day');
   const [date, setDate] = useState<string | null>(null);
   const [data, setData] = useState<CalendarData | null>(null);
@@ -78,7 +71,6 @@ export function CalendarView({ slug }: { slug: string }) {
     getTenantContext(slug)
       .then(({ tenant }) => {
         setTimeZone(tenant.timezone);
-        setName(tenant.name);
         setDate(organizationDate(new Date(), tenant.timezone));
       })
       .catch((error: unknown) => {
@@ -124,13 +116,12 @@ export function CalendarView({ slug }: { slug: string }) {
     <>
       <div className={styles.header}>
         <div>
-          <h1 className={shell.title}>{name}</h1>
-          <p className={shell.lede}>
+          <h2 className={styles.title}>
             {view === 'day'
               ? `${weekdayLong(dateToIso(date), timeZone)} ${dayAndMonth(dateToIso(date), timeZone)}`
               : `Week of ${dayAndMonth(dateToIso(from!), timeZone)}`}
-            {' · '}Times in {timeZone} · <Link to={`/manage/${slug}`}>Set up</Link>
-          </p>
+          </h2>
+          <p className={shell.lede}>Times in {timeZone}</p>
         </div>
       </div>
 

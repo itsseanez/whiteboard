@@ -38,7 +38,7 @@ function ready(extra: Record<string, () => Response> = {}) {
   });
 }
 
-function renderSetup(tab?: 'hours' | 'staff' | 'accounts' | 'services') {
+function renderSetup(tab?: 'calendar' | 'hours' | 'staff' | 'accounts' | 'services') {
   render(
     <MemoryRouter initialEntries={[tab ? `/manage/acme?tab=${tab}` : '/manage/acme']}>
       <Routes>
@@ -72,7 +72,7 @@ describe('Setup', () => {
 
   it('shows what is already set up, a tab at a time', async () => {
     ready();
-    renderSetup();
+    renderSetup('hours');
     expect(await screen.findByRole('button', { name: 'Save opening hours' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Save Ana' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Staff' }));
@@ -80,6 +80,13 @@ describe('Setup', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Services and resources' }));
     expect(screen.getByText('Wash station', { selector: 'li span' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Save Color' })).toBeTruthy();
+  });
+
+  it('opens on the calendar, with the tabs in a column', async () => {
+    ready();
+    renderSetup();
+    expect((await screen.findByRole('tab', { name: 'Calendar' })).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tablist').getAttribute('aria-orientation')).toBe('vertical');
   });
 
   it('keeps unsaved edits across tabs and marks the tab holding them', async () => {
@@ -106,7 +113,7 @@ describe('Setup', () => {
     const calls = ready({
       [`PUT ${base}/business-hours`]: () => json(400, { error: '09:00–17:00 and 12:00–18:00 overlap' }),
     });
-    renderSetup();
+    renderSetup('hours');
     await screen.findByRole('button', { name: 'Save opening hours' });
     fireEvent.click(screen.getAllByRole('button', { name: 'Add hours' })[0]!);
     fireEvent.click(screen.getByRole('button', { name: 'Save opening hours' }));
@@ -118,7 +125,7 @@ describe('Setup', () => {
 
   it('sends a midnight end as 00:00', async () => {
     const calls = ready({ [`PUT ${base}/business-hours`]: () => json(200, { hours: [] }) });
-    renderSetup();
+    renderSetup('hours');
     await screen.findByRole('button', { name: 'Save opening hours' });
     fireEvent.click(screen.getAllByRole('button', { name: 'Add hours' })[0]!);
     fireEvent.change(screen.getAllByLabelText('Monday end')[0]!, { target: { value: '00:00' } });
@@ -181,7 +188,7 @@ describe('Setup', () => {
 
   it('asks the browser to confirm leaving while edits are unsaved', async () => {
     ready({ [`PUT ${base}/business-hours`]: () => json(200, { hours: [{ weekday: 1, start: '09:00', end: '17:00' }] }) });
-    renderSetup();
+    renderSetup('hours');
     await screen.findByRole('button', { name: 'Save opening hours' });
     const leave = () => {
       const event = new Event('beforeunload', { cancelable: true });

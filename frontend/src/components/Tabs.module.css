@@ -62,6 +62,7 @@
 /* Vertical: a column of tabs beside the panel, kept in view while it scrolls.
  * Narrow screens go back to a row above it. */
 .vertical {
+  margin-top: var(--space-5);
   display: grid;
   grid-template-columns: 11rem minmax(0, 1fr);
   gap: var(--space-5);

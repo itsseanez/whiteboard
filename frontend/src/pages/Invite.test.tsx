@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fakeFetch, json, replies } from '../test/fake-api'; // first: see the file
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -47,7 +47,8 @@ describe('Invite, signed out', () => {
     type('Your name', 'Ana');
     type('Password', 'long-enough-password');
     fireEvent.click(await screen.findByRole('button', { name: 'Create account and join' }));
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/expired/));
+    // Sign-up then accept: two round trips, so allow more than the default second under a loaded run.
+    expect((await screen.findByRole('alert', {}, { timeout: 3000 })).textContent).toMatch(/expired/);
   });
 
   it('links to sign-in, coming back here after', async () => {

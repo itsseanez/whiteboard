@@ -1,9 +1,8 @@
-// Where sign-in lands, as tabs of like things. Owners and managers get the
-// calendar first, in a column of tabs that stays in view; then organizations,
-// staff work, and the account itself.
+// Where sign-in lands, as tabs of like things: organizations you own or
+// manage, organizations you work at as staff, and the account itself.
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError, getMyOrganizations, type Membership } from '../api';
 import { authClient } from '../auth';
@@ -12,7 +11,6 @@ import shell from '../shell.module.css';
 import styles from './Auth.module.css';
 import Problem from '../components/Problem';
 import Tabs, { type Tab } from '../components/Tabs';
-import { CalendarView } from './Calendar';
 
 type State =
   | { kind: 'loading' }
@@ -25,8 +23,6 @@ export default function Account() {
   const session = authClient.useSession();
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [problem, setProblem] = useState<string | null>(null);
-  const [params, setParams] = useSearchParams();
-  const [calendarSlug, setCalendarSlug] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -55,8 +51,8 @@ export default function Account() {
     }
   }
 
-  const frame = (body: ReactNode, wide = false) => (
-    <main className={wide ? shell.page : `${shell.page} ${shell.narrow}`}>
+  const frame = (body: ReactNode) => (
+    <main className={`${shell.page} ${shell.narrow}`}>
       <Link className={shell.wordmark} to="/">
         Whiteboard
       </Link>
@@ -91,63 +87,33 @@ export default function Account() {
   const staffed = state.organizations.filter((o) => o.role === 'member');
 
   const tabs: Tab[] = [];
-  // Owners and managers get the calendar first, beside a column of tabs that stays in view.
-  const wide = managed.length > 0;
-  const heading = (text: string) => (wide ? <h2 className={styles.panelTitle}>{text}</h2> : null);
-  const calendarOrg = managed.find((o) => o.slug === calendarSlug) ?? managed[0];
-  if (calendarOrg) {
-    tabs.push({
-      id: 'calendar',
-      label: 'Calendar',
-      panel: (
-        <>
-          {managed.length > 1 ? (
-            <label className={styles.picker}>
-              Organization
-              <select value={calendarOrg.slug} onChange={(event) => setCalendarSlug(event.target.value)}>
-                {managed.map((o) => (
-                  <option key={o.slug} value={o.slug}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <CalendarView key={calendarOrg.slug} slug={calendarOrg.slug} />
-        </>
-      ),
-    });
-  }
   if (managed.length > 0 || staffed.length === 0) {
     tabs.push({
       id: 'organizations',
       label: 'Organizations',
-      panel: (
-        <>
-          {heading('Organizations')}
-          {managed.length === 0 ? (
-            <p className={styles.note}>
-              This account is not linked to an organization. If you just signed up, setting up the organization did
-              not finish. <Link to="/signup">Finish setting up your organization</Link>.
-            </p>
-          ) : (
-            <ul className={styles.list}>
-              {managed.map((o) => (
-                <li key={o.tenantId}>
-                  <span className={styles.name}>
-                    {o.name}
-                    <span className={styles.meta}> · {o.role === 'owner' ? 'Owner' : 'Manager'}</span>
-                  </span>
-                  <span className={styles.links}>
-                    <Link to={`/manage/${o.slug}`}>Set up</Link>
-                    <Link to={`/${o.slug}`}>Booking page</Link>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      ),
+      panel:
+        managed.length === 0 ? (
+          <p className={styles.note}>
+            This account is not linked to an organization. If you just signed up, setting up the organization did
+            not finish. <Link to="/signup">Finish setting up your organization</Link>.
+          </p>
+        ) : (
+          <ul className={styles.list}>
+            {managed.map((o) => (
+              <li key={o.tenantId}>
+                <span className={styles.name}>
+                  {o.name}
+                  <span className={styles.meta}> · {o.role === 'owner' ? 'Owner' : 'Manager'}</span>
+                </span>
+                <span className={styles.links}>
+                  <Link to={`/manage/${o.slug}?tab=hours`}>Set up</Link>
+                  <Link to={`/manage/${o.slug}?tab=calendar`}>Calendar</Link>
+                  <Link to={`/${o.slug}`}>Booking page</Link>
+                </span>
+              </li>
+            ))}
+          </ul>
+        ),
     });
   }
   if (staffed.length > 0) {
@@ -155,19 +121,16 @@ export default function Account() {
       id: 'week',
       label: 'Your week',
       panel: (
-        <>
-          {heading('Your week')}
-          <ul className={styles.list}>
-            {staffed.map((o) => (
-              <li key={o.tenantId}>
-                <span className={styles.name}>{o.name}</span>
-                <span className={styles.links}>
-                  <Link to={`/manage/${o.slug}/me`}>Your week</Link>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
+        <ul className={styles.list}>
+          {staffed.map((o) => (
+            <li key={o.tenantId}>
+              <span className={styles.name}>{o.name}</span>
+              <span className={styles.links}>
+                <Link to={`/manage/${o.slug}/me`}>Your week</Link>
+              </span>
+            </li>
+          ))}
+        </ul>
       ),
     });
   }
@@ -176,7 +139,6 @@ export default function Account() {
     label: 'Account',
     panel: (
       <>
-        {heading('Account')}
         <dl className={styles.details}>
           <dt>Name</dt>
           <dd>{user?.name ?? '—'}</dd>
@@ -193,21 +155,10 @@ export default function Account() {
     ),
   });
 
-  const tabsView = (
-    <Tabs
-      label="Your account"
-      tabs={tabs}
-      selected={params.get('tab') ?? undefined}
-      onSelect={(id) => setParams({ tab: id }, { replace: true })}
-      orientation={wide ? 'vertical' : 'horizontal'}
-    />
-  );
-  // The calendar brings its own heading (the organization's name).
-  if (wide) return frame(tabsView, true);
   return frame(
     <>
       <h1 className={shell.title}>Your account</h1>
-      {tabsView}
+      <Tabs label="Your account" tabs={tabs} />
     </>,
   );
 }
