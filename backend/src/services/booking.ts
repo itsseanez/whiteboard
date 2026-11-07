@@ -126,17 +126,22 @@ async function upsertCustomer(
  */
 export async function requireNotArchived(
   client: PoolClient,
+  tenantId: string,
   staffId: string,
   serviceId: string,
   resourceId: string | null,
 ): Promise<void> {
+  // The tenant check is the same race as the others: closing locks the tenant
+  // row FOR UPDATE, the insert's foreign key waits on it, and this re-read
+  // after the insert sees the close once it commits.
   const { rows } = await client.query<{ ok: boolean }>(
     `SELECT EXISTS (SELECT 1 FROM staff WHERE id = $1 AND archived_at IS NULL)
         AND EXISTS (SELECT 1 FROM service WHERE id = $2 AND archived_at IS NULL)
-        AND ($3::uuid IS NULL OR EXISTS (SELECT 1 FROM resource WHERE id = $3 AND archived_at IS NULL)) AS ok`,
-    [staffId, serviceId, resourceId],
+        AND ($3::uuid IS NULL OR EXISTS (SELECT 1 FROM resource WHERE id = $3 AND archived_at IS NULL))
+        AND EXISTS (SELECT 1 FROM tenant WHERE id = $4 AND archived_at IS NULL) AS ok`,
+    [staffId, serviceId, resourceId, tenantId],
   );
-  if (!rows[0]?.ok) throw new SlotNotOfferedError('the staff member, service or resource was removed');
+  if (!rows[0]?.ok) throw new SlotNotOfferedError('the organization, staff member, service or resource was removed');
 }
 
 /**
@@ -248,7 +253,7 @@ export async function createBooking(
       );
       const row = rows[0];
       if (!row) throw new Error('appointment insert returned no row');
-      await requireNotArchived(client, request.staffId, request.serviceId, resourceId);
+      await requireNotArchived(client, request.tenantId, request.staffId, request.serviceId, resourceId);
 
       return {
         id: row.id,

@@ -37,7 +37,7 @@ export async function getTenantBySlug(
     return withContext(appPool, { userId }, async (client) => {
       const { rows } = await client.query(
         `SELECT id, name, slug, timezone, better_auth_org_id AS "betterAuthOrgId"
-         FROM tenant WHERE slug = $1`,
+         FROM tenant WHERE slug = $1 AND archived_at IS NULL`,
         [slug]
       );
       return rows[0] ?? null;
@@ -47,7 +47,8 @@ export async function getTenantBySlug(
   const { rows } = await publicPool.query(
     // name is readable by whiteboard_public per the create-public-access-role
     // grant; it is what the booking page puts in its header.
-    `SELECT id, name, slug, timezone FROM tenant WHERE slug = $1`,
+    // A closed organization is gone from every page, but its slug stays taken.
+    `SELECT id, name, slug, timezone FROM tenant WHERE slug = $1 AND archived_at IS NULL`,
     [slug]
   );
   return rows[0] ?? null;
@@ -73,7 +74,7 @@ export async function getTenantsByUserId(userId: string) {
         member.role
       FROM member
       JOIN tenant ON member."organizationId" = tenant.better_auth_org_id
-      WHERE member."userId" = $1
+      WHERE member."userId" = $1 AND tenant.archived_at IS NULL
       `,
       [userId]
     );
