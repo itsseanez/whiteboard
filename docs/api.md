@@ -106,6 +106,7 @@ Everything below needs `owner` or `admin` (`403 managers_only` otherwise).
 | `GET` | `/people` | Members with their role and linked staff row, and pending invitations |
 | `POST` | `/invitations` | Invite `{ email, role: "staff", staffId }` or `{ email, role: "manager" }` |
 | `DELETE` | `/members/:memberId` | Owner only: end a member's access and free their staff row |
+| `DELETE` | `/` (that is, `/tenant/:slug`) | Owner only: close the organization, `{ confirm: "<slug>" }` |
 
 | Method | Path | Does |
 |---|---|---|
@@ -144,6 +145,12 @@ login, and `409 already_member` when the address already belongs here.
 `503 email_unavailable` means email isn't configured, and nothing was saved;
 `502 email_failed` means the invitation was saved but the email didn't send,
 so inviting again resends it.
+
+Closing archives the organization rather than deleting it: every future
+booking is cancelled and its customer emailed, past appointments are kept,
+and the organization disappears from its booking page, its members' accounts
+and every `/tenant/:slug` route. The slug stays taken. It answers
+`{ cancelled, emailed }`.
 
 Owner bookings and moves go through the same checks as customers': an owner
 can't book a time availability doesn't offer.

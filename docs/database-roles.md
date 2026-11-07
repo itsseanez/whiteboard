@@ -313,9 +313,18 @@ the staff boundary directly against the database.
   (tenant not yet resolved — the bootstrapping case). Both `current_setting`
   calls use the two-argument form so an unset variable evaluates to `NULL`
   rather than throwing, letting the `OR` fall through cleanly.
-- `tenant_insert`, `tenant_update`, `tenant_delete` — unchanged from
-  initial design, scoped `TO whiteboard_signup` (insert) or by
-  `app.tenant_id` match (update/delete).
+- `tenant_insert` — `TO whiteboard_signup`.
+- `tenant_update`, `tenant_delete` — originally applied to every role with
+  only an `app.tenant_id` match, which would have let any member update
+  their tenant once `whiteboard_app` had an `UPDATE` grant. Now scoped
+  `TO whiteboard_signup`, which has neither grant, so they let no one through.
+- **`tenant_close_app`** — `FOR UPDATE TO whiteboard_app`: the caller's own
+  tenant, and only if they are its `owner`. `whiteboard_app` may update only
+  `archived_at`, so closing is the one change it can make. The membership
+  check is inline rather than in a function, so the policy never queries the
+  table it guards.
+- `whiteboard_public` can read `archived_at`, so the slug lookup and the
+  booking re-check can skip a closed organization.
 
 Verified manually via `SET ROLE whiteboard_app` + `SET LOCAL` inside a
 transaction, against real seeded data, for all four cases: direct
