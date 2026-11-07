@@ -21,7 +21,7 @@
 // through the browser's Date is a chance to lose one for no benefit.
 
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import {
   ApiError,
@@ -286,9 +286,6 @@ export default function Booking() {
   if (loadError) {
     return (
       <main className={`${shell.page} ${shell.narrow}`}>
-        <Link className={shell.wordmark} to="/">
-          Whiteboard
-        </Link>
         <h1 className={shell.title}>{loadError.title}</h1>
         <p className={shell.lede}>{loadError.detail}</p>
       </main>
@@ -298,7 +295,6 @@ export default function Booking() {
   if (!catalog || !timeZone || !today || !anchor) {
     return (
       <main className={`${shell.page} ${shell.narrow}`}>
-        <span className={shell.wordmark}>Whiteboard</span>
         <p className={shell.lede}>Loading…</p>
       </main>
     );
@@ -310,9 +306,6 @@ export default function Booking() {
     )}`;
     return (
       <main className={`${shell.page} ${shell.narrow}`}>
-        <Link className={shell.wordmark} to="/">
-          Whiteboard
-        </Link>
         <div className={styles.done}>
           <h1 className={styles.doneTitle}>You're booked</h1>
           <p className={shell.lede}>
@@ -334,9 +327,6 @@ export default function Booking() {
 
   return (
     <main className={shell.page}>
-      <Link className={shell.wordmark} to="/">
-        Whiteboard
-      </Link>
 
       <div className={styles.head}>
         <h1 className={styles.organization}>{catalog.tenant.name}</h1>

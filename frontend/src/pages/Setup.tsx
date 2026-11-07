@@ -186,9 +186,6 @@ export default function Setup() {
 
   const frame = (body: ReactNode) => (
     <main className={shell.page}>
-      <Link className={shell.wordmark} to="/account">
-        Whiteboard
-      </Link>
       {body}
     </main>
   );

@@ -53,9 +53,6 @@ export default function Account() {
 
   const frame = (body: ReactNode) => (
     <main className={`${shell.page} ${shell.narrow}`}>
-      <Link className={shell.wordmark} to="/">
-        Whiteboard
-      </Link>
       {body}
     </main>
   );

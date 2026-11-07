@@ -112,9 +112,6 @@ export default function SignUp() {
 
   return (
     <main className={`${shell.page} ${shell.narrow}`}>
-      <Link className={shell.wordmark} to="/">
-        Whiteboard
-      </Link>
       <h1 className={shell.title}>Create an organization</h1>
       <p className={shell.lede}>
         This gives your organization its own booking page. Next you'll add hours, staff and services,

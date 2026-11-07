@@ -11,6 +11,7 @@ import SignUp from './pages/SignUp';
 import Account from './pages/Account';
 import Setup from './pages/Setup';
 import Calendar from './pages/Calendar';
+import TopBar from './components/TopBar';
 import Invite from './pages/Invite';
 import MyWeek from './pages/MyWeek';
 
@@ -25,6 +26,7 @@ if (!root) throw new Error('#root is missing from index.html');
 createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
+      <TopBar />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/signin" element={<SignIn />} />

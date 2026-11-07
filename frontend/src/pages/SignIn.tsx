@@ -47,9 +47,6 @@ export default function SignIn() {
 
   return (
     <main className={`${shell.page} ${shell.narrow}`}>
-      <Link className={shell.wordmark} to="/">
-        Whiteboard
-      </Link>
       <h1 className={shell.title}>Sign in</h1>
       <p className={shell.lede}>For owners, managers and staff. Customers book without an account.</p>
 

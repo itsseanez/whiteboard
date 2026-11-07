@@ -59,9 +59,6 @@ export default function MyWeek() {
 
   const frame = (body: ReactNode) => (
     <main className={`${shell.page} ${styles.page}`}>
-      <Link className={shell.wordmark} to="/account">
-        Whiteboard
-      </Link>
       {body}
     </main>
   );

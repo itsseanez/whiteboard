@@ -94,9 +94,6 @@ export default function Invite() {
 
   const frame = (body: ReactNode) => (
     <main className={`${shell.page} ${shell.narrow}`}>
-      <Link className={shell.wordmark} to="/">
-        Whiteboard
-      </Link>
       <h1 className={shell.title}>You're invited</h1>
       {body}
     </main>
