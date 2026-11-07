@@ -1,9 +1,10 @@
 import { betterAuth } from "better-auth";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { organization } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements, ownerAc, memberAc } from "better-auth/plugins/organization/access";
 import { authPool } from "../db.js";
+import { getTenantsByUserId } from "../services/tenant.js";
 
 // "admin" is a manager: owner minus people. Managers invite staff, but only an
 // owner invites managers (beforeCreateInvitation) or changes and removes members.
@@ -30,6 +31,36 @@ export const auth = betterAuth({
     database: authPool,
     emailAndPassword: { 
         enabled: true, 
+    },
+    // Better Auth would let a session less than a day old delete its account
+    // without a password. A stolen cookie shouldn't be enough, so always ask.
+    hooks: {
+        before: createAuthMiddleware(async (ctx) => {
+            const body = ctx.body as { password?: unknown } | undefined;
+            if (ctx.path === "/delete-user" && (typeof body?.password !== "string" || body.password === "")) {
+                throw new APIError("BAD_REQUEST", { code: "PASSWORD_REQUIRED", message: "Enter your password to delete your account." });
+            }
+        }),
+    },
+    // Deleting your own account, with your password. Sessions, sign-ins,
+    // memberships and invitations you sent go with it (foreign keys cascade);
+    // a staff row you were linked to stays, unlinked.
+    user: {
+        deleteUser: {
+            enabled: true,
+            beforeDelete: async (user) => {
+                // An open organization with no owner couldn't be run or closed.
+                const owned = (await getTenantsByUserId(user.id)).filter(
+                    (o: { role: string; closedAt: unknown }) => o.role === "owner" && !o.closedAt,
+                );
+                if (owned.length > 0) {
+                    throw new APIError("BAD_REQUEST", {
+                        code: "OWNS_ORGANIZATIONS",
+                        message: `Close the organizations you own first: ${owned.map((o: { name: string }) => o.name).join(", ")}.`,
+                    });
+                }
+            },
+        },
     },
     // Dev pages come from Vite on 5173, not BETTER_AUTH_URL, so Better Auth
     // answers 403 INVALID_ORIGIN. Production is one origin and needs no entry.
