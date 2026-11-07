@@ -262,6 +262,24 @@ describe('Setup', () => {
     });
   });
 
+  describe('connecting other apps', () => {
+    it('is tucked into Accounts for owners, and opens on request', async () => {
+      ready({ [`GET ${base}/webhooks`]: () => json(200, { webhooks: [] }) });
+      renderSetup('accounts');
+      expect(await screen.findByRole('heading', { name: 'Advanced: connect other apps' })).toBeTruthy();
+      expect(screen.queryByRole('tab', { name: 'Webhooks' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Set up a connection…' }));
+      expect(await screen.findByText('No connections yet.')).toBeTruthy();
+    });
+
+    it('is not shown to a manager', async () => {
+      ready({ [`GET ${base}`]: context('admin') });
+      renderSetup('accounts');
+      await screen.findByRole('heading', { name: 'Accounts' });
+      expect(screen.queryByRole('heading', { name: 'Advanced: connect other apps' })).toBeNull();
+    });
+  });
+
   describe('closing the organization', () => {
     it('lets an owner close it once the address is typed back', async () => {
       const calls = ready({ [`DELETE ${base}`]: () => json(200, { cancelled: 2, emailed: 2 }) });

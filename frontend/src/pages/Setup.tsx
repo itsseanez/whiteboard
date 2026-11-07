@@ -283,22 +283,6 @@ export default function Setup() {
               </div>
             ),
           },
-          ...(data.role === 'owner'
-            ? [
-                {
-                  id: 'webhooks',
-                  label: 'Webhooks',
-                  panel: (
-                    <div className={styles.column}>
-                      <section className={styles.section}>
-                        <h2 className={styles.heading}>Webhooks</h2>
-                        <Webhooks slug={slug} />
-                      </section>
-                    </div>
-                  ),
-                },
-              ]
-            : []),
           {
             id: 'accounts',
             label: 'Accounts',
@@ -307,6 +291,7 @@ export default function Setup() {
             panel: (
               <div className={styles.column}>
                 <Accounts slug={slug} data={data} changed={reload} />
+                {data.role === 'owner' ? <ConnectApps slug={slug} /> : null}
                 {data.role === 'owner' ? <CloseOrganization slug={slug} name={data.name} /> : null}
               </div>
             ),
@@ -614,6 +599,29 @@ function RoleControl({
       ) : null}
       {save.line}
     </span>
+  );
+}
+
+/** Webhooks, for the few owners who use them: out of the way, in plain words. */
+function ConnectApps({ slug }: { slug: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>Advanced: connect other apps</h2>
+      <p className={styles.note}>
+        Send each booking, change and cancellation to another app as it happens, such as Zapier, Google Sheets or
+        your customer list. Most organizations never need this.
+      </p>
+      {open ? (
+        <Webhooks slug={slug} />
+      ) : (
+        <div>
+          <Button variant="secondary" onClick={() => setOpen(true)}>
+            Set up a connection…
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 

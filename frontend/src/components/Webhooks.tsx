@@ -16,7 +16,7 @@ function messageFor(error: unknown): string {
       const text = error.code.replace(/^url\b/, 'The URL');
       return text.charAt(0).toUpperCase() + text.slice(1) + '.';
     }
-    if (error.code === 'owner_only') return 'Only owners can manage webhooks.';
+    if (error.code === 'owner_only') return 'Only owners can connect other apps.';
     return 'Something went wrong. Try again in a moment.';
   }
   return "Can't reach Whiteboard. Check your connection and try again.";
@@ -31,7 +31,7 @@ function status(d: WebhookDelivery): string {
     case 'expired':
       return `gave up after ${d.attempts} tries${d.lastError ? `: ${d.lastError}` : ''}`;
     case 'cancelled':
-      return 'not sent: webhook removed';
+      return 'not sent: connection removed';
     default:
       return d.attempts === 0 ? 'waiting' : `retrying: ${d.lastError ?? 'failed'}`;
   }
@@ -82,9 +82,10 @@ export default function Webhooks({ slug }: { slug: string }): ReactNode {
   return (
     <div className={styles.webhooks}>
       <p className={styles.note}>
-        Every booking, move and cancellation is sent as a signed JSON POST, with the customer's name, email and phone.
-        Check the <code>Whiteboard-Signature</code> header with your secret before trusting a request. Failed
-        deliveries are retried for three days.
+        The other app gives you an address to paste here (it may call it a webhook URL). Whiteboard sends each
+        change to it, with the customer's name, email and phone, and retries for three days if it doesn't answer.
+        Whoever sets up the other app will want the secret shown after you add it, to check the messages really come
+        from Whiteboard (the <code>Whiteboard-Signature</code> header).
       </p>
       {problem ? <Problem role="alert">{problem}</Problem> : null}
       {secret ? (
@@ -102,9 +103,9 @@ export default function Webhooks({ slug }: { slug: string }): ReactNode {
       {hooks === null ? (
         <p className={styles.note}>Loading…</p>
       ) : hooks.length === 0 ? (
-        <p className={styles.note}>No webhooks yet.</p>
+        <p className={styles.note}>No connections yet.</p>
       ) : (
-        <ul className={styles.list} aria-label="Webhooks">
+        <ul className={styles.list} aria-label="Connections">
           {hooks.map((h) => (
             <li key={h.id} className={styles.hook}>
               <div className={styles.head}>
@@ -147,10 +148,10 @@ export default function Webhooks({ slug }: { slug: string }): ReactNode {
         </ul>
       )}
       <form className={styles.form} onSubmit={(event) => void add(event)}>
-        <Field label="Webhook URL" value={url} onChange={setUrl} hint="https only. Up to five." disabled={busy} />
+        <Field label="Address from the other app" value={url} onChange={setUrl} hint="Starts with https://. Up to five." disabled={busy} />
         <div>
           <Button type="submit" disabled={busy || !url.trim()}>
-            Add webhook
+            Add connection
           </Button>
         </div>
       </form>

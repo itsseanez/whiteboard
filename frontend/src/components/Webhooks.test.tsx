@@ -32,9 +32,9 @@ describe('Webhooks', () => {
       'POST /tenant/wien/webhooks': () => json(201, { id: 'h2', url: 'https://new.example.com/', secret: 'whsec_abc' }),
     });
     render(<Webhooks slug="wien" />);
-    await screen.findByText('No webhooks yet.');
-    fireEvent.change(screen.getByLabelText('Webhook URL'), { target: { value: 'https://new.example.com/' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add webhook' }));
+    await screen.findByText('No connections yet.');
+    fireEvent.change(screen.getByLabelText('Address from the other app'), { target: { value: 'https://new.example.com/' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add connection' }));
     expect(await screen.findByText('whsec_abc')).toBeTruthy();
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ url: 'https://new.example.com/' });
     fireEvent.click(screen.getByRole('button', { name: "I've saved it" }));
@@ -47,9 +47,9 @@ describe('Webhooks', () => {
       'POST /tenant/wien/webhooks': () => json(400, { error: 'url must be a public address' }),
     });
     render(<Webhooks slug="wien" />);
-    await screen.findByText('No webhooks yet.');
-    fireEvent.change(screen.getByLabelText('Webhook URL'), { target: { value: 'http://169.254.169.254/' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add webhook' }));
+    await screen.findByText('No connections yet.');
+    fireEvent.change(screen.getByLabelText('Address from the other app'), { target: { value: 'http://169.254.169.254/' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add connection' }));
     expect(await screen.findByText('The URL must be a public address.')).toBeTruthy();
   });
 
@@ -60,7 +60,7 @@ describe('Webhooks', () => {
     });
     render(<Webhooks slug="wien" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Send a test' }));
-    await screen.findByRole('list', { name: 'Webhooks' });
+    await screen.findByRole('list', { name: 'Connections' });
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(calls.some((c) => c.path.endsWith('/test'))).toBe(true);
     expect(screen.queryByRole('alert')).toBeNull();
