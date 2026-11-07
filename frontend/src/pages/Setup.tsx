@@ -31,6 +31,8 @@ import Problem from '../components/Problem';
 import Tabs from '../components/Tabs';
 import { CalendarView } from './Calendar';
 import TimeOff from '../components/TimeOff';
+import Select from '../components/Select';
+import { useSettledSession } from '../auth';
 
 interface Data {
   name: string;
@@ -62,6 +64,7 @@ const MESSAGES: Record<string, string> = {
   email_unavailable: "Email isn't set up yet, so the invitation couldn't be sent. Try again once it is.",
   email_failed: "The invitation was saved but the email didn't go. Try sending it again.",
   not_found: 'That no longer exists. Reload the page.',
+  last_owner: 'There has to be at least one owner. Make someone else an owner first.',
   unknown_staff_or_resource: 'A selected staff member or resource no longer exists. Reload the page.',
   has_future_appointments: 'There are upcoming appointments. Move or cancel them in the calendar first.',
   only_resource_for_service:
@@ -534,9 +537,73 @@ function StaffLogin({
 
 const ROLE_LABEL: Record<MemberRole, string> = { owner: 'Owner', admin: 'Manager', member: 'Staff' };
 
+const APP_ROLE: Record<MemberRole, 'owner' | 'manager' | 'staff'> = { owner: 'owner', admin: 'manager', member: 'staff' };
+const ROLE_OPTIONS = [
+  { value: 'owner', label: 'Owner' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'staff', label: 'Staff' },
+] as const;
+
+/** An owner's control over one person's role. Stepping yourself down asks first. */
+function RoleControl({
+  slug,
+  person,
+  self,
+  staffName,
+  changed,
+}: {
+  slug: string;
+  person: Person;
+  self: boolean;
+  staffName: string | undefined;
+  changed: () => void;
+}) {
+  const save = useSave();
+  const [pending, setPending] = useState<'owner' | 'manager' | 'staff' | null>(null);
+  const current = APP_ROLE[person.role] ?? 'staff';
+
+  async function apply(role: 'owner' | 'manager' | 'staff') {
+    setPending(null);
+    await save.run(async () => {
+      await peopleApi.setRole(slug, person.memberId, role);
+      changed();
+    });
+  }
+
+  return (
+    <span className={styles.role}>
+      <Select
+        label={`${person.name}'s role${staffName ? ` (${staffName})` : ''}`}
+        value={pending ?? current}
+        options={ROLE_OPTIONS}
+        disabled={save.busy}
+        onChange={(value) => {
+          const role = value as 'owner' | 'manager' | 'staff';
+          if (role === current) return setPending(null);
+          if (self && current === 'owner') return setPending(role);
+          void apply(role);
+        }}
+      />
+      {pending ? (
+        <span className={styles.actions}>
+          <span className={styles.note}>You'll no longer be an owner.</span>
+          <Button variant="secondary" onClick={() => void apply(pending)}>
+            Yes, change my role
+          </Button>
+          <Button variant="secondary" onClick={() => setPending(null)}>
+            Keep
+          </Button>
+        </span>
+      ) : null}
+      {save.line}
+    </span>
+  );
+}
+
 /** Who can sign in. Managers see it; only owners invite managers or remove anyone. */
 function Accounts({ slug, data, changed }: { slug: string; data: Data; changed: () => void }) {
   const isOwner = data.role === 'owner';
+  const me = useSettledSession().data?.user.id;
   const [email, setEmail] = useState('');
   const save = useSave();
   useTrackDirty('invite:manager', email.trim() !== '');
@@ -556,8 +623,8 @@ function Accounts({ slug, data, changed }: { slug: string; data: Data; changed: 
     <section className={styles.section}>
       <h2 className={styles.heading}>Accounts</h2>
       <p className={styles.note}>
-        Who can sign in. Managers run setup and the calendar and invite staff; only owners invite managers or
-        remove anyone. Invite staff from their card on the Staff tab.
+        Who can sign in. Managers run setup and the calendar and invite staff; only owners invite managers, change
+        roles or remove anyone. There's always at least one owner. Invite staff from their card on the Staff tab.
       </p>
       <ul className={styles.list}>
         {data.members.map((m) => (
@@ -566,10 +633,20 @@ function Accounts({ slug, data, changed }: { slug: string; data: Data; changed: 
               {m.name} · {m.email}
             </span>
             <span className={styles.actions}>
-              <span className={styles.note}>
-                {ROLE_LABEL[m.role] ?? m.role}
-                {m.staffId && staffName(m.staffId) ? ` · ${staffName(m.staffId)}` : ''}
-              </span>
+              {isOwner ? (
+                <RoleControl
+                  slug={slug}
+                  person={m}
+                  self={m.userId === me}
+                  staffName={m.staffId ? staffName(m.staffId) : undefined}
+                  changed={changed}
+                />
+              ) : (
+                <span className={styles.note}>
+                  {ROLE_LABEL[m.role] ?? m.role}
+                  {m.staffId && staffName(m.staffId) ? ` · ${staffName(m.staffId)}` : ''}
+                </span>
+              )}
               {isOwner && m.role !== 'owner' ? (
                 <RemoveButton
                   label={m.name}

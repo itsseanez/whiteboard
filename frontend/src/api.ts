@@ -368,6 +368,9 @@ export const peopleApi = {
     send<{ invitationId: string }>(owner(slug, '/invitations'), write('POST', body)),
   remove: (slug: string, memberId: string) =>
     send<void>(owner(slug, `/members/${encodeURIComponent(memberId)}`), { method: 'DELETE' }),
+  /** Owner only. Refused with last_owner when it would leave no owner. */
+  setRole: (slug: string, memberId: string, role: 'owner' | 'manager' | 'staff') =>
+    send<void>(owner(slug, `/members/${encodeURIComponent(memberId)}`), write('PATCH', { role })),
 };
 
 /** POST /me/invitations/:id/accept. Safe to repeat. */
