@@ -694,7 +694,8 @@ function CloseOrganization({ slug, name }: { slug: string; name: string }) {
       <p className={styles.note}>
         Its booking page goes away, everyone loses access, and every upcoming appointment is cancelled with an email
         to the customer. Past appointments are kept. You can reopen it from your account page for 30 days, without the
-        cancelled appointments; after that it's closed for good and its address is released for someone else.
+        cancelled appointments; after that it's closed <strong>permanently</strong>, and its address can be taken by
+        someone else.
       </p>
       {open ? (
         <form

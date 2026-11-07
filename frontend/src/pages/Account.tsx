@@ -147,8 +147,8 @@ export default function Account() {
                       {o.name}
                       <span className={styles.meta}>
                         {' '}
-                        · closed {day(o.closedAt!)}. Reopen by {day(o.reopenUntil!)}, after which its address is
-                        released.
+                        · closed {day(o.closedAt!)}. Reopen by {day(o.reopenUntil!)}, after which it's closed{' '}
+                        <strong>permanently</strong>, and its address can be taken by someone else.
                       </span>
                     </span>
                     <span className={styles.links}>
