@@ -1,6 +1,6 @@
 // Calendar under /tenant/:slug, for owners and managers (requireManager):
 //   GET  /calendar?from&through            what to draw for those dates
-//   GET  /availability/explain?serviceId&from&through
+//   GET  /availability/explain?serviceId&from&through[&staffId][&exclude]
 //                                          the engine's full result, reasons included
 //   POST /appointments                     book on a customer's behalf
 //   POST /appointments/:id/cancel
@@ -58,7 +58,10 @@ export async function getExplain(req: Request, res: Response) {
   const parsed = parseAvailability(req);
   if (!parsed.ok) return res.status(parsed.status).json({ error: parsed.error });
   try {
-    const result = await getAvailability(appPool, { ...parsed.value, userId: scope(req).userId, now: new Date(), excludeAppointmentId: null });
+    // Moving an appointment: it mustn't block its own new time. Managers see
+    // every appointment anyway, so naming one to leave out reveals nothing.
+    const exclude = typeof req.query.exclude === 'string' && UUID.test(req.query.exclude) ? req.query.exclude : null;
+    const result = await getAvailability(appPool, { ...parsed.value, userId: scope(req).userId, now: new Date(), excludeAppointmentId: exclude });
     // Temporal values serialise through their toJSON, as ISO strings.
     res.json({ timeZone: parsed.value.timeZone, ...result });
   } catch (error) {

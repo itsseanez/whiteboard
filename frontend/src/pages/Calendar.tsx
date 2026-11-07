@@ -492,13 +492,13 @@ function AppointmentPanel({
     if (!moving || !moveStaff) return;
     setTimes(null);
     calendarApi
-      .explain(slug, a.serviceId, moveDate, moveDate, moveStaff)
+      .explain(slug, a.serviceId, moveDate, moveDate, moveStaff, a.id)
       .then((r) => {
         const d = r.days[0];
         setTimes(d?.status === 'open' ? d.slots.filter((s) => s.staffIds.includes(moveStaff)).map((s) => s.startsAt) : []);
       })
       .catch((e: unknown) => setError(messageFor(e)));
-  }, [moving, moveDate, moveStaff, slug, a.serviceId]);
+  }, [moving, moveDate, moveStaff, slug, a.serviceId, a.id]);
 
   async function act(fn: () => Promise<unknown>) {
     setBusy(true);

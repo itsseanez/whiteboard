@@ -92,6 +92,11 @@ describe('owner calendar', () => {
     const nine = explain.body.days[0].excluded.find((e: { startsAt: string }) => e.startsAt === at('09:00'));
     expect(nine.reason[0]).toMatchObject({ reason: 'busy', staffId: ana, busyInterval: { appointmentId: id } });
 
+    // Moving it: with itself left out, its own time is free again.
+    const moving = await get('/availability/explain', { serviceId: cut, from: date, exclude: id });
+    const starts = moving.body.days[0].slots.map((slot: { startsAt: string }) => slot.startsAt);
+    expect(starts).toContain(at('09:00'));
+
     // The engine refuses 11:30 (would run past Ana's noon finish), so the owner can't book it either.
     const refused = await post('/appointments', {
       serviceId: cut,

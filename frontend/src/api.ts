@@ -336,9 +336,11 @@ export interface HistoryEvent {
 export const calendarApi = {
   calendar: (slug: string, from: string, through: string) =>
     send<CalendarData>(owner(slug, `/calendar?${new URLSearchParams({ from, through })}`)),
-  explain: (slug: string, serviceId: string, from: string, through: string, staffId?: string) => {
+  /** `exclude`: the appointment being moved, so it doesn't block its own new time. */
+  explain: (slug: string, serviceId: string, from: string, through: string, staffId?: string, exclude?: string) => {
     const query = new URLSearchParams({ serviceId, from, through });
     if (staffId) query.set('staffId', staffId);
+    if (exclude) query.set('exclude', exclude);
     return send<Explain>(owner(slug, `/availability/explain?${query}`));
   },
   book: (
