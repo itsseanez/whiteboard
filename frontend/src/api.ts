@@ -216,6 +216,9 @@ const owner = (slug: string, path: string) => `/tenant/${encodeURIComponent(slug
 const write = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
 
 export const ownerApi = {
+  /** Owner only. Archives the organization and cancels, and emails, every future booking. */
+  close: (slug: string, confirm: string) =>
+    send<{ cancelled: number; emailed: number }>(owner(slug, ''), write('DELETE', { confirm })),
   staff: (slug: string) => send<StaffMember[]>(owner(slug, '/staff')),
   addStaff: (slug: string, name: string) => send<StaffMember>(owner(slug, '/staff'), write('POST', { name })),
   renameStaff: (slug: string, id: string, name: string) =>

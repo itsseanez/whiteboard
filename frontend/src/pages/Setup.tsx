@@ -5,7 +5,7 @@
 // its own, marks itself while it holds unsaved edits, and so does its tab.
 
 import { createContext, useCallback, useContext, useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   ApiError,
@@ -269,6 +269,7 @@ export default function Setup() {
             panel: (
               <div className={styles.column}>
                 <Accounts slug={slug} data={data} changed={reload} />
+                {data.role === 'owner' ? <CloseOrganization slug={slug} name={data.name} /> : null}
               </div>
             ),
           },
@@ -581,6 +582,51 @@ function Accounts({ slug, data, changed }: { slug: string; data: Data; changed: 
           {save.line}
         </form>
       ) : null}
+    </section>
+  );
+}
+
+/** Owner only: archive the organization, cancelling and emailing every future booking. */
+function CloseOrganization({ slug, name }: { slug: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState('');
+  const save = useSave();
+  const navigate = useNavigate();
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>Close this organization</h2>
+      <p className={styles.note}>
+        Its booking page goes away, everyone loses access, and every upcoming appointment is cancelled with an email
+        to the customer. Past appointments are kept. This can't be undone, and the address stays taken.
+      </p>
+      {open ? (
+        <form
+          className={styles.inline}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void save.run(async () => {
+              await ownerApi.close(slug, typed.trim());
+              navigate('/account');
+            });
+          }}
+        >
+          <Field label={`Type ${slug} to confirm`} value={typed} onChange={setTyped} disabled={save.busy} />
+          <Button type="submit" disabled={save.busy || typed.trim() !== slug}>
+            Close {name}
+          </Button>
+          <Button variant="secondary" disabled={save.busy} onClick={() => setOpen(false)}>
+            Keep it
+          </Button>
+          {save.line}
+        </form>
+      ) : (
+        <div className={styles.actions}>
+          <Button variant="secondary" onClick={() => setOpen(true)}>
+            Close organization…
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

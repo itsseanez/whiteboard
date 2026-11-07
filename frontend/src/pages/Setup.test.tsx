@@ -43,6 +43,7 @@ function renderSetup(tab?: 'calendar' | 'hours' | 'staff' | 'accounts' | 'servic
     <MemoryRouter initialEntries={[tab ? `/manage/acme?tab=${tab}` : '/manage/acme']}>
       <Routes>
         <Route path="/manage/:slug" element={<Setup />} />
+        <Route path="/account" element={<p>account page</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -258,6 +259,28 @@ describe('Setup', () => {
       renderSetup('accounts');
       await screen.findByRole('tab', { name: 'Accounts' });
       expect(screen.queryByRole('button', { name: 'Invite manager' })).toBeNull();
+    });
+  });
+
+  describe('closing the organization', () => {
+    it('lets an owner close it once the address is typed back', async () => {
+      const calls = ready({ [`DELETE ${base}`]: () => json(200, { cancelled: 2, emailed: 2 }) });
+      renderSetup('accounts');
+      fireEvent.click(await screen.findByRole('button', { name: 'Close organization…' }));
+      const confirm = screen.getByRole('button', { name: 'Close Acme' }) as HTMLButtonElement;
+      expect(confirm.disabled).toBe(true);
+      fireEvent.change(screen.getByLabelText('Type acme to confirm'), { target: { value: 'acme' } });
+      expect(confirm.disabled).toBe(false);
+      fireEvent.click(confirm);
+      expect(await screen.findByText('account page')).toBeTruthy();
+      expect(calls.find((c) => c.method === 'DELETE')?.body).toEqual({ confirm: 'acme' });
+    });
+
+    it('is not offered to a manager', async () => {
+      ready({ [`GET ${base}`]: context('admin') });
+      renderSetup('accounts');
+      await screen.findByRole('heading', { name: 'Accounts' });
+      expect(screen.queryByRole('button', { name: 'Close organization…' })).toBeNull();
     });
   });
 });
