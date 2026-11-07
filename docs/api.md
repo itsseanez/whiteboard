@@ -16,6 +16,12 @@ There are three audiences, and each has its own database role
 
 Sign-up, sign-in and sessions are Better Auth's own routes under `/api/auth/*`.
 
+The public routes are limited per client address, each group with its own
+allowance: reads (services, availability) 300 per 5 minutes, bookings 10 per
+hour, and anything carrying a manage token 60 per 15 minutes. Past that the
+answer is `429 { "error": "rate_limited" }` with a `Retry-After`. Better Auth
+limits its own routes.
+
 ## Public: `/:slug`
 
 | Method | Path | Does |

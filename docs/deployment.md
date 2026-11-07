@@ -66,6 +66,15 @@ rate limit.
 
 Port 80 is not optional — the HTTP-01 challenge is served over it.
 
+Caddy is also where the client's address comes from. With no
+`trusted_proxies` set, it discards any `X-Forwarded-For` a client sends and
+writes one value, the real peer. Express trusts exactly that one hop
+(`trust proxy` 1) and Better Auth trusts a single-value header, so both rate
+limiters key on the real client. **Putting anything in front of Caddy (a CDN,
+a load balancer) breaks this:** every request would come from that proxy and
+share one bucket. Set Caddy's `trusted_proxies` to it and raise the hop count
+in `app.ts` together.
+
 ## Deploy transport: SSM, not SSH
 
 Deploys run via `aws ssm send-command`, authenticated by GitHub OIDC. Port
