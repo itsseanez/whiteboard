@@ -14,7 +14,7 @@ There are three audiences, and each has its own database role
 | `/me/...` | Any signed-in user | Session cookie |
 | `/tenant/:slug/...` | An organization's owners, managers and staff | Session cookie, membership |
 
-Sign-up, sign-in and sessions are Better Auth's own routes under `/api/auth/*`.
+Sign-up, sign-in, sessions, password reset (`/request-password-reset`, `/reset-password`), email confirmation (`/send-verification-email`, `/verify-email`) and changing your email or password are Better Auth's own routes under `/api/auth/*`. Changing your email also needs `password` in the body.
 
 The public routes are limited per client address, each group with its own
 allowance: reads (services, availability) 300 per 5 minutes, bookings 10 per
