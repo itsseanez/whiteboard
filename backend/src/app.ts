@@ -3,7 +3,8 @@ import express, { type Express, type Request, type Response } from 'express';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import apiRouter from './routes/api/index.js';
-import publicRouter from './routes/public/index.js';
+import createPublicRouter from './routes/public/index.js';
+import { PRODUCTION_LIMITS, createLimiters, type RateLimits } from './middleware/rate-limit.js';
 import meRouter from './routes/me/index.js';
 import { auth } from './lib/auth.js';
 import { toNodeHandler } from 'better-auth/node';
@@ -13,8 +14,21 @@ import { toNodeHandler } from 'better-auth/node';
 const CLIENT_DIR = path.resolve(import.meta.dirname, '../client');
 const CLIENT_INDEX = path.join(CLIENT_DIR, 'index.html');
 
-export function createApp(): Express {
+export interface AppOptions {
+  /** Off by default under Vitest, whose suites book far past any real limit. */
+  rateLimits?: RateLimits | false;
+}
+
+export function createApp(options: AppOptions = {}): Express {
   const app: Express = express();
+  const limits = createLimiters(
+    options.rateLimits ?? (process.env.NODE_ENV === 'test' ? false : PRODUCTION_LIMITS),
+  );
+
+  // Caddy is the one hop in front of us, and it replaces any X-Forwarded-For a
+  // client sends with the real peer address. Trusting exactly one hop makes
+  // req.ip that address; without it every request is Caddy's, one shared bucket.
+  app.set('trust proxy', 1);
 
   app.all('/api/auth/*splat', toNodeHandler(auth));
   app.use(express.json());
@@ -57,8 +71,8 @@ export function createApp(): Express {
   app.use('/tenant/:slug', apiRouter);
   app.use('/me', meRouter);
   // Before /:slug, which would otherwise read "links" as an organization.
-  app.post('/links/closed', postClosedLink);
-  app.use('/:slug', publicRouter);
+  app.post('/links/closed', limits.manage, postClosedLink);
+  app.use('/:slug', createPublicRouter(limits));
 
   if (!hasClient) {
     // Development and test. The API is the whole app here.
