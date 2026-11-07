@@ -1,4 +1,5 @@
 import { postClosedLink } from './controllers/closed-link.js';
+import { getHealth } from './controllers/health.js';
 import express, { type Express, type Request, type Response } from 'express';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -30,6 +31,7 @@ export function createApp(options: AppOptions = {}): Express {
   // req.ip that address; without it every request is Caddy's, one shared bucket.
   app.set('trust proxy', 1);
 
+  app.get('/api/health', getHealth);
   app.all('/api/auth/*splat', toNodeHandler(auth));
   app.use(express.json());
 

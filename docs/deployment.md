@@ -356,6 +356,38 @@ CRON
   created, then deploy as usual. Migrations already applied in the backup are
   skipped. `restore.sh` refuses a database that already holds data.
 
+## Monitoring
+
+`GET /api/health` answers `200 {"ok":true,…}` when the app and its database
+are up and `503` when the database isn't. It also reports `clientIp`, the
+address the app sees for you, and how much email is waiting in the outbox.
+
+- **After every infrastructure change**, open
+  `https://whiteboardhq.app/api/health` on your laptop and on your phone over
+  cellular. The two `clientIp` values must differ and match your real
+  addresses. If both show a `172.x` Docker address, the rate limits are one
+  shared bucket.
+- **Uptime:** an external HTTP check (UptimeRobot, Better Stack, or a
+  CloudWatch Synthetics canary) on `https://whiteboardhq.app/api/health`,
+  every 5 minutes, alerting on anything but `200` or a body without
+  `"ok":true`. External, because a check on the box dies with the box.
+- **The instance itself:** a CloudWatch alarm on the status check, emailing
+  you. Once:
+
+  ```bash
+  aws sns create-topic --name whiteboard-alerts
+  aws sns subscribe --topic-arn arn:aws:sns:us-east-1:174683182383:whiteboard-alerts \
+    --protocol email --notification-endpoint you@example.com   # confirm the email
+  aws cloudwatch put-metric-alarm --alarm-name whiteboard-instance-status \
+    --namespace AWS/EC2 --metric-name StatusCheckFailed --statistic Maximum \
+    --dimensions Name=InstanceId,Value=i-0c55a9f3df7256f06 \
+    --period 300 --evaluation-periods 2 --threshold 1 --comparison-operator GreaterThanOrEqualToThreshold \
+    --alarm-actions arn:aws:sns:us-east-1:174683182383:whiteboard-alerts
+  ```
+- **Backups:** set `BACKUP_PING_URL` (see Backups) so a missed night alerts.
+- **The outbox:** `outbox.oldestMinutes` climbing means emails aren't going
+  out. Expected while SES is unconfigured or in its sandbox.
+
 ## Never run
 
 **`docker compose down -v`.** It destroys the cluster's entire data
