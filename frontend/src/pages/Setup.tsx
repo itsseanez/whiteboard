@@ -1,9 +1,10 @@
-// Setup at /manage/:slug, for owners and managers: opening hours, resources,
-// staff and their hours, services, and who can sign in. Removing archives; each
-// card saves on its own and marks itself while it holds unsaved edits.
+// Setup at /manage/:slug, for owners and managers, in three tabs of like
+// sections, in the order a new organization fills them: opening hours; staff
+// and who can sign in; resources and the services that use staff and resources. The open tab is in ?tab=. Removing archives; each card saves on
+// its own, marks itself while it holds unsaved edits, and so does its tab.
 
 import { createContext, useCallback, useContext, useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   ApiError,
@@ -26,6 +27,7 @@ import WeekHours from '../components/WeekHours';
 import shell from '../shell.module.css';
 import styles from './Setup.module.css';
 import Problem from '../components/Problem';
+import Tabs from '../components/Tabs';
 
 interface Data {
   role: string;
@@ -117,8 +119,17 @@ function Unsaved({ show }: { show: boolean }) {
   return show ? <span className={styles.unsaved}>Unsaved changes</span> : null;
 }
 
+/** Which tab a form's unsaved-edits key belongs to. */
+function tabOf(key: string): string {
+  if (key === 'business-hours') return 'hours';
+  if (key.startsWith('service:') || key === 'add:New resource') return 'services';
+  return 'team';
+}
+
 export default function Setup() {
   const { slug = '' } = useParams();
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') ?? 'hours';
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [dirty, setDirty] = useState<ReadonlySet<string>>(new Set());
 
@@ -200,6 +211,7 @@ export default function Setup() {
 
   const { data } = state;
   const reload = () => void load();
+  const unsavedIn = (id: string) => [...dirty].some((key) => tabOf(key) === id);
 
   return frame(
     <DirtyContext.Provider value={report}>
@@ -209,47 +221,80 @@ export default function Setup() {
         in your organization's own zone. <Link to={`/manage/${slug}/calendar`}>Open the calendar</Link>.
       </p>
 
-      <BusinessHours slug={slug} initial={data.businessHours} />
-
-      <section className={styles.section}>
-        <h2 className={styles.heading}>Resources</h2>
-        <p className={styles.note}>Rooms, chairs or equipment a service needs. Any one free resource will do.</p>
-        <ul className={styles.list}>
-          {data.resources.map((r) => (
-            <li key={r.id} className={styles.row}>
-              <span>{r.name}</span>
-              <span className={styles.actions}>
-                <RemoveButton
-                  label={r.name}
-                  onRemove={async () => {
-                    await ownerApi.deleteResource(slug, r.id);
-                    reload();
-                  }}
-                />
-              </span>
-            </li>
-          ))}
-        </ul>
-        <AddByName label="New resource" action="Add resource" onAdd={(name) => ownerApi.addResource(slug, name)} done={reload} />
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.heading}>Staff</h2>
-        {data.staff.map((s) => (
-          <StaffCard key={s.id} slug={slug} member={s} login={loginOf(data, s.id)} removed={reload} />
-        ))}
-        <AddByName label="New staff member" action="Add staff member" onAdd={(name) => ownerApi.addStaff(slug, name)} done={reload} />
-      </section>
-
-      <People slug={slug} data={data} changed={reload} />
-
-      <section className={styles.section}>
-        <h2 className={styles.heading}>Services</h2>
-        {data.services.map((s) => (
-          <ServiceForm key={s.id} slug={slug} service={s} staff={data.staff} resources={data.resources} done={reload} />
-        ))}
-        <ServiceForm slug={slug} staff={data.staff} resources={data.resources} done={reload} />
-      </section>
+      <Tabs
+        label="Set up"
+        selected={tab}
+        onSelect={(id) => setParams({ tab: id }, { replace: true })}
+        tabs={[
+          {
+            id: 'hours',
+            label: 'Opening hours',
+            marked: unsavedIn('hours'),
+            markLabel: 'unsaved changes',
+            panel: (
+              <>
+                <BusinessHours slug={slug} initial={data.businessHours} />
+              </>
+            ),
+          },
+          {
+            id: 'team',
+            label: 'Staff and people',
+            marked: unsavedIn('team'),
+            markLabel: 'unsaved changes',
+            panel: (
+              <>
+                <section className={styles.section}>
+                  <h2 className={styles.heading}>Staff</h2>
+                  {data.staff.map((s) => (
+                    <StaffCard key={s.id} slug={slug} member={s} login={loginOf(data, s.id)} removed={reload} />
+                  ))}
+                  <AddByName label="New staff member" action="Add staff member" onAdd={(name) => ownerApi.addStaff(slug, name)} done={reload} />
+                </section>
+                <People slug={slug} data={data} changed={reload} />
+              </>
+            ),
+          },
+          {
+            id: 'services',
+            label: 'Services and resources',
+            marked: unsavedIn('services'),
+            markLabel: 'unsaved changes',
+            panel: (
+              <>
+                <section className={styles.section}>
+                  <h2 className={styles.heading}>Resources</h2>
+                  <p className={styles.note}>Rooms, chairs or equipment a service needs. Any one free resource will do.</p>
+                  <ul className={styles.list}>
+                    {data.resources.map((r) => (
+                      <li key={r.id} className={styles.row}>
+                        <span>{r.name}</span>
+                        <span className={styles.actions}>
+                          <RemoveButton
+                            label={r.name}
+                            onRemove={async () => {
+                              await ownerApi.deleteResource(slug, r.id);
+                              reload();
+                            }}
+                          />
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <AddByName label="New resource" action="Add resource" onAdd={(name) => ownerApi.addResource(slug, name)} done={reload} />
+                </section>
+                <section className={styles.section}>
+                  <h2 className={styles.heading}>Services</h2>
+                  {data.services.map((s) => (
+                    <ServiceForm key={s.id} slug={slug} service={s} staff={data.staff} resources={data.resources} done={reload} />
+                  ))}
+                  <ServiceForm slug={slug} staff={data.staff} resources={data.resources} done={reload} />
+                </section>
+              </>
+            ),
+          },
+        ]}
+      />
     </DirtyContext.Provider>,
   );
 }

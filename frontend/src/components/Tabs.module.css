@@ -39,3 +39,22 @@
   outline: 2px solid var(--ink);
   outline-offset: 4px;
 }
+
+.mark {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: var(--space-1);
+  border-radius: 50%;
+  background: var(--ink);
+  vertical-align: 0.15em;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

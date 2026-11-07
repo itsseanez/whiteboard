@@ -112,7 +112,7 @@ describe('Account', () => {
     renderAccount();
     expect((await screen.findByRole('tab', { name: 'Organizations' })).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('link', { name: 'Set up' }).getAttribute('href')).toBe('/manage/acme');
-    expect(screen.queryByText('Name of studio-wien')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Your week' })).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Your week' }));
     expect(screen.getByRole('link', { name: 'Your week' }).getAttribute('href')).toBe('/manage/studio-wien/me');

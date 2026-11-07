@@ -124,3 +124,10 @@ main.page {
   font-size: var(--step--1);
   color: var(--ink-soft);
 }
+
+/* The tabs' rule is the top edge of a panel's first section. */
+[role='tabpanel'] > .section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
