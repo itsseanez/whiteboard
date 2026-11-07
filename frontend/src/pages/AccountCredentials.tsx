@@ -13,7 +13,7 @@ function wrongPassword(error: AuthError, fallback: (e: AuthError) => string): st
   return error.code === 'INVALID_PASSWORD' ? 'That password is not right.' : fallback(error);
 }
 
-export function ChangeEmail({ current }: { current: string }): ReactNode {
+export function ChangeEmail({ current, verified }: { current: string; verified: boolean }): ReactNode {
   const [open, setOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,6 +47,11 @@ export function ChangeEmail({ current }: { current: string }): ReactNode {
       setPassword('');
       if (now && now === newEmail.trim().toLowerCase()) {
         setDone(`Your email is now ${now}. Sign in with it from now on.`);
+        setNewEmail('');
+        setOpen(false);
+      } else if (verified) {
+        // A confirmed address only changes once the new one is confirmed too.
+        setDone(`If no other account uses ${newEmail.trim()}, we've emailed it a link. Your email changes when you open it.`);
         setNewEmail('');
         setOpen(false);
       } else {
@@ -166,5 +171,42 @@ export function ChangePassword(): ReactNode {
         </div>
       )}
     </section>
+  );
+}
+
+/** For an address that hasn't been confirmed: send the link again. Nothing waits on it. */
+export function ConfirmEmail({ email }: { email: string }): ReactNode {
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function resend() {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const { error } = await authClient.sendVerificationEmail({ email, callbackURL: '/account?verified=1' });
+      setStatus(error ? { ok: false, text: authMessage(error) } : { ok: true, text: `Sent to ${email}.` });
+    } catch {
+      setStatus({ ok: false, text: UNREACHABLE });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className={styles.actions}>
+      <span className={styles.note}>We sent a link to confirm your email.</span>
+      <Button variant="secondary" disabled={busy} onClick={() => void resend()}>
+        {busy ? 'Sending…' : 'Send it again'}
+      </Button>
+      {status ? (
+        status.ok ? (
+          <span className={styles.note} role="status">
+            {status.text}
+          </span>
+        ) : (
+          <Problem role="alert">{status.text}</Problem>
+        )
+      ) : null}
+    </div>
   );
 }

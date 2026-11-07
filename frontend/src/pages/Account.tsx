@@ -2,7 +2,7 @@
 // manage, organizations you work at as staff, and the account itself.
 
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError, getMyOrganizations, reopenOrganization, type Membership } from '../api';
 import { authClient, UNREACHABLE } from '../auth';
@@ -10,7 +10,7 @@ import Button from '../components/Button';
 import Field from '../components/Field';
 import shell from '../shell.module.css';
 import styles from './Auth.module.css';
-import { ChangeEmail, ChangePassword } from './AccountCredentials';
+import { ChangeEmail, ChangePassword, ConfirmEmail } from './AccountCredentials';
 import Problem from '../components/Problem';
 import Tabs, { type Tab } from '../components/Tabs';
 
@@ -23,6 +23,9 @@ type State =
 export default function Account() {
   const navigate = useNavigate();
   const session = authClient.useSession();
+  // Where the confirmation link in the verification email lands.
+  const [params] = useSearchParams();
+  const justVerified = params.get('verified') === '1';
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -196,15 +199,19 @@ export default function Account() {
           <dt>Name</dt>
           <dd>{user?.name ?? '—'}</dd>
           <dt>Email</dt>
-          <dd>{user?.email ?? '—'}</dd>
+          <dd>
+            {user?.email ?? '—'}
+            {user && !user.emailVerified ? <span className={styles.unconfirmed}> · not confirmed</span> : null}
+          </dd>
         </dl>
+        {user && !user.emailVerified ? <ConfirmEmail email={user.email} /> : null}
         {problem ? <Problem role="alert">{problem}</Problem> : null}
         <div className={styles.actions}>
           <Button variant="secondary" onClick={signOut}>
             Sign out
           </Button>
         </div>
-        {user ? <ChangeEmail current={user.email} /> : null}
+        {user ? <ChangeEmail current={user.email} verified={user.emailVerified} /> : null}
         <ChangePassword />
         <DeleteAccount />
       </>
@@ -214,6 +221,11 @@ export default function Account() {
   return frame(
     <>
       <h1 className={shell.title}>Your account</h1>
+      {justVerified ? (
+        <p className={shell.lede} role="status">
+          Your email is confirmed.
+        </p>
+      ) : null}
       <Tabs label="Your account" tabs={tabs} />
     </>,
   );

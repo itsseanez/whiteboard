@@ -11,10 +11,10 @@ import Account from './Account';
 afterEach(cleanup);
 
 /** The signed-in session, with the email it currently holds. */
-function sessionWith(email: string) {
+function sessionWith(email: string, emailVerified = false) {
   return async () => {
     const body = (await replies.session().json()) as { user: Record<string, unknown> };
-    return json(200, { ...body, user: { ...body.user, email } });
+    return json(200, { ...body, user: { ...body.user, email, emailVerified } });
   };
 }
 
@@ -104,5 +104,20 @@ describe('Account, changing your password', () => {
     fill('New password', 'new-password-123');
     fireEvent.click(screen.getByRole('button', { name: 'Change password' }));
     expect(await screen.findByText('That password is not right.')).toBeTruthy();
+  });
+});
+
+describe('Account, confirming your email', () => {
+  it('sends the confirmation link again', async () => {
+    const calls = fakeFetch({
+      'GET /me/organizations': () => json(200, []),
+      'GET /api/auth/get-session': sessionWith('owner@example.com'),
+      'POST /api/auth/send-verification-email': () => json(200, { status: true }),
+    });
+    await openAccountTab();
+    expect(screen.getByText(/not confirmed/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Send it again' }));
+    expect(await screen.findByText('Sent to owner@example.com.')).toBeTruthy();
+    expect(calls.find((c) => c.path === '/api/auth/send-verification-email')?.body).toMatchObject({ email: 'owner@example.com' });
   });
 });
