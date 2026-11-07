@@ -212,7 +212,10 @@ export default function LiveBooking() {
           {timeOfDay(booked.startsAt, month.timeZone)}, {weekdayLong(booked.startsAt, month.timeZone)}{' '}
           {dayAndMonth(booked.startsAt, month.timeZone)} at {month.name}.
         </p>
-        <p className={styles.frameNote}>Keep this link. It's the only way to change or cancel this booking.</p>
+        <p className={styles.frameNote}>
+          {booked.emailed ? "We've emailed you this link too. " : 'Keep this link. '}It's the only way to change or cancel
+          this booking.
+        </p>
         <a className={styles.manageLink} href={manageUrl}>
           {manageUrl}
         </a>

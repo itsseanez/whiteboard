@@ -132,6 +132,7 @@ describe('Landing live booking', () => {
           startsAt: '2026-11-03T09:00:00Z',
           endsAt: '2026-11-03T11:30:00Z',
           manageToken: 'tok-123',
+          emailed: true,
         }),
     });
     renderLanding();
@@ -144,6 +145,7 @@ describe('Landing live booking', () => {
     expect(await screen.findByText("You're booked")).toBeTruthy();
     expect(screen.queryByText('booking page')).toBeNull();
     expect(screen.getByText(/manage\?token=tok-123/)).toBeTruthy();
+    expect(screen.getByText(/We've emailed you this link too/)).toBeTruthy();
     expect(calls.find((c: Call) => c.method === 'POST')).toMatchObject({
       path: '/studio-wien/appointments',
       body: {

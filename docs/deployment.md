@@ -191,9 +191,12 @@ Setup, once:
 1. In SES (the region in `AWS_REGION`), verify the domain `whiteboardhq.app`
    and add the DKIM CNAME records it gives you to DNS. Add a custom MAIL FROM
    domain and SPF if you want DMARC alignment.
-2. Request production access. Until it's granted, SES only delivers to
-   addresses you have verified one by one, which is enough to demo.
-3. Give the instance role `ses:SendEmail` on that identity.
+2. Request production access, as transactional mail (invitations and
+   appointment emails). Until it's granted, SES only delivers to addresses you
+   have verified one by one under Verified identities, which is enough to demo.
+3. Give the instance role `ses:SendEmail` on `arn:aws:ses:REGION:ACCOUNT:identity/*`.
+   Not just the domain: in the sandbox SES also checks the recipient's
+   verified identity, so a domain-only policy refuses every send.
 4. Raise the instance metadata hop limit to 2
    (`aws ec2 modify-instance-metadata-options --instance-id … --http-put-response-hop-limit 2 --http-tokens required`).
    The app runs in a container on Docker's bridge network, one hop further

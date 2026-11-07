@@ -52,7 +52,12 @@ POST /studio-wien/appointments
   "customer": { "name": "Jo", "email": "jo@example.com", "phone": "optional" } }
 ```
 
-`201` returns `appointmentId`, `staffId`, `startsAt`, `endsAt` and `manageToken`.
+`201` returns `appointmentId`, `staffId`, `startsAt`, `endsAt` and `manageToken`,
+plus `emailed`: whether the confirmation email, which carries the same manage
+link, went out. A booking never fails because the email did.
+
+The customer is also emailed when an appointment is cancelled or moved, from
+their link or from the owner calendar. A repeat cancel sends nothing.
 The token is returned once and stored only as a hash; it is what the cancel and
 reschedule routes take (`{ "token": … }`, plus `startsAt` and an optional
 `staffId` to reschedule). A time that was never offered is `409

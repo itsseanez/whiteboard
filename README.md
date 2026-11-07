@@ -177,7 +177,8 @@ In active development since August 2026. The full definition of done in [`DECISI
 - [x] Owner calendar: day and week views, why a time isn't bookable, book, move and cancel
 - [x] Customers cancel and reschedule by link
 - [x] Demo tenants
-- [ ] Email notifications, audit trail, webhooks
+- [x] Customer emails: confirmation with the manage link, cancellation, move
+- [ ] Reminder emails, audit trail, webhooks
 - [x] Staff and manager accounts by emailed invitation; staff see their own week, enforced by RLS
 - [x] API docs
 

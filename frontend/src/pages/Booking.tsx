@@ -312,8 +312,9 @@ export default function Booking() {
             {fullMoment(booked.startsAt, timeZone)} at {catalog.tenant.name}, {timeZone}.
           </p>
           <p className={shell.lede}>
-            Keep this link. It is the only way to change or cancel this appointment, and it is not
-            shown again.
+            {booked.emailed
+              ? "We've emailed you this link too. It's the only way to change or cancel this appointment."
+              : "Keep this link. It's the only way to change or cancel this appointment, and the email with it didn't go, so it isn't shown again."}
           </p>
           <a className={styles.manage} href={manageUrl}>
             {manageUrl}

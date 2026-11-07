@@ -546,7 +546,7 @@ function AppointmentPanel({
           )}
         </div>
       )}
-      <p className={styles.muted}>The customer isn't notified yet; email isn't built.</p>
+      <p className={styles.muted}>The customer is emailed when you move or cancel this.</p>
     </div>
   );
 }

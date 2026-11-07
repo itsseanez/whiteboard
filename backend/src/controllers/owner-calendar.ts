@@ -19,6 +19,7 @@ import { parseRequest as parseAvailability } from './availability.js';
 import { parseBooking } from './booking.js';
 import { sendManageError } from './manage-booking.js';
 import { scope } from '../lib/scope.js';
+import { emailCustomer } from '../services/appointment-emails.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -69,13 +70,22 @@ export async function postOwnerBooking(req: Request, res: Response) {
   const parsed = parseBooking(req);
   if (!parsed.ok) return res.status(400).json({ error: parsed.error });
   try {
-    // The manage token is discarded: emailing it to the customer isn't built yet.
-    const booked = await createBooking(appPool, { ...parsed.value, userId: scope(req).userId, now: new Date() });
+    const { userId } = scope(req);
+    const booked = await createBooking(appPool, { ...parsed.value, userId, now: new Date() });
+    // The manage token goes to the customer in the confirmation and nowhere else.
+    const emailed = await emailCustomer(
+      appPool,
+      req.tenant!,
+      booked.id,
+      { kind: 'booked', manageToken: booked.manageToken },
+      userId,
+    );
     res.status(201).json({
       appointmentId: booked.id,
       staffId: booked.staffId,
       startsAt: booked.startsAt.toString(),
       endsAt: booked.endsAt.toString(),
+      emailed,
     });
   } catch (error) {
     if (!sendManageError(res, error)) throw error;
@@ -92,6 +102,9 @@ export async function postOwnerCancel(req: Request, res: Response) {
   if (!id) return res.status(404).json({ error: 'appointment_not_found' });
   try {
     const result = await cancelBooking(appPool, { ...scope(req), ref: { appointmentId: id }, now: new Date() });
+    if (result.cancelled) {
+      await emailCustomer(appPool, req.tenant!, result.appointmentId, { kind: 'cancelled' }, scope(req).userId);
+    }
     res.json({ appointmentId: result.appointmentId, status: 'CANCELLED', cancelled: result.cancelled });
   } catch (error) {
     if (!sendManageError(res, error)) throw error;
@@ -119,6 +132,7 @@ export async function postOwnerReschedule(req: Request, res: Response) {
       staffId: staffId ?? null,
       now: new Date(),
     });
+    await emailCustomer(appPool, req.tenant!, result.appointmentId, { kind: 'moved' }, scope(req).userId);
     res.json({
       appointmentId: result.appointmentId,
       staffId: result.staffId,

@@ -15,6 +15,7 @@
 
 import type { Request, Response } from 'express';
 import { publicPool } from '../db.js';
+import { emailCustomer } from '../services/appointment-emails.js';
 import { ServiceNotFoundError } from '../services/availability.js';
 import {
   SlotNotOfferedError,
@@ -128,6 +129,10 @@ export async function postPublicBooking(req: Request, res: Response): Promise<vo
 
   try {
     const booked = await createBooking(publicPool, request);
+    const emailed = await emailCustomer(publicPool, req.tenant!, booked.id, {
+      kind: 'booked',
+      manageToken: booked.manageToken,
+    });
 
     // Nothing about the customer goes back out. The client sent that data and
     // already has it; echoing it would make this endpoint a way to confirm
@@ -141,6 +146,8 @@ export async function postPublicBooking(req: Request, res: Response): Promise<vo
       // email's cancel and reschedule links; the database holds only its hash,
       // so it cannot be re-issued or looked up later.
       manageToken: booked.manageToken,
+      // False when the confirmation didn't go, so the page knows to stress the link.
+      emailed,
     });
   } catch (error) {
     if (error instanceof ServiceNotFoundError) {

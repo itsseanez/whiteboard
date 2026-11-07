@@ -47,6 +47,8 @@ export interface Booked {
   startsAt: string;
   endsAt: string;
   manageToken: string;
+  /** Whether the confirmation email, carrying the same link, went out. */
+  emailed?: boolean;
 }
 
 export interface Rescheduled {

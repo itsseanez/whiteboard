@@ -31,6 +31,7 @@
 
 import type { Request, Response } from 'express';
 import { publicPool } from '../db.js';
+import { emailCustomer } from '../services/appointment-emails.js';
 import { ServiceNotFoundError } from '../services/availability.js';
 import { SlotNotOfferedError, SlotTakenError } from '../services/booking.js';
 import {
@@ -117,6 +118,7 @@ export async function postCancelBooking(req: Request, res: Response): Promise<vo
       // The only clock read on this path, matching every other endpoint.
       now: new Date(),
     });
+    if (result.cancelled) await emailCustomer(publicPool, req.tenant!, result.appointmentId, { kind: 'cancelled' });
 
     // 200 either way. `cancelled` says whether this call was the one that did
     // it, which a UI can use to show "cancelled" versus "already cancelled"
@@ -173,6 +175,7 @@ export async function postRescheduleBooking(req: Request, res: Response): Promis
       staffId: staff && staff.length > 0 ? staff : null,
       now: new Date(),
     });
+    await emailCustomer(publicPool, req.tenant!, result.appointmentId, { kind: 'moved' });
 
     // The token is not re-issued and not echoed. It still works, which is the
     // reason reschedule is an UPDATE rather than a cancel and a rebook.

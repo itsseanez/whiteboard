@@ -248,6 +248,10 @@ go through it rather than setting session variables by hand.
 **`whiteboard_public`**
 - `SELECT (id, slug, timezone)` on `tenant` only — column-scoped, read-only,
   no session variable required (this is the anonymous slug-lookup path)
+- `SELECT (customer_id)` on `appointment`, so a cancel or move made from a
+  manage link can email that appointment's customer. It could already read
+  `customer.email`; this only follows the link, and the routes use it only
+  for an appointment whose token the caller presented.
 
 **`whiteboard_auth`**
 - `CONNECT` on the current database, `USAGE` on schema `public`

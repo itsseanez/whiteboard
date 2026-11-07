@@ -38,4 +38,29 @@ describe('inviting without email configured', () => {
     expect(res.status).toBe(503);
     expect(res.body.error).toBe('email_unavailable');
   });
+
+  it('still books, and says the confirmation did not go', async () => {
+    // Marina on a Friday: no other test books her that day.
+    let date = Temporal.Now.plainDateISO('America/New_York').add({ days: 2 });
+    while (date.dayOfWeek !== 5) date = date.add({ days: 1 });
+    const cut = 'b1111111-1111-1111-1111-111111111111';
+    const avail = await request(app).get('/marinas-cuts-color/availability').query({ serviceId: cut, from: date.toString() });
+    const slot = avail.body.days[0].slots[0];
+    const customer = `nomail-${run}@customer.example`;
+    try {
+      const res = await request(app)
+        .post('/marinas-cuts-color/appointments')
+        .send({ serviceId: cut, staffId: slot.staffIds[0], startsAt: slot.startsAt, customer: { name: 'No Mail', email: customer } });
+      expect(res.status).toBe(201);
+      expect(res.body.emailed).toBe(false);
+      expect(res.body.manageToken).toBeTruthy();
+    } finally {
+      await ownerPool.query(
+        `WITH mine AS (SELECT id FROM customer WHERE email = $1),
+              cleared AS (DELETE FROM appointment WHERE customer_id IN (SELECT id FROM mine))
+         DELETE FROM customer WHERE id IN (SELECT id FROM mine)`,
+        [customer],
+      );
+    }
+  });
 });

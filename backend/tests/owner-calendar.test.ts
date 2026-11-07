@@ -3,6 +3,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { randomUUID } from 'node:crypto';
 import { createApp } from '../src/app.js';
+import { outbox } from '../src/lib/mailer.js';
 
 const app = createApp();
 const ownerPool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -74,6 +75,11 @@ describe('owner calendar', () => {
     expect(booked.status).toBe(201);
     expect(booked.body.manageToken).toBeUndefined();
     const id = booked.body.appointmentId;
+    const mailTo = (subject: RegExp) =>
+      outbox.filter((m) => m.to === `walkin-${run}@test.example` && subject.test(m.subject));
+    // The customer gets the manage link the owner never sees.
+    expect(booked.body.emailed).toBe(true);
+    expect(mailTo(/^Your appointment at/)[0]?.text).toMatch(/\/manage\?token=[^\s]+/);
 
     const cal = await get('/calendar', { from: date });
     expect(cal.status).toBe(200);
@@ -99,10 +105,12 @@ describe('owner calendar', () => {
     const moved = await post(`/appointments/${id}/reschedule`, { startsAt: at('10:00') });
     expect(moved.status).toBe(200);
     expect(moved.body.startsAt).toBe(at('10:00'));
+    expect(mailTo(/has moved$/)).toHaveLength(1);
 
     const cancelled = await post(`/appointments/${id}/cancel`, {});
     expect(cancelled.body).toMatchObject({ status: 'CANCELLED', cancelled: true });
     expect((await post(`/appointments/${id}/cancel`, {})).body.cancelled).toBe(false);
+    expect(mailTo(/is cancelled$/)).toHaveLength(1); // once, not on the repeat
     expect((await get('/calendar', { from: date })).body.appointments).toEqual([]);
   });
 
