@@ -275,7 +275,7 @@ export interface CalendarAppointment {
   resourceName: string | null;
   startsAt: string;
   endsAt: string;
-  customer: { name: string; email: string; phone: string | null };
+  customer: { id: string; name: string; email: string; phone: string | null };
 }
 
 export interface CalendarData {
@@ -356,6 +356,9 @@ export const calendarApi = {
   cancel: (slug: string, id: string) => send<Cancelled>(owner(slug, `/appointments/${id}/cancel`), write('POST', {})),
   move: (slug: string, id: string, startsAt: string, staffId?: string) =>
     send<Rescheduled>(owner(slug, `/appointments/${id}/reschedule`), write('POST', staffId ? { startsAt, staffId } : { startsAt })),
+  /** Owners only. Refused while the customer has an upcoming booking. */
+  eraseCustomer: (slug: string, customerId: string) =>
+    send<void>(owner(slug, `/customers/${customerId}/erase`), { method: 'POST' }),
   history: (slug: string, id: string) =>
     send<{ timeZone: string; events: HistoryEvent[] }>(owner(slug, `/appointments/${id}/history`)),
 };

@@ -22,7 +22,7 @@ const appointment = {
   resourceName: null,
   startsAt: at('10:00'),
   endsAt: at('10:45'),
-  customer: { name: 'Jo Bloggs', email: 'jo@example.com', phone: '555-0100' },
+  customer: { id: 'c1', name: 'Jo Bloggs', email: 'jo@example.com', phone: '555-0100' },
 };
 
 const calendar = {
@@ -120,6 +120,16 @@ describe('Calendar', () => {
     const list = await screen.findByRole('list', { name: 'History' });
     expect(list.textContent).toMatch(/Booked for .* by the customer/);
     expect(list.textContent).toMatch(/Cancelled by Hanna/);
+  });
+
+  it("erases a customer's details only after a second click, and explains a refusal", async () => {
+    const calls = setup({ [`POST ${base}/customers/c1/erase`]: () => json(409, { error: 'has_future_appointments' }) });
+    renderCalendar();
+    fireEvent.click(await screen.findByRole('button', { name: /Cut\s*Jo Bloggs/ }));
+    fireEvent.click(screen.getByRole('button', { name: "Erase customer's details…" }));
+    expect(calls.some((c) => c.path.endsWith('/erase'))).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: "Yes, erase Jo Bloggs's details" }));
+    expect(await screen.findByText(/has an upcoming booking. Cancel it first/)).toBeTruthy();
   });
 
   it('explains why a time is not bookable once a service is picked', async () => {

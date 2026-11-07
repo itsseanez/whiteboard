@@ -13,7 +13,7 @@ const color: CalendarAppointment = {
   resourceName: 'Wash station',
   startsAt: '2026-11-16T15:00:00Z',
   endsAt: '2026-11-16T16:30:00Z',
-  customer: { name: 'Jo', email: 'jo@example.com', phone: null },
+  customer: { id: 'c1', name: 'Jo', email: 'jo@example.com', phone: null },
 };
 
 const ctx: ReasonContext = {

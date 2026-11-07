@@ -44,6 +44,8 @@ const MESSAGES: Record<string, string> = {
   already_started: 'That appointment has already started.',
   not_booked: 'That appointment was already changed. Reload the calendar.',
   appointment_not_found: 'That appointment no longer exists. Reload the calendar.',
+  owner_only: "Only an owner can erase a customer's details.",
+  has_future_appointments: 'This customer has an upcoming booking. Cancel it first, then erase their details.',
 };
 
 function messageFor(error: unknown): string {
@@ -475,6 +477,7 @@ function AppointmentPanel({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<HistoryEvent[] | null | 'closed'>('closed');
+  const [erasing, setErasing] = useState(false);
   const a = appointment;
 
   async function toggleHistory() {
@@ -561,11 +564,26 @@ function AppointmentPanel({
         </div>
       )}
       <p className={styles.muted}>The customer is emailed when you move or cancel this.</p>
-      <div>
+      <div className={styles.actions}>
         <Button variant="secondary" onClick={() => void toggleHistory()}>
           {history === 'closed' ? 'History' : 'Hide history'}
         </Button>
+        {erasing ? (
+          <Button disabled={busy} onClick={() => act(() => calendarApi.eraseCustomer(slug, a.customer.id))}>
+            Yes, erase {a.customer.name}'s details
+          </Button>
+        ) : (
+          <Button variant="secondary" disabled={busy} onClick={() => setErasing(true)}>
+            Erase customer's details…
+          </Button>
+        )}
       </div>
+      {erasing ? (
+        <p className={styles.muted}>
+          For a customer who asks to be forgotten. Their name, email and phone are removed from every appointment they
+          had here; the appointments themselves stay. This can't be undone.
+        </p>
+      ) : null}
       {history === null ? <p className={styles.muted}>Loading history…</p> : null}
       {Array.isArray(history) ? (
         <ol className={styles.history} aria-label="History">
