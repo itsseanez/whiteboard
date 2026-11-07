@@ -129,7 +129,7 @@ export default function SignUp() {
         <div className={styles.group}>
           <h2 className={styles.groupTitle}>Your account</h2>
           {hasAccount ? (
-            <p className={styles.note}>Signed in as {signedInAs}. Only the organization is left to set up.</p>
+            <p className={styles.note}>Signed in as {signedInAs}. The new organization will be added to this account.</p>
           ) : (
             <>
               <Field

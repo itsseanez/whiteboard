@@ -104,16 +104,16 @@ export default function Account() {
   const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
 
   const tabs: Tab[] = [];
-  if (managed.length > 0 || closed.length > 0 || staffed.length === 0) {
-    tabs.push({
+  const queued: Tab[] = [];
+  {
+    const organizationsTab: Tab = {
       id: 'organizations',
       label: 'Organizations',
       panel: (
         <>
           {managed.length === 0 && closed.length === 0 ? (
           <p className={styles.note}>
-            This account is not linked to an organization. If you just signed up, setting up the organization did
-            not finish. <Link to="/signup">Finish setting up your organization</Link>.
+            You don't run an organization yet. Create one to get your own booking page, or ask an owner to invite you.
           </p>
         ) : managed.length > 0 ? (
           <ul className={styles.list}>
@@ -156,9 +156,15 @@ export default function Account() {
               </ul>
             </>
           ) : null}
+          <p className={styles.newOrg}>
+            <Link to="/signup">New organization</Link>
+          </p>
         </>
       ),
-    });
+    };
+    // Someone who only works as staff opens on their week; everyone else on organizations.
+    if (managed.length > 0 || closed.length > 0 || staffed.length === 0) tabs.push(organizationsTab);
+    else queued.push(organizationsTab);
   }
   if (staffed.length > 0) {
     tabs.push({
@@ -178,6 +184,7 @@ export default function Account() {
       ),
     });
   }
+  tabs.push(...queued);
   tabs.push({
     id: 'account',
     label: 'Account',
@@ -206,3 +213,4 @@ export default function Account() {
     </>,
   );
 }
+

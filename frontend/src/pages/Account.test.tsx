@@ -47,8 +47,8 @@ describe('Account', () => {
     });
     renderAccount();
 
-    expect(await screen.findByText(/not linked to an organization/)).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Finish setting up/ }).getAttribute('href')).toBe('/signup');
+    expect(await screen.findByText(/You don't run an organization yet/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'New organization' }).getAttribute('href')).toBe('/signup');
   });
 
   it('links every organization the account belongs to', async () => {
@@ -159,5 +159,24 @@ describe('Account', () => {
     expect(await screen.findByRole('link', { name: 'Edit' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Closed' })).toBeNull();
     expect(calls.some((c) => c.path === '/me/tenants/acme/reopen')).toBe(true);
+  });
+
+  it('offers a new organization to someone who already runs one', async () => {
+    fakeFetch({
+      'GET /me/organizations': () => json(200, [organization('acme', 'UTC')]),
+      'GET /api/auth/get-session': replies.noSession,
+    });
+    renderAccount();
+    expect((await screen.findByRole('link', { name: 'New organization' })).getAttribute('href')).toBe('/signup');
+  });
+
+  it('opens on their week for someone who only works as staff', async () => {
+    fakeFetch({
+      'GET /me/organizations': () => json(200, [organization('acme', 'UTC', 'member')]),
+      'GET /api/auth/get-session': replies.noSession,
+    });
+    renderAccount();
+    expect((await screen.findByRole('tab', { name: 'Your week' })).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Your week', 'Organizations', 'Account']);
   });
 });
