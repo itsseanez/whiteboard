@@ -326,6 +326,23 @@ the staff boundary directly against the database.
 - `whiteboard_public` can read `archived_at`, so the slug lookup and the
   booking re-check can skip a closed organization.
 
+## Functions that cross tenants
+
+Two `SECURITY DEFINER` functions run as the migration owner and so bypass
+RLS. Each takes no tenant id from its caller and does one narrow thing:
+
+- **`release_closed_slug(slug)`** — `whiteboard_signup` only. If the tenant
+  holding that slug was closed more than `closed_slug_hold()` (30 days) ago,
+  renames it and its Better Auth organization to `<slug>--closed-<id>`.
+  Provisioning calls it first, so a released slug can be taken.
+- **`closed_organization_for_token(token_hash)`** — `whiteboard_public` only.
+  The name and close time of a closed organization the token's appointment
+  belongs to. The token's hash is the secret, so it tells its holder no more
+  than the organization's name.
+
+Both set `search_path` explicitly, as a `SECURITY DEFINER` function must, so
+an object planted in another schema can't be picked up.
+
 Verified manually via `SET ROLE whiteboard_app` + `SET LOCAL` inside a
 transaction, against real seeded data, for all four cases: direct
 `tenant_id` match, membership-only match, a user with zero memberships,

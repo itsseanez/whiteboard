@@ -70,6 +70,15 @@ slot_not_available`; one somebody else just took is `409 slot_taken`.
 | `GET` | `/me/organizations` | The organizations the user belongs to, with their role |
 | `POST` | `/me/tenants` | Create an organization `{ name, slug, timezone }`; the caller becomes its owner |
 | `POST` | `/me/invitations/:id/accept` | Join the organization that invited the caller |
+| `POST` | `/me/tenants/:slug/reopen` | The owner reopens an organization they closed, within 30 days |
+
+`GET /me/organizations` also lists an owner's closed organizations for the 30
+days they can be reopened, with `closedAt` and `reopenUntil` set.
+
+`POST /links/closed { token }` (no session) answers `{ name, closedAt }` when a
+manage token belongs to a closed organization, and `404` otherwise. It isn't
+under `/:slug`, because after a closed slug is released that slug may belong
+to a different organization.
 
 `POST /me/tenants` answers `201` when it created the organization, `200` when an
 earlier attempt already had (it is safe to retry), `409 slug_taken` when another
