@@ -52,6 +52,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await ownerPool.query('DELETE FROM notification WHERE tenant_id = $1', [tenantId]);
   for (const table of ['appointment', 'customer', 'service', 'staff']) await ownerPool.query(`DELETE FROM ${table} WHERE tenant_id = $1`, [tenantId]);
   await ownerPool.query('DELETE FROM tenant WHERE id = $1', [tenantId]);
   await ownerPool.query('DELETE FROM member WHERE "organizationId" = $1', [orgId]);
@@ -69,6 +70,22 @@ describe('erasing a customer', () => {
     const row = (await ownerPool.query('SELECT name, email, phone FROM customer WHERE id = $1', [customer])).rows[0];
     expect(row).toEqual({ name: 'Erased customer', email: `erased-${customer}@invalid`, phone: null });
     expect((await ownerPool.query('SELECT 1 FROM appointment WHERE id = $1', [appointment])).rowCount).toBe(1);
+  });
+
+  it('takes their name out of the inbox too', async () => {
+    // Booked online, then cancelled: both told the owner, by name.
+    const { customer, appointment } = await customerWith(new Date(Date.now() + 9 * 86_400_000));
+    await ownerPool.query(`UPDATE appointment SET status = 'CANCELLED' WHERE id = $1`, [appointment]);
+    const names = async (): Promise<string[]> =>
+      (await request(app).get('/me/notifications').query({ pageSize: 50 }).set('Cookie', owner)).body.items
+        .filter((n: { link: string }) => n.link.includes(slug))
+        .map((n: { data: { customer: string } }) => n.data.customer);
+    expect(await names()).toContain('Jo Bloggs');
+
+    expect((await erase(customer, owner)).status).toBe(204);
+    const after = await names();
+    expect(after).not.toContain('Jo Bloggs');
+    expect(after.filter((n) => n === 'Erased customer')).toHaveLength(2);
   });
 
   it('is refused while they have an upcoming booking', async () => {
