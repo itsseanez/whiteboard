@@ -1,5 +1,5 @@
 // What happens to people's details, in plain words. Linked from the booking
-// form and sign-up. Kept short and true to what the code does.
+// form, sign-up and the front page. Kept short and true to what the code does.
 
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -14,8 +14,8 @@ export default function Privacy(): ReactNode {
     <main className={`${shell.page} ${shell.narrow}`}>
       <h1 className={shell.title}>Privacy</h1>
       <p className={shell.lede}>
-        Whiteboard is booking software. When you book with an organization here, that organization decides what
-        happens to your details; Whiteboard keeps them for it.
+        Whiteboard is booking software, run by Sean Ezenwa. When you book with an organization here, that organization
+        decides what happens to your details; Whiteboard keeps them for it.
       </p>
 
       <section className={styles.section}>
@@ -46,9 +46,27 @@ export default function Privacy(): ReactNode {
         <ul>
           <li>We keep your name, email and a scrambled form of your password, never the password itself.</li>
           <li>
+            Each time you sign in, we note the IP address and browser it came from, so a sign-in you don't recognize
+            can be spotted. That note goes when you sign out.
+          </li>
+          <li>
             A cookie keeps you signed in. It's the only cookie we set: no analytics, no advertising, no tracking.
           </li>
           <li>You can change your email or password, or delete your account, from your account page.</li>
+        </ul>
+      </section>
+
+      <section className={styles.section}>
+        <h2>How long we keep it</h2>
+        <ul>
+          <li>Appointments and the details on them stay until the organization erases them.</li>
+          <li>Deleting your account removes it straight away.</li>
+          <li>
+            Erased or deleted details can stay in our backups for up to 30 days, until those backups are replaced.
+          </li>
+          <li>
+            To stop one internet address sending too many requests, we count its requests briefly in memory. They're never saved.
+          </li>
         </ul>
       </section>
 
@@ -57,7 +75,21 @@ export default function Privacy(): ReactNode {
         <ul>
           <li>On Amazon Web Services in the United States (us-east-1), with nightly backups kept for 30 days.</li>
           <li>Emails are sent through Amazon's email service.</li>
-          <li>Nothing is sold or shared with anyone else.</li>
+          <li>Nothing is sold, and nothing is shared beyond what this page lists.</li>
+        </ul>
+      </section>
+
+      <section className={styles.section}>
+        <h2>Children</h2>
+        <ul>
+          <li>Accounts are for adults. If you're booking for a child, book in your own name.</li>
+        </ul>
+      </section>
+
+      <section className={styles.section}>
+        <h2>Changes</h2>
+        <ul>
+          <li>When this page changes, the date at the bottom changes with it.</li>
         </ul>
       </section>
 
