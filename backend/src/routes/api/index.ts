@@ -21,7 +21,6 @@ router.delete('/', requireOwner, owner.deleteOrganization);
 
 // A staff member's own page. 404 not_staff for a member with no staff row.
 router.get('/me/week', myWeek.getMyWeek);
-router.put('/me/hours', myWeek.putMyHours);
 // Every role; RLS limits staff to their own.
 router.get('/time-off', timeOff.getTimeOff);
 router.post('/time-off', timeOff.postTimeOff);

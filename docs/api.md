@@ -135,9 +135,8 @@ the caller doesn't belong to is `404`, the same as one that doesn't exist.
 | Method | Path | Does |
 |---|---|---|
 | `GET` | `/me/week?from[&through]` | The calendar's shape, holding only the caller's own row and appointments, up to 7 days |
-| `PUT` | `/me/hours` | Replace the caller's own week of hours |
 
-Both answer `404 not_staff` for a member with no staff row here.
+It answers `404 not_staff` for a member with no staff row here. Staff can't change their own hours; owners and managers set them under `/staff/:id/hours`.
 
 ### Time off: every role
 

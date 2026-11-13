@@ -186,9 +186,10 @@ describe('a staff member', () => {
     expect(res.body.appointments[0].customer.name).toBe('Carla');
   });
 
-  it('can change their own hours', async () => {
+  it('is refused when changing their own hours', async () => {
+    // The route is gone, so this falls through to the managers-only routes.
     const res = await api.put('/me/hours', { hours: [{ weekday: 1, start: '09:00', end: '17:00' }] }, staff.cookie);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
   });
 
   describe('as whiteboard_app, under their own user', () => {
@@ -217,6 +218,26 @@ describe('a staff member', () => {
       await expect(
         asStaff((c) => c.query(`UPDATE appointment SET status = 'CANCELLED' WHERE staff_id = $1`, [anna])),
       ).rejects.toMatchObject({ code: '42501' });
+    });
+
+    it('reads their own hours but cannot add or remove them', async () => {
+      await ownerPool.query(
+        `INSERT INTO staff_working_hours (staff_id, tenant_id, weekday, start_time, end_time) VALUES ($1, $2, 4, '09:00', '17:00')`,
+        [anna, tenantId],
+      );
+      const mine = await asStaff((c) => c.query('SELECT weekday FROM staff_working_hours WHERE staff_id = $1', [anna]));
+      expect(mine.rows.map((r) => r.weekday)).toContain(4);
+      await expect(
+        asStaff((c) =>
+          c.query(
+            `INSERT INTO staff_working_hours (staff_id, tenant_id, weekday, start_time, end_time) VALUES ($1, $2, 5, '09:00', '10:00')`,
+            [anna, tenantId],
+          ),
+        ),
+      ).rejects.toMatchObject({ code: '42501' });
+      // A DELETE that RLS hides rows from removes nothing rather than erroring.
+      const removed = await asStaff((c) => c.query('DELETE FROM staff_working_hours WHERE staff_id = $1', [anna]));
+      expect(removed.rowCount).toBe(0);
     });
 
     it('sees nothing once their staff row is archived', async () => {
