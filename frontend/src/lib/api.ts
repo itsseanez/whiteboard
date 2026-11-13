@@ -413,8 +413,6 @@ export const myWeekApi = {
   /** The same shape as the calendar, holding only the caller's own row. */
   week: (slug: string, from: string, through: string) =>
     send<CalendarData>(owner(slug, `/me/week?${new URLSearchParams({ from, through })}`)),
-  saveHours: (slug: string, hours: HoursRange[]) =>
-    send<{ hours: HoursRange[] }>(owner(slug, '/me/hours'), write('PUT', { hours })),
 };
 
 export interface TimeOffEntry {

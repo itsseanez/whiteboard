@@ -1,6 +1,8 @@
-/* The staff page: one column, a week of days, then the hours editor. */
-main.page {
-  max-width: calc(48rem + 2 * var(--space-4));
+/* The staff page: tabs beside one column, as on the owner's page. */
+.column {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 48rem;
 }
 
 .toolbar {
@@ -8,13 +10,12 @@ main.page {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-4);
 }
 
 .days {
   list-style: none;
   padding: 0;
-  margin: var(--space-4) 0 0;
+  margin: 0;
 }
 
 .day {
@@ -63,36 +64,30 @@ main.page {
   overflow-wrap: anywhere;
 }
 
-.section {
-  display: grid;
-  gap: var(--space-3);
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--rule);
-}
-
 .heading {
   font-size: var(--step-2);
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.saved,
-.unsaved {
+.note {
   font-size: var(--step--1);
-}
-
-.saved {
   color: var(--ink-soft);
 }
 
-.unsaved {
-  font-weight: 500;
+.hours {
+  margin: 0;
+}
+
+.hoursRow {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.hoursRow dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 30rem) {

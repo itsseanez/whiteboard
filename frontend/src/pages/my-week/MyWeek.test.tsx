@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fakeFetch, json } from '@/test/fake-api'; // first: see the file
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -31,9 +31,9 @@ const week = () =>
     ],
   });
 
-function renderPage() {
+function renderPage(at = '/manage/acme/me') {
   render(
-    <MemoryRouter initialEntries={['/manage/acme/me']}>
+    <MemoryRouter initialEntries={[at]}>
       <Routes>
         <Route path="/manage/:slug/me" element={<MyWeek />} />
       </Routes>
@@ -52,17 +52,22 @@ describe('MyWeek', () => {
     expect(query.get('from')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('saves their own hours', async () => {
-    const calls = fakeFetch({
-      [`GET ${base}`]: context,
-      [`GET ${base}/me/week`]: week,
-      [`PUT ${base}/me/hours`]: () => json(200, { hours: [] }),
-    });
+  it('shows their hours read-only, in their own tab', async () => {
+    const calls = fakeFetch({ [`GET ${base}`]: context, [`GET ${base}/me/week`]: week, [`GET ${base}/time-off`]: () => json(200, { timeOff: [] }) });
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Save hours' }));
-    await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true));
-    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ hours: [{ weekday: 1, start: '09:00', end: '17:00' }] });
-    expect(await screen.findByText('Saved.')).toBeTruthy();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Working hours' }));
+    const panel = screen.getByRole('tabpanel', { name: 'Working hours' });
+    expect(panel.textContent).toContain('Monday09:00–17:00');
+    expect(panel.textContent).toContain('TuesdayNot working');
+    expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
+    expect(panel.querySelector('input')).toBeNull();
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false);
+  });
+
+  it('opens the tab named in the address', async () => {
+    fakeFetch({ [`GET ${base}`]: context, [`GET ${base}/me/week`]: week, [`GET ${base}/time-off`]: () => json(200, { timeOff: [] }) });
+    renderPage('/manage/acme/me?tab=time-off');
+    expect((await screen.findByRole('tab', { name: 'Time off' })).getAttribute('aria-selected')).toBe('true');
   });
 
   it('explains an account with no staff profile', async () => {
