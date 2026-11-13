@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError, getTenantContext, myWeekApi, type CalendarData, type HoursRange } from '@/lib/api';
-import { addDays, weekStart } from '@/lib/calendar/grid';
+import { addDays, weekdayOf, weekStart } from '@/lib/calendar/grid';
 import Button from '@/components/ui/Button';
 import Tabs from '@/components/ui/Tabs';
 import TimeOff from '@/components/organization/TimeOff';
@@ -116,6 +116,10 @@ export default function MyWeek() {
                 <ol className={styles.days}>
                   {days.map((day) => {
                     const appointments = data.appointments.filter((a) => onDay(a.startsAt, day));
+                    const weekday = weekdayOf(day);
+                    // Closed beats not working: the organization's hours bound the staff member's.
+                    const closed = !data.businessHours.some((h) => h.weekday === weekday);
+                    const off = !closed && !(me?.hours ?? []).some((h) => h.weekday === weekday);
                     // Time off can span days: shown on every date from its start to its last moment.
                     const away = data.timeOff.filter(
                       (t) =>
@@ -133,8 +137,10 @@ export default function MyWeek() {
                             Time off{t.reason ? `: ${t.reason}` : ''}
                           </p>
                         ))}
+                        {closed ? <p className={styles.empty}>Closed</p> : null}
+                        {off ? <p className={styles.empty}>Not working</p> : null}
                         {appointments.length === 0 ? (
-                          <p className={styles.empty}>Nothing booked.</p>
+                          closed || off ? null : <p className={styles.empty}>Nothing booked.</p>
                         ) : (
                           appointments.map((a) => (
                             <div key={a.id} className={styles.appointment}>

@@ -52,6 +52,29 @@ describe('MyWeek', () => {
     expect(query.get('from')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
+  it('says which days are closed and which they are not working', async () => {
+    const weekdays = [1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, start: '09:00', end: '17:00' }));
+    fakeFetch({
+      [`GET ${base}`]: context,
+      [`GET ${base}/me/week`]: () =>
+        json(200, {
+          timeZone: 'UTC',
+          staff: [{ id: 's1', name: 'Ana', archived: false, hours: [{ weekday: 1, start: '09:00', end: '17:00' }] }],
+          businessHours: weekdays,
+          timeOff: [],
+          appointments: [],
+        }),
+    });
+    renderPage();
+    await screen.findByRole('heading', { name: "Ana's week" });
+    const day = (name: string) => screen.getByRole('heading', { name: new RegExp(`^${name} `) }).closest('li')!.textContent;
+    expect(day('Monday')).toContain('Nothing booked.');
+    expect(day('Tuesday')).toContain('Not working');
+    expect(day('Tuesday')).not.toContain('Nothing booked.');
+    expect(day('Sunday')).toContain('Closed');
+    expect(day('Sunday')).not.toContain('Not working');
+  });
+
   it('shows their hours read-only, in their own tab', async () => {
     const calls = fakeFetch({ [`GET ${base}`]: context, [`GET ${base}/me/week`]: week, [`GET ${base}/time-off`]: () => json(200, { timeOff: [] }) });
     renderPage();
