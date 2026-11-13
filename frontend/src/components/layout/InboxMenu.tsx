@@ -56,7 +56,7 @@ export default function InboxMenu(): ReactNode {
   }
 
   return (
-    <div className={styles.profile} ref={root}>
+    <div className={styles.inboxRoot} ref={root}>
       <button
         ref={button}
         type="button"

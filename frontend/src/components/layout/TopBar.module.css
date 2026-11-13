@@ -127,9 +127,16 @@
 }
 
 .icons {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-1);
+}
+
+/* Anchored to the icon row's right edge, not the inbox icon's, so on a phone
+   the wide menu fits between the page margins instead of running off the left. */
+.inboxRoot {
+  position: static;
 }
 
 .inbox {
