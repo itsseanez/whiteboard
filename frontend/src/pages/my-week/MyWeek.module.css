@@ -90,8 +90,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Stacked on a phone: the time leads each appointment, and a rule between
+   them shows where one ends and the next begins. */
 @media (max-width: 30rem) {
   .appointment {
     grid-template-columns: 1fr;
+  }
+
+  .appointment + .appointment {
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--rule);
+  }
+
+  .time {
+    font-weight: 500;
   }
 }
