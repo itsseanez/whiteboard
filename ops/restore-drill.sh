@@ -17,7 +17,9 @@ name="whiteboard-restore-drill-$$"
 trap 'docker rm -f "$name" > /dev/null 2>&1 || true; rm -rf "$work"' EXIT
 
 aws s3 cp "s3://$BACKUP_BUCKET/whiteboard/$key" "$work/dump.sql.gz" --only-show-errors
-docker run -d --name "$name" -e POSTGRES_USER=whiteboard -e POSTGRES_PASSWORD=drill postgres:18 > /dev/null
+# POSTGRES_DB=postgres: otherwise the image creates a whiteboard database and
+# the dump's own CREATE DATABASE fails against it.
+docker run -d --name "$name" -e POSTGRES_USER=whiteboard -e POSTGRES_DB=postgres -e POSTGRES_PASSWORD=drill postgres:18 > /dev/null
 until docker exec "$name" pg_isready -U whiteboard > /dev/null 2>&1; do sleep 1; done
 sleep 2
 
